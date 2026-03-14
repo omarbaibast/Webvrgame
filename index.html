@@ -2,9 +2,9 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebXR Test</title>
+<title>WebXR VR Test</title>
 <style>
-body{margin:0;}
+body{margin:0;overflow:hidden;}
 </style>
 </head>
 
@@ -19,7 +19,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x88ccff);
 
 const camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
-camera.position.z = 5;
+camera.position.set(0,1.6,3);
 
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
@@ -31,17 +31,22 @@ document.body.appendChild(VRButton.createButton(renderer));
 const light = new THREE.HemisphereLight(0xffffff,0x444444);
 scene.add(light);
 
-const geo = new THREE.BoxGeometry();
-const mat = new THREE.MeshStandardMaterial({color:0x00ff00});
-const cube = new THREE.Mesh(geo,mat);
-
+const cubeGeo = new THREE.BoxGeometry();
+const cubeMat = new THREE.MeshStandardMaterial({color:0x00ff88});
+const cube = new THREE.Mesh(cubeGeo,cubeMat);
 scene.add(cube);
+
+const floor = new THREE.Mesh(
+new THREE.PlaneGeometry(20,20),
+new THREE.MeshStandardMaterial({color:0x55aa55})
+);
+
+floor.rotation.x = -Math.PI/2;
+scene.add(floor);
 
 renderer.setAnimationLoop(()=>{
 
-cube.rotation.x += 0.01;
 cube.rotation.y += 0.01;
-
 renderer.render(scene,camera);
 
 });
