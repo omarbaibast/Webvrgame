@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>WebVR Minecraft</title>
+
+<style>
+body { margin:0; overflow:hidden; background:black; }
+#info{
+position:absolute;
+top:10px;
+left:10px;
+color:white;
+font-family:monospace;
+}
+</style>
+
+</head>
+
+<body>
+
+<div id="info">
+PS4 Controller Controls<br>
+Left Stick = Move<br>
+Right Stick = Look<br>
+X = Jump
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
+<script>
+
+let scene = new THREE.Scene()
+
+let camera = new THREE.PerspectiveCamera(
+75,
+window.innerWidth/window.innerHeight,
+0.1,
+1000
+)
+
+let renderer = new THREE.WebGLRenderer({antialias:true})
+renderer.setSize(window.innerWidth,window.innerHeight)
+renderer.xr.enabled = true
+document.body.appendChild(renderer.domElement)
+
+scene.background = new THREE.Color(0x87CEEB)
+
+/////////////////////////
+// LIGHT
+/////////////////////////
+
+let light = new THREE.DirectionalLight(0xffffff,1)
+light.position.set(10,20,10)
+scene.add(light)
+
+scene.add(new THREE.AmbientLight(0xffffff,0.4))
+
+/////////////////////////
+// PLAYER
+/////////////////////////
+
+camera.position.y = 2
+
+let velocityY = 0
+let onGround = true
+
+/////////////////////////
+// WORLD (VOXELS)
+/////////////////////////
+
+let blockGeo = new THREE.BoxGeometry(1,1,1)
+
+function block(color,x,y,z){
+
+let mat = new THREE.MeshStandardMaterial({color:color})
+let mesh = new THREE.Mesh(blockGeo,mat)
+
+mesh.position.set(x,y,z)
+
+scene.add(mesh)
+
+}
+
+for(let x=-20;x<20;x++){
+for(let z=-20;z<20;z++){
+
+block(0x55aa55,x,0,z)
+
+if(Math.random()>0.85){
+
+block(0x8B4513,x,1,z)
+block(0x228B22,x,2,z)
+
+}
+
+}
+}
+
+/////////////////////////
+// CONTROLLER INPUT
+/////////////////////////
+
+function getGamepad(){
+let gps = navigator.getGamepads()
+for(let g of gps){
+if(g) return g
+}
+return null
+}
+
+/////////////////////////
+// MOVEMENT
+/////////////////////////
+
+let yaw = 0
+let pitch = 0
+
+function updateController(){
+
+let gp = getGamepad()
+
+if(!gp) return
+
+let lx = gp.axes[0]
+let ly = gp.axes[1]
+
+let rx = gp.axes[2]
+let ry = gp.axes[3]
+
+/////////////////////////
+// LOOK
+/////////////////////////
+
+yaw -= rx * 0.05
+pitch -= ry * 0.05
+
+pitch = Math.max(-1.5,Math.min(1.5,pitch))
+
+camera.rotation.order="YXZ"
+camera.rotation.y = yaw
+camera.rotation.x = pitch
+
+/////////////////////////
+// MOVE
+/////////////////////////
+
+let speed = 0.1
+
+let forward = new THREE.Vector3(
+Math.sin(yaw),
+0,
+Math.cos(yaw)
+)
+
+let right = new THREE.Vector3(
+Math.cos(yaw),
+0,
+-Math.sin(yaw)
+)
+
+camera.position.add(forward.multiplyScalar(-ly*speed))
+camera.position.add(right.multiplyScalar(lx*speed))
+
+/////////////////////////
+// JUMP (X button)
+/////////////////////////
+
+if(gp.buttons[0].pressed && onGround){
+
+velocityY = 0.15
+onGround = false
+
+}
+
+}
+
+/////////////////////////
+// PHYSICS
+/////////////////////////
+
+function updatePhysics(){
+
+velocityY -= 0.01
+
+camera.position.y += velocityY
+
+if(camera.position.y < 2){
+
+camera.position.y = 2
+velocityY = 0
+onGround = true
+
+}
+
+}
+
+/////////////////////////
+// LOOP
+/////////////////////////
+
+function animate(){
+
+updateController()
+updatePhysics()
+
+renderer.render(scene,camera)
+
+requestAnimationFrame(animate)
+
+}
+
+animate()
+
+</script>
+</body>
+</html>
