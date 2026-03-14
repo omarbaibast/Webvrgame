@@ -2,24 +2,56 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebXR VR Test</title>
+<title>VR Minecraft</title>
 <style>
-body{margin:0;overflow:hidden;}
+body{margin:0;overflow:hidden;background:black;}
+#info{
+position:absolute;
+top:10px;
+left:10px;
+color:white;
+font-family:monospace;
+background:rgba(0,0,0,0.5);
+padding:10px;
+}
 </style>
 </head>
 
 <body>
+
+<div id="info">
+PS4 Controller<br>
+Left Stick = Move<br>
+Right Stick = Turn<br>
+X = Jump
+</div>
 
 <script type="module">
 
 import * as THREE from "https://unpkg.com/three@0.152.2/build/three.module.js";
 import { VRButton } from "https://unpkg.com/three@0.152.2/examples/jsm/webxr/VRButton.js";
 
+/////////////////////////////////////////////////
+// SCENE
+/////////////////////////////////////////////////
+
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x88ccff);
+scene.background = new THREE.Color(0x87CEEB);
+
+/////////////////////////////////////////////////
+// CAMERA
+/////////////////////////////////////////////////
 
 const camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
-camera.position.set(0,1.6,3);
+
+const player = new THREE.Object3D();
+player.position.set(0,2,5);
+player.add(camera);
+scene.add(player);
+
+/////////////////////////////////////////////////
+// RENDERER
+/////////////////////////////////////////////////
 
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
@@ -28,26 +60,156 @@ renderer.xr.enabled = true;
 document.body.appendChild(renderer.domElement);
 document.body.appendChild(VRButton.createButton(renderer));
 
-const light = new THREE.HemisphereLight(0xffffff,0x444444);
+/////////////////////////////////////////////////
+// LIGHT
+/////////////////////////////////////////////////
+
+const light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(10,20,10);
 scene.add(light);
 
-const cubeGeo = new THREE.BoxGeometry();
-const cubeMat = new THREE.MeshStandardMaterial({color:0x00ff88});
-const cube = new THREE.Mesh(cubeGeo,cubeMat);
-scene.add(cube);
+scene.add(new THREE.AmbientLight(0xffffff,0.4));
 
-const floor = new THREE.Mesh(
-new THREE.PlaneGeometry(20,20),
-new THREE.MeshStandardMaterial({color:0x55aa55})
+/////////////////////////////////////////////////
+// BLOCKS
+/////////////////////////////////////////////////
+
+const blockGeo = new THREE.BoxGeometry(1,1,1);
+
+function block(color,x,y,z){
+
+const mat = new THREE.MeshStandardMaterial({color:color});
+const mesh = new THREE.Mesh(blockGeo,mat);
+
+mesh.position.set(x,y,z);
+scene.add(mesh);
+
+}
+
+/////////////////////////////////////////////////
+// TERRAIN
+/////////////////////////////////////////////////
+
+for(let x=-30;x<30;x++){
+for(let z=-30;z<30;z++){
+
+block(0x55aa55,x,0,z);
+
+if(Math.random()>0.95){
+
+block(0x8B4513,x,1,z);
+block(0x228B22,x,2,z);
+
+}
+
+}
+}
+
+/////////////////////////////////////////////////
+// GAMEPAD
+/////////////////////////////////////////////////
+
+function getGamepad(){
+
+const pads = navigator.getGamepads();
+
+for(let p of pads){
+
+if(p) return p;
+
+}
+
+return null;
+
+}
+
+/////////////////////////////////////////////////
+// MOVEMENT
+/////////////////////////////////////////////////
+
+let velocityY = 0;
+let onGround = true;
+
+function updateController(){
+
+const gp = getGamepad();
+
+if(!gp) return;
+
+const lx = gp.axes[0];
+const ly = gp.axes[1];
+const rx = gp.axes[2];
+
+const speed = 0.12;
+
+player.rotation.y -= rx * 0.05;
+
+const forward = new THREE.Vector3(
+Math.sin(player.rotation.y),
+0,
+Math.cos(player.rotation.y)
 );
 
-floor.rotation.x = -Math.PI/2;
-scene.add(floor);
+const right = new THREE.Vector3(
+Math.cos(player.rotation.y),
+0,
+-Math.sin(player.rotation.y)
+);
+
+player.position.add(forward.multiplyScalar(-ly*speed));
+player.position.add(right.multiplyScalar(lx*speed));
+
+if(gp.buttons[0].pressed && onGround){
+
+velocityY = 0.18;
+onGround = false;
+
+}
+
+}
+
+/////////////////////////////////////////////////
+// PHYSICS
+/////////////////////////////////////////////////
+
+function physics(){
+
+velocityY -= 0.01;
+
+player.position.y += velocityY;
+
+if(player.position.y < 2){
+
+player.position.y = 2;
+velocityY = 0;
+onGround = true;
+
+}
+
+}
+
+/////////////////////////////////////////////////
+// LOOP
+/////////////////////////////////////////////////
 
 renderer.setAnimationLoop(()=>{
 
-cube.rotation.y += 0.01;
+updateController();
+physics();
+
 renderer.render(scene,camera);
+
+});
+
+/////////////////////////////////////////////////
+// RESIZE
+/////////////////////////////////////////////////
+
+window.addEventListener("resize",()=>{
+
+camera.aspect = window.innerWidth/window.innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(window.innerWidth,window.innerHeight);
 
 });
 
