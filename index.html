@@ -2,309 +2,61 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebVR Minecraft</title>
+<title>WebXR VR Game</title>
 
 <style>
-body{
-margin:0;
-overflow:hidden;
-background:black;
-}
-
-#info{
-position:absolute;
-top:10px;
-left:10px;
-color:white;
-font-family:monospace;
-background:rgba(0,0,0,0.5);
-padding:10px;
-}
+body{margin:0;overflow:hidden;}
 </style>
 </head>
 
 <body>
 
-<div id="info">
-PS4 Controller<br>
-Left Stick = Move<br>
-Right Stick = Look<br>
-X = Jump<br>
-Phone rotation = VR look
-</div>
+<script type="module">
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js";
+import { VRButton } from "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/webxr/VRButton.js";
 
-<script>
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
 
-/////////////////////////////////////////////////
-// SCENE
-/////////////////////////////////////////////////
+const camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+camera.position.y = 2;
 
-const scene = new THREE.Scene()
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
 
-scene.background = new THREE.Color(0x87ceeb)
+renderer.xr.enabled = true;
 
-/////////////////////////////////////////////////
-// CAMERA
-/////////////////////////////////////////////////
+document.body.appendChild(renderer.domElement);
 
-const camera = new THREE.PerspectiveCamera(
-75,
-window.innerWidth/window.innerHeight,
-0.1,
-1000
-)
+document.body.appendChild(VRButton.createButton(renderer));
 
-camera.position.y = 2
+const light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(10,20,10);
+scene.add(light);
 
-/////////////////////////////////////////////////
-// RENDERER
-/////////////////////////////////////////////////
+scene.add(new THREE.AmbientLight(0xffffff,0.4));
 
-const renderer = new THREE.WebGLRenderer({antialias:true})
+const geo = new THREE.BoxGeometry(1,1,1);
+const mat = new THREE.MeshStandardMaterial({color:0x55aa55});
 
-renderer.setSize(window.innerWidth,window.innerHeight)
+for(let x=-20;x<20;x++){
+for(let z=-20;z<20;z++){
 
-document.body.appendChild(renderer.domElement)
-
-/////////////////////////////////////////////////
-// VR STEREO EFFECT
-/////////////////////////////////////////////////
-
-const stereo = new THREE.StereoCamera()
-
-/////////////////////////////////////////////////
-// LIGHT
-/////////////////////////////////////////////////
-
-const sun = new THREE.DirectionalLight(0xffffff,1)
-sun.position.set(20,30,10)
-
-scene.add(sun)
-
-scene.add(new THREE.AmbientLight(0xffffff,0.4))
-
-/////////////////////////////////////////////////
-// WORLD (VOXELS)
-/////////////////////////////////////////////////
-
-const blockGeo = new THREE.BoxGeometry(1,1,1)
-
-function block(color,x,y,z){
-
-const mat = new THREE.MeshStandardMaterial({color:color})
-
-const mesh = new THREE.Mesh(blockGeo,mat)
-
-mesh.position.set(x,y,z)
-
-scene.add(mesh)
-
-}
-
-for(let x=-25;x<25;x++){
-for(let z=-25;z<25;z++){
-
-block(0x55aa55,x,0,z)
-
-if(Math.random()>0.9){
-
-block(0x8b4513,x,1,z)
-block(0x228b22,x,2,z)
-
-}
+let cube = new THREE.Mesh(geo,mat);
+cube.position.set(x,0,z);
+scene.add(cube);
 
 }
 }
 
-/////////////////////////////////////////////////
-// PHONE ORIENTATION (VR LOOK)
-/////////////////////////////////////////////////
+renderer.setAnimationLoop(()=>{
 
-let phoneYaw = 0
-let phonePitch = 0
+renderer.render(scene,camera);
 
-window.addEventListener("deviceorientation", e=>{
-
-phoneYaw = THREE.MathUtils.degToRad(e.alpha || 0)
-phonePitch = THREE.MathUtils.degToRad(e.beta || 0)
-
-})
-
-/////////////////////////////////////////////////
-// CONTROLLER
-/////////////////////////////////////////////////
-
-function gamepad(){
-
-const pads = navigator.getGamepads()
-
-for(let p of pads){
-
-if(p) return p
-
-}
-
-return null
-
-}
-
-/////////////////////////////////////////////////
-// MOVEMENT
-/////////////////////////////////////////////////
-
-let yaw = 0
-let pitch = 0
-
-let velocityY = 0
-let onGround = true
-
-function controllerUpdate(){
-
-const gp = gamepad()
-
-if(!gp) return
-
-const lx = gp.axes[0]
-const ly = gp.axes[1]
-
-const rx = gp.axes[2]
-const ry = gp.axes[3]
-
-//////////////////////////
-// LOOK
-//////////////////////////
-
-yaw -= rx*0.04
-pitch -= ry*0.04
-
-pitch = Math.max(-1.4,Math.min(1.4,pitch))
-
-//////////////////////////
-// MOVE
-//////////////////////////
-
-const speed = 0.12
-
-const forward = new THREE.Vector3(
-Math.sin(yaw),
-0,
-Math.cos(yaw)
-)
-
-const right = new THREE.Vector3(
-Math.cos(yaw),
-0,
--Math.sin(yaw)
-)
-
-camera.position.add(forward.multiplyScalar(-ly*speed))
-camera.position.add(right.multiplyScalar(lx*speed))
-
-//////////////////////////
-// JUMP
-//////////////////////////
-
-if(gp.buttons[0].pressed && onGround){
-
-velocityY = 0.18
-onGround=false
-
-}
-
-}
-
-/////////////////////////////////////////////////
-// PHYSICS
-/////////////////////////////////////////////////
-
-function physics(){
-
-velocityY -= 0.01
-
-camera.position.y += velocityY
-
-if(camera.position.y < 2){
-
-camera.position.y = 2
-velocityY = 0
-onGround=true
-
-}
-
-}
-
-/////////////////////////////////////////////////
-// APPLY ROTATION
-/////////////////////////////////////////////////
-
-function updateCamera(){
-
-camera.rotation.order = "YXZ"
-
-camera.rotation.y = yaw + phoneYaw
-camera.rotation.x = pitch + phonePitch*0.3
-
-}
-
-/////////////////////////////////////////////////
-// VR RENDER
-/////////////////////////////////////////////////
-
-function renderVR(){
-
-stereo.update(camera)
-
-const size = renderer.getSize(new THREE.Vector2())
-
-renderer.setScissorTest(true)
-
-renderer.setScissor(0,0,size.width/2,size.height)
-renderer.setViewport(0,0,size.width/2,size.height)
-renderer.render(scene,stereo.cameraL)
-
-renderer.setScissor(size.width/2,0,size.width/2,size.height)
-renderer.setViewport(size.width/2,0,size.width/2,size.height)
-renderer.render(scene,stereo.cameraR)
-
-renderer.setScissorTest(false)
-
-}
-
-/////////////////////////////////////////////////
-// LOOP
-/////////////////////////////////////////////////
-
-function animate(){
-
-requestAnimationFrame(animate)
-
-controllerUpdate()
-
-physics()
-
-updateCamera()
-
-renderVR()
-
-}
-
-animate()
-
-/////////////////////////////////////////////////
-// RESIZE
-/////////////////////////////////////////////////
-
-window.addEventListener("resize",()=>{
-
-camera.aspect = window.innerWidth/window.innerHeight
-camera.updateProjectionMatrix()
-
-renderer.setSize(window.innerWidth,window.innerHeight)
-
-})
+});
 
 </script>
+
 </body>
 </html>
