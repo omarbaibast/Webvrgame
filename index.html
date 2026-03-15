@@ -2,28 +2,30 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>VR Story Game</title>
+<title>VR Voxel Game</title>
 
 <style>
 body{margin:0;overflow:hidden;background:black;}
-
-#dialog{
+#ui{
 position:absolute;
-bottom:20px;
-left:50%;
-transform:translateX(-50%);
+top:10px;
+left:10px;
 color:white;
 font-family:monospace;
-background:rgba(0,0,0,0.7);
-padding:15px;
-display:none;
 }
 </style>
 </head>
 
 <body>
 
-<div id="dialog"></div>
+<div id="ui">
+PS4 Controls<br>
+Move: Left Stick<br>
+Turn: Right Stick<br>
+Jump: X<br>
+Build: R2<br>
+Break: L2
+</div>
 
 <script type="module">
 
@@ -31,7 +33,7 @@ import * as THREE from "https://unpkg.com/three@0.152.2/build/three.module.js";
 import { VRButton } from "https://unpkg.com/three@0.152.2/examples/jsm/webxr/VRButton.js";
 
 /////////////////////////////////////////////////
-// SCENE
+//// SCENE
 /////////////////////////////////////////////////
 
 const scene = new THREE.Scene();
@@ -45,18 +47,18 @@ player.add(camera);
 scene.add(player);
 
 /////////////////////////////////////////////////
-// RENDERER
+//// RENDERER
 /////////////////////////////////////////////////
 
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
-renderer.xr.enabled=true;
+renderer.xr.enabled = true;
 
 document.body.appendChild(renderer.domElement);
 document.body.appendChild(VRButton.createButton(renderer));
 
 /////////////////////////////////////////////////
-// LIGHT
+//// LIGHT
 /////////////////////////////////////////////////
 
 scene.add(new THREE.HemisphereLight(0xffffff,0x444444));
@@ -66,87 +68,85 @@ sun.position.set(10,20,10);
 scene.add(sun);
 
 /////////////////////////////////////////////////
-// TERRAIN
+//// VOXEL SYSTEM
 /////////////////////////////////////////////////
 
+const blocks = [];
 const geo = new THREE.BoxGeometry(1,1,1);
-const mat = new THREE.MeshStandardMaterial({color:0x55aa55});
+
+function createBlock(x,y,z,color=0x55aa55){
+
+const mat = new THREE.MeshStandardMaterial({color});
+const cube = new THREE.Mesh(geo,mat);
+
+cube.position.set(x,y,z);
+
+scene.add(cube);
+blocks.push(cube);
+
+}
+
+//// ground
 
 for(let x=-10;x<10;x++){
 for(let z=-10;z<10;z++){
-
-const block = new THREE.Mesh(geo,mat);
-block.position.set(x,0,z);
-
-scene.add(block);
-
+createBlock(x,0,z);
 }
 }
 
 /////////////////////////////////////////////////
-// LOW POLY CHARACTER
+//// RAYCAST FOR BUILDING
 /////////////////////////////////////////////////
 
-const npc = new THREE.Group();
+const raycaster = new THREE.Raycaster();
 
-const skin = new THREE.MeshStandardMaterial({color:0xffcc99});
-const shirt = new THREE.MeshStandardMaterial({color:0x3366ff});
-const pants = new THREE.MeshStandardMaterial({color:0x222222});
+function getLookBlock(){
 
-const head = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.6),skin);
-head.position.y = 1.8;
+const dir = new THREE.Vector3(0,0,-1);
+dir.applyQuaternion(camera.quaternion);
 
-const body = new THREE.Mesh(new THREE.BoxGeometry(0.8,1,0.4),shirt);
-body.position.y = 1.1;
+raycaster.set(camera.getWorldPosition(new THREE.Vector3()),dir);
 
-const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.9,0.3),pants);
-leg1.position.set(-0.2,0.45,0);
+const hits = raycaster.intersectObjects(blocks);
 
-const leg2 = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.9,0.3),pants);
-leg2.position.set(0.2,0.45,0);
+if(hits.length>0) return hits[0];
 
-const arm1 = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25),shirt);
-arm1.position.set(-0.6,1.2,0);
+return null;
 
-const arm2 = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25),shirt);
-arm2.position.set(0.6,1.2,0);
-
-npc.add(head,body,leg1,leg2,arm1,arm2);
-
-npc.position.set(0,0,-3);
-
-scene.add(npc);
-
-/////////////////////////////////////////////////
-// STORY
-/////////////////////////////////////////////////
-
-const dialog = document.getElementById("dialog");
-
-const story = [
-"Hello traveler...",
-"This world is made of voxels.",
-"Your journey begins here.",
-"Explore and build your destiny."
-];
-
-let storyIndex = 0;
-
-function showDialog(){
-
-dialog.style.display="block";
-dialog.innerText = story[storyIndex];
-
-storyIndex++;
-
-if(storyIndex>=story.length){
-storyIndex=0;
 }
+
+function placeBlock(){
+
+const hit = getLookBlock();
+
+if(!hit) return;
+
+const pos = hit.point.clone().add(hit.face.normal);
+
+const x = Math.floor(pos.x);
+const y = Math.floor(pos.y);
+const z = Math.floor(pos.z);
+
+createBlock(x,y,z,0x8888ff);
+
+}
+
+function breakBlock(){
+
+const hit = getLookBlock();
+
+if(!hit) return;
+
+scene.remove(hit.object);
+
+const i = blocks.indexOf(hit.object);
+
+if(i>-1) blocks.splice(i,1);
 
 }
 
 /////////////////////////////////////////////////
-// GAMEPAD
+//// GAMEPAD
 /////////////////////////////////////////////////
 
 function getPad(){
@@ -162,24 +162,57 @@ return null;
 }
 
 /////////////////////////////////////////////////
-// MOVEMENT
+//// PHYSICS
 /////////////////////////////////////////////////
 
 let velocityY=0;
 let onGround=true;
+
+function physics(){
+
+velocityY -= 0.01;
+
+player.position.y += velocityY;
+
+if(player.position.y < 2){
+
+player.position.y = 2;
+velocityY = 0;
+onGround = true;
+
+}
+
+}
+
+/////////////////////////////////////////////////
+//// CONTROLLER
+/////////////////////////////////////////////////
+
+const DEADZONE = 0.15;
+
+function deadzone(v){
+return Math.abs(v)<DEADZONE?0:v;
+}
+
+let buildPressed=false;
+let breakPressed=false;
 
 function updateController(){
 
 const gp = getPad();
 if(!gp) return;
 
-const lx = gp.axes[0];
-const ly = gp.axes[1];
-const rx = gp.axes[2];
+let lx = deadzone(gp.axes[0]);
+let ly = deadzone(gp.axes[1]);
+let rx = deadzone(gp.axes[2]);
+
+//// fix inverted movement
+
+ly = -ly;
 
 player.rotation.y -= rx*0.05;
 
-const speed=0.15;
+const speed = 0.15;
 
 const forward = new THREE.Vector3(
 Math.sin(player.rotation.y),
@@ -193,44 +226,48 @@ Math.cos(player.rotation.y),
 -Math.sin(player.rotation.y)
 );
 
-player.position.add(forward.multiplyScalar(-ly*speed));
+player.position.add(forward.multiplyScalar(ly*speed));
 player.position.add(right.multiplyScalar(lx*speed));
+
+//// jump
 
 if(gp.buttons[0].pressed && onGround){
 
-velocityY = 0.18;
+velocityY=0.18;
 onGround=false;
 
 }
 
-if(gp.buttons[3].pressed){
-showDialog();
+//// build
+
+if(gp.buttons[7].pressed){
+
+if(!buildPressed){
+placeBlock();
+buildPressed=true;
+}
+
+}else{
+buildPressed=false;
+}
+
+//// break
+
+if(gp.buttons[6].pressed){
+
+if(!breakPressed){
+breakBlock();
+breakPressed=true;
+}
+
+}else{
+breakPressed=false;
 }
 
 }
 
 /////////////////////////////////////////////////
-// PHYSICS
-/////////////////////////////////////////////////
-
-function physics(){
-
-velocityY -= 0.01;
-
-player.position.y += velocityY;
-
-if(player.position.y<2){
-
-player.position.y=2;
-velocityY=0;
-onGround=true;
-
-}
-
-}
-
-/////////////////////////////////////////////////
-// LOOP
+//// LOOP
 /////////////////////////////////////////////////
 
 renderer.setAnimationLoop(()=>{
