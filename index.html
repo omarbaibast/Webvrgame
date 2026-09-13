@@ -2,284 +2,371 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>VR Voxel Game</title>
-
+<title>VR Voxel Game - Vivid Edition</title>
 <style>
-body{margin:0;overflow:hidden;background:black;}
-#ui{
-position:absolute;
-top:10px;
-left:10px;
-color:white;
-font-family:monospace;
-}
+  body { margin: 0; overflow: hidden; background: black; }
+  #ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-family: monospace;
+    background: rgba(0,0,0,0.5);
+    padding: 10px;
+    border-radius: 5px;
+    pointer-events: none;
+  }
 </style>
 </head>
-
 <body>
 
 <div id="ui">
-PS4 Controls<br>
-Move: Left Stick<br>
-Turn: Right Stick<br>
-Jump: X<br>
-Build: R2<br>
-Break: L2
+  <b>PS4 Controls</b><br>
+  Move: Left Stick<br>
+  Turn: Right Stick<br>
+  Jump: X<br>
+  Build: R2<br>
+  Break: L2
 </div>
 
 <script type="module">
-
 import * as THREE from "https://unpkg.com/three@0.152.2/build/three.module.js";
 import { VRButton } from "https://unpkg.com/three@0.152.2/examples/jsm/webxr/VRButton.js";
 
 /////////////////////////////////////////////////
-//// SCENE
+//// SCENE & ATMOSPHERE
 /////////////////////////////////////////////////
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87CEEB);
+const SKY_COLOR = 0x7ec0ee;
 
-const camera = new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(SKY_COLOR);
+scene.fog = new THREE.FogExp2(SKY_COLOR, 0.025);
+
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
 
 const player = new THREE.Object3D();
-player.position.set(0,2,5);
+player.position.set(0, 4, 8);
 player.add(camera);
 scene.add(player);
 
 /////////////////////////////////////////////////
-//// RENDERER
+//// RENDERER & TONE MAPPING
 /////////////////////////////////////////////////
 
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth,innerHeight);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.xr.enabled = true;
+
+// Enable soft shadows & filmic color grading
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
 
 document.body.appendChild(renderer.domElement);
 document.body.appendChild(VRButton.createButton(renderer));
 
 /////////////////////////////////////////////////
-//// LIGHT
+//// LIGHTING
 /////////////////////////////////////////////////
 
-scene.add(new THREE.HemisphereLight(0xffffff,0x444444));
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334455, 0.6);
+scene.add(hemiLight);
 
-const sun = new THREE.DirectionalLight(0xffffff,1);
-sun.position.set(10,20,10);
+const sun = new THREE.DirectionalLight(0xfff5ea, 1.4);
+sun.position.set(15, 30, 10);
+sun.castShadow = true;
+sun.shadow.mapSize.width = 2048;
+sun.shadow.mapSize.height = 2048;
+sun.shadow.camera.near = 0.5;
+sun.shadow.camera.far = 60;
+const d = 20;
+sun.shadow.camera.left = -d;
+sun.shadow.camera.right = d;
+sun.shadow.camera.top = d;
+sun.shadow.camera.bottom = -d;
+sun.shadow.bias = -0.0005;
 scene.add(sun);
 
 /////////////////////////////////////////////////
-//// VOXEL SYSTEM
+//// PROCEDURAL TEXTURE GENERATOR
+/////////////////////////////////////////////////
+
+function createPixelTexture(baseHex, noiseAmount = 0.12) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 16;
+  canvas.height = 16;
+  const ctx = canvas.getContext('2d');
+  
+  const baseColor = new THREE.Color(baseHex);
+
+  for (let x = 0; x < 16; x++) {
+    for (let y = 0; y < 16; y++) {
+      const n = (Math.random() - 0.5) * noiseAmount;
+      const r = Math.min(1, Math.max(0, baseColor.r + n));
+      const g = Math.min(1, Math.max(0, baseColor.g + n));
+      const b = Math.min(1, Math.max(0, baseColor.b + n));
+      ctx.fillStyle = `rgb(${Math.floor(r*255)},${Math.floor(g*255)},${Math.floor(b*255)})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  return texture;
+}
+
+const materials = {
+  grass: new THREE.MeshStandardMaterial({
+    map: createPixelTexture(0x43a047),
+    roughness: 0.8,
+    metalness: 0.1
+  }),
+  dirt: new THREE.MeshStandardMaterial({
+    map: createPixelTexture(0x6d4c41),
+    roughness: 0.9,
+    metalness: 0.0
+  }),
+  build: new THREE.MeshStandardMaterial({
+    map: createPixelTexture(0x00bcd4),
+    emissive: 0x006064,
+    emissiveIntensity: 0.3,
+    roughness: 0.2,
+    metalness: 0.5
+  })
+};
+
+/////////////////////////////////////////////////
+//// VOXEL SYSTEM & TERRAIN
 /////////////////////////////////////////////////
 
 const blocks = [];
-const geo = new THREE.BoxGeometry(1,1,1);
+const geo = new THREE.BoxGeometry(1, 1, 1);
 
-function createBlock(x,y,z,color=0x55aa55){
+function createBlock(x, y, z, type = 'grass') {
+  const mat = materials[type] || materials.grass;
+  const cube = new THREE.Mesh(geo, mat);
+  cube.position.set(x, y, z);
+  cube.castShadow = true;
+  cube.receiveShadow = true;
 
-const mat = new THREE.MeshStandardMaterial({color});
-const cube = new THREE.Mesh(geo,mat);
-
-cube.position.set(x,y,z);
-
-scene.add(cube);
-blocks.push(cube);
-
+  scene.add(cube);
+  blocks.push(cube);
+  return cube;
 }
 
-//// ground
-
-for(let x=-10;x<10;x++){
-for(let z=-10;z<10;z++){
-createBlock(x,0,z);
-}
+// Terrain generation with hills & dirt sub-layer
+for (let x = -12; x <= 12; x++) {
+  for (let z = -12; z <= 12; z++) {
+    const height = Math.floor(Math.sin(x * 0.25) * Math.cos(z * 0.25) * 2);
+    createBlock(x, height, z, 'grass');
+    for (let y = height - 1; y >= height - 2; y--) {
+      createBlock(x, y, z, 'dirt');
+    }
+  }
 }
 
 /////////////////////////////////////////////////
-//// RAYCAST FOR BUILDING
+//// TARGETING RETICLE / HIGHLIGHT
+/////////////////////////////////////////////////
+
+const highlightGeo = new THREE.BoxGeometry(1.02, 1.02, 1.02);
+const highlightMat = new THREE.MeshBasicMaterial({
+  color: 0xffeb3b,
+  wireframe: true,
+  wireframeLinewidth: 2
+});
+const highlightBox = new THREE.Mesh(highlightGeo, highlightMat);
+highlightBox.visible = false;
+scene.add(highlightBox);
+
+/////////////////////////////////////////////////
+//// PARTICLE VFX SYSTEM
+/////////////////////////////////////////////////
+
+const particles = [];
+const particleGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+
+function spawnParticles(pos, colorHex) {
+  const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+  for (let i = 0; i < 12; i++) {
+    const p = new THREE.Mesh(particleGeo, mat);
+    p.position.copy(pos);
+    p.velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.2,
+      Math.random() * 0.2 + 0.05,
+      (Math.random() - 0.5) * 0.2
+    );
+    p.life = 1.0;
+    scene.add(p);
+    particles.push(p);
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.position.add(p.velocity);
+    p.velocity.y -= 0.008; // Gravity
+    p.scale.multiplyScalar(0.92);
+    p.life -= 0.04;
+
+    if (p.life <= 0) {
+      scene.remove(p);
+      particles.splice(i, 1);
+    }
+  }
+}
+
+/////////////////////////////////////////////////
+//// RAYCAST & INTERACTION
 /////////////////////////////////////////////////
 
 const raycaster = new THREE.Raycaster();
 
-function getLookBlock(){
+function getLookBlock() {
+  const dir = new THREE.Vector3(0, 0, -1);
+  dir.applyQuaternion(camera.quaternion);
+  raycaster.set(camera.getWorldPosition(new THREE.Vector3()), dir);
 
-const dir = new THREE.Vector3(0,0,-1);
-dir.applyQuaternion(camera.quaternion);
-
-raycaster.set(camera.getWorldPosition(new THREE.Vector3()),dir);
-
-const hits = raycaster.intersectObjects(blocks);
-
-if(hits.length>0) return hits[0];
-
-return null;
-
+  const hits = raycaster.intersectObjects(blocks);
+  return hits.length > 0 ? hits[0] : null;
 }
 
-function placeBlock(){
-
-const hit = getLookBlock();
-
-if(!hit) return;
-
-const pos = hit.point.clone().add(hit.face.normal);
-
-const x = Math.floor(pos.x);
-const y = Math.floor(pos.y);
-const z = Math.floor(pos.z);
-
-createBlock(x,y,z,0x8888ff);
-
+function updateHighlight() {
+  const hit = getLookBlock();
+  if (hit) {
+    highlightBox.position.copy(hit.object.position);
+    highlightBox.visible = true;
+  } else {
+    highlightBox.visible = false;
+  }
 }
 
-function breakBlock(){
+function placeBlock() {
+  const hit = getLookBlock();
+  if (!hit) return;
 
-const hit = getLookBlock();
+  const pos = hit.point.clone().add(hit.face.normal);
+  const x = Math.round(pos.x);
+  const y = Math.round(pos.y);
+  const z = Math.round(pos.z);
 
-if(!hit) return;
-
-scene.remove(hit.object);
-
-const i = blocks.indexOf(hit.object);
-
-if(i>-1) blocks.splice(i,1);
-
+  const newBlock = createBlock(x, y, z, 'build');
+  spawnParticles(newBlock.position, 0x00bcd4);
 }
 
-/////////////////////////////////////////////////
-//// GAMEPAD
-/////////////////////////////////////////////////
+function breakBlock() {
+  const hit = getLookBlock();
+  if (!hit) return;
 
-function getPad(){
+  spawnParticles(hit.object.position, 0xff5252);
+  scene.remove(hit.object);
 
-const pads = navigator.getGamepads();
-
-for(let p of pads){
-if(p) return p;
-}
-
-return null;
-
+  const idx = blocks.indexOf(hit.object);
+  if (idx > -1) blocks.splice(idx, 1);
 }
 
 /////////////////////////////////////////////////
-//// PHYSICS
+//// GAMEPAD CONTROLLER
 /////////////////////////////////////////////////
 
-let velocityY=0;
-let onGround=true;
-
-function physics(){
-
-velocityY -= 0.01;
-
-player.position.y += velocityY;
-
-if(player.position.y < 2){
-
-player.position.y = 2;
-velocityY = 0;
-onGround = true;
-
+function getPad() {
+  const pads = navigator.getGamepads();
+  for (let p of pads) {
+    if (p) return p;
+  }
+  return null;
 }
-
-}
-
-/////////////////////////////////////////////////
-//// CONTROLLER
-/////////////////////////////////////////////////
 
 const DEADZONE = 0.15;
-
-function deadzone(v){
-return Math.abs(v)<DEADZONE?0:v;
+function deadzone(v) {
+  return Math.abs(v) < DEADZONE ? 0 : v;
 }
 
-let buildPressed=false;
-let breakPressed=false;
+let buildPressed = false;
+let breakPressed = false;
 
-function updateController(){
+function updateController() {
+  const gp = getPad();
+  if (!gp) return;
 
-const gp = getPad();
-if(!gp) return;
+  let lx = deadzone(gp.axes[0]);
+  let ly = -deadzone(gp.axes[1]); // Inverted movement fix
+  let rx = deadzone(gp.axes[2]);
 
-let lx = deadzone(gp.axes[0]);
-let ly = deadzone(gp.axes[1]);
-let rx = deadzone(gp.axes[2]);
+  player.rotation.y -= rx * 0.04;
 
-//// fix inverted movement
+  const speed = 0.12;
+  const forward = new THREE.Vector3(Math.sin(player.rotation.y), 0, Math.cos(player.rotation.y));
+  const right = new THREE.Vector3(Math.cos(player.rotation.y), 0, -Math.sin(player.rotation.y));
 
-ly = -ly;
+  player.position.add(forward.multiplyScalar(ly * speed));
+  player.position.add(right.multiplyScalar(lx * speed));
 
-player.rotation.y -= rx*0.05;
+  // Jump (X button)
+  if (gp.buttons[0].pressed && onGround) {
+    velocityY = 0.18;
+    onGround = false;
+  }
 
-const speed = 0.15;
+  // Build (R2 trigger)
+  if (gp.buttons[7].pressed) {
+    if (!buildPressed) {
+      placeBlock();
+      buildPressed = true;
+    }
+  } else {
+    buildPressed = false;
+  }
 
-const forward = new THREE.Vector3(
-Math.sin(player.rotation.y),
-0,
-Math.cos(player.rotation.y)
-);
-
-const right = new THREE.Vector3(
-Math.cos(player.rotation.y),
-0,
--Math.sin(player.rotation.y)
-);
-
-player.position.add(forward.multiplyScalar(ly*speed));
-player.position.add(right.multiplyScalar(lx*speed));
-
-//// jump
-
-if(gp.buttons[0].pressed && onGround){
-
-velocityY=0.18;
-onGround=false;
-
-}
-
-//// build
-
-if(gp.buttons[7].pressed){
-
-if(!buildPressed){
-placeBlock();
-buildPressed=true;
-}
-
-}else{
-buildPressed=false;
-}
-
-//// break
-
-if(gp.buttons[6].pressed){
-
-if(!breakPressed){
-breakBlock();
-breakPressed=true;
-}
-
-}else{
-breakPressed=false;
-}
-
+  // Break (L2 trigger)
+  if (gp.buttons[6].pressed) {
+    if (!breakPressed) {
+      breakBlock();
+      breakPressed = true;
+    }
+  } else {
+    breakPressed = false;
+  }
 }
 
 /////////////////////////////////////////////////
-//// LOOP
+//// PHYSICS & ANIMATION LOOP
 /////////////////////////////////////////////////
 
-renderer.setAnimationLoop(()=>{
+let velocityY = 0;
+let onGround = true;
 
-updateController();
-physics();
+function physics() {
+  velocityY -= 0.009;
+  player.position.y += velocityY;
 
-renderer.render(scene,camera);
+  if (player.position.y < 3) { // Base ground level offset
+    player.position.y = 3;
+    velocityY = 0;
+    onGround = true;
+  }
+}
 
+renderer.setAnimationLoop(() => {
+  updateController();
+  physics();
+  updateHighlight();
+  updateParticles();
+
+  renderer.render(scene, camera);
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 </script>
-
 </body>
 </html>
