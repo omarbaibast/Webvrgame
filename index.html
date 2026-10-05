@@ -58,6 +58,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.xr.enabled = true;
+renderer.xr.setReferenceSpaceType('local-floor');
 
 // Enable soft shadows & filmic color grading
 renderer.shadowMap.enabled = true;
