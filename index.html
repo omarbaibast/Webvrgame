@@ -2,372 +2,751 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>VR Voxel Game - Vivid Edition</title>
+<meta name="viewport"
+      content="width=device-width,initial-scale=1,
+               maximum-scale=1,user-scalable=no">
+<title>Voxel Phone VR</title>
+
 <style>
-  body { margin: 0; overflow: hidden; background: black; }
-  #ui {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    color: white;
-    font-family: monospace;
-    background: rgba(0,0,0,0.5);
-    padding: 10px;
-    border-radius: 5px;
-    pointer-events: none;
-  }
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#000;
+  touch-action:none;
+}
+
+canvas{
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+#start{
+  position:fixed;
+  z-index:10;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  padding:16px 24px;
+  border:0;
+  border-radius:10px;
+  background:#222;
+  color:white;
+  font-size:18px;
+  font-weight:bold;
+}
+
+#info{
+  position:fixed;
+  z-index:5;
+  top:10px;
+  left:10px;
+  color:white;
+  background:#0008;
+  padding:8px;
+  font:13px monospace;
+}
 </style>
 </head>
+
 <body>
 
-<div id="ui">
-  <b>PS4 Controls</b><br>
-  Move: Left Stick<br>
-  Turn: Right Stick<br>
-  Jump: X<br>
-  Build: R2<br>
-  Break: L2
+<div id="info">
+PS4: Left Stick Move | Right Stick Turn<br>
+X Jump | R2 Build | L2 Break
 </div>
 
+<button id="start">ENTER PHONE VR</button>
+
 <script type="module">
-import * as THREE from "https://unpkg.com/three@0.152.2/build/three.module.js";
-import { VRButton } from "https://unpkg.com/three@0.152.2/examples/jsm/webxr/VRButton.js";
 
-/////////////////////////////////////////////////
-//// SCENE & ATMOSPHERE
-/////////////////////////////////////////////////
+import * as THREE from
+"https://unpkg.com/three@0.152.2/build/three.module.js";
 
-const SKY_COLOR = 0x7ec0ee;
+
+/* =========================
+   SETTINGS
+========================= */
+
+const IPD = 0.064;
+const FOV = 75;
+const SKY = 0x7ec0ee;
+
+
+/* =========================
+   SCENE
+========================= */
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(SKY_COLOR);
-scene.fog = new THREE.FogExp2(SKY_COLOR, 0.025);
 
-const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+scene.background =
+  new THREE.Color(SKY);
 
-const player = new THREE.Object3D();
-player.position.set(0, 4, 8);
-player.add(camera);
+scene.fog =
+  new THREE.FogExp2(SKY,0.025);
+
+
+/* =========================
+   PLAYER + HEAD
+========================= */
+
+const player =
+  new THREE.Object3D();
+
+player.position.set(0,4,8);
+
 scene.add(player);
 
-/////////////////////////////////////////////////
-//// RENDERER & TONE MAPPING
-/////////////////////////////////////////////////
+const head =
+  new THREE.Object3D();
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.xr.enabled = true;
-renderer.xr.setReferenceSpaceType('local-floor');
+player.add(head);
 
-// Enable soft shadows & filmic color grading
+
+/* =========================
+   TWO EYES
+========================= */
+
+const leftEye =
+  new THREE.PerspectiveCamera(
+    FOV,1,0.1,1000
+  );
+
+const rightEye =
+  new THREE.PerspectiveCamera(
+    FOV,1,0.1,1000
+  );
+
+leftEye.position.x =
+  -IPD/2;
+
+rightEye.position.x =
+  IPD/2;
+
+head.add(leftEye);
+head.add(rightEye);
+
+
+/* =========================
+   RENDERER
+========================= */
+
+const renderer =
+  new THREE.WebGLRenderer({
+    antialias:true,
+    powerPreference:"high-performance"
+  });
+
+renderer.setPixelRatio(
+  Math.min(devicePixelRatio,2)
+);
+
+renderer.setSize(
+  innerWidth,
+  innerHeight
+);
+
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+renderer.shadowMap.type =
+  THREE.PCFSoftShadowMap;
+
+renderer.toneMapping =
+  THREE.ACESFilmicToneMapping;
+
 renderer.toneMappingExposure = 1.15;
 
-document.body.appendChild(renderer.domElement);
-document.body.appendChild(VRButton.createButton(renderer));
+document.body.appendChild(
+  renderer.domElement
+);
 
-/////////////////////////////////////////////////
-//// LIGHTING
-/////////////////////////////////////////////////
 
-const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334455, 0.6);
-scene.add(hemiLight);
+/* =========================
+   LIGHT
+========================= */
 
-const sun = new THREE.DirectionalLight(0xfff5ea, 1.4);
-sun.position.set(15, 30, 10);
+scene.add(
+  new THREE.HemisphereLight(
+    0xffffff,
+    0x334455,
+    0.6
+  )
+);
+
+const sun =
+  new THREE.DirectionalLight(
+    0xfff5ea,1.4
+  );
+
+sun.position.set(15,30,10);
 sun.castShadow = true;
-sun.shadow.mapSize.width = 2048;
-sun.shadow.mapSize.height = 2048;
-sun.shadow.camera.near = 0.5;
-sun.shadow.camera.far = 60;
-const d = 20;
-sun.shadow.camera.left = -d;
-sun.shadow.camera.right = d;
-sun.shadow.camera.top = d;
-sun.shadow.camera.bottom = -d;
-sun.shadow.bias = -0.0005;
+
+sun.shadow.mapSize.set(
+  1024,1024
+);
+
 scene.add(sun);
 
-/////////////////////////////////////////////////
-//// PROCEDURAL TEXTURE GENERATOR
-/////////////////////////////////////////////////
 
-function createPixelTexture(baseHex, noiseAmount = 0.12) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 16;
-  canvas.height = 16;
-  const ctx = canvas.getContext('2d');
-  
-  const baseColor = new THREE.Color(baseHex);
+/* =========================
+   TEXTURE
+========================= */
 
-  for (let x = 0; x < 16; x++) {
-    for (let y = 0; y < 16; y++) {
-      const n = (Math.random() - 0.5) * noiseAmount;
-      const r = Math.min(1, Math.max(0, baseColor.r + n));
-      const g = Math.min(1, Math.max(0, baseColor.g + n));
-      const b = Math.min(1, Math.max(0, baseColor.b + n));
-      ctx.fillStyle = `rgb(${Math.floor(r*255)},${Math.floor(g*255)},${Math.floor(b*255)})`;
-      ctx.fillRect(x, y, 1, 1);
+function texture(color){
+
+  const c =
+    document.createElement("canvas");
+
+  c.width = c.height = 16;
+
+  const ctx = c.getContext("2d");
+  const base = new THREE.Color(color);
+
+  for(let x=0;x<16;x++)
+    for(let y=0;y<16;y++){
+
+      const n =
+        (Math.random()-.5)*.12;
+
+      ctx.fillStyle =
+        `rgb(
+          ${(base.r+n)*255|0},
+          ${(base.g+n)*255|0},
+          ${(base.b+n)*255|0}
+        )`;
+
+      ctx.fillRect(x,y,1,1);
     }
-  }
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.magFilter = THREE.NearestFilter;
-  texture.minFilter = THREE.NearestFilter;
-  return texture;
+  const t =
+    new THREE.CanvasTexture(c);
+
+  t.magFilter =
+    THREE.NearestFilter;
+
+  t.minFilter =
+    THREE.NearestFilter;
+
+  return t;
 }
 
-const materials = {
-  grass: new THREE.MeshStandardMaterial({
-    map: createPixelTexture(0x43a047),
-    roughness: 0.8,
-    metalness: 0.1
-  }),
-  dirt: new THREE.MeshStandardMaterial({
-    map: createPixelTexture(0x6d4c41),
-    roughness: 0.9,
-    metalness: 0.0
-  }),
-  build: new THREE.MeshStandardMaterial({
-    map: createPixelTexture(0x00bcd4),
-    emissive: 0x006064,
-    emissiveIntensity: 0.3,
-    roughness: 0.2,
-    metalness: 0.5
-  })
+
+const mats = {
+
+  grass:
+    new THREE.MeshStandardMaterial({
+      map:texture(0x43a047),
+      roughness:.8
+    }),
+
+  dirt:
+    new THREE.MeshStandardMaterial({
+      map:texture(0x6d4c41),
+      roughness:.9
+    }),
+
+  build:
+    new THREE.MeshStandardMaterial({
+      map:texture(0x00bcd4),
+      emissive:0x006064,
+      emissiveIntensity:.3
+    })
 };
 
-/////////////////////////////////////////////////
-//// VOXEL SYSTEM & TERRAIN
-/////////////////////////////////////////////////
+
+/* =========================
+   VOXELS
+========================= */
 
 const blocks = [];
-const geo = new THREE.BoxGeometry(1, 1, 1);
 
-function createBlock(x, y, z, type = 'grass') {
-  const mat = materials[type] || materials.grass;
-  const cube = new THREE.Mesh(geo, mat);
-  cube.position.set(x, y, z);
-  cube.castShadow = true;
-  cube.receiveShadow = true;
+const cubeGeo =
+  new THREE.BoxGeometry(1,1,1);
 
-  scene.add(cube);
-  blocks.push(cube);
-  return cube;
-}
 
-// Terrain generation with hills & dirt sub-layer
-for (let x = -12; x <= 12; x++) {
-  for (let z = -12; z <= 12; z++) {
-    const height = Math.floor(Math.sin(x * 0.25) * Math.cos(z * 0.25) * 2);
-    createBlock(x, height, z, 'grass');
-    for (let y = height - 1; y >= height - 2; y--) {
-      createBlock(x, y, z, 'dirt');
-    }
-  }
-}
+function block(x,y,z,type="grass"){
 
-/////////////////////////////////////////////////
-//// TARGETING RETICLE / HIGHLIGHT
-/////////////////////////////////////////////////
-
-const highlightGeo = new THREE.BoxGeometry(1.02, 1.02, 1.02);
-const highlightMat = new THREE.MeshBasicMaterial({
-  color: 0xffeb3b,
-  wireframe: true,
-  wireframeLinewidth: 2
-});
-const highlightBox = new THREE.Mesh(highlightGeo, highlightMat);
-highlightBox.visible = false;
-scene.add(highlightBox);
-
-/////////////////////////////////////////////////
-//// PARTICLE VFX SYSTEM
-/////////////////////////////////////////////////
-
-const particles = [];
-const particleGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
-
-function spawnParticles(pos, colorHex) {
-  const mat = new THREE.MeshBasicMaterial({ color: colorHex });
-  for (let i = 0; i < 12; i++) {
-    const p = new THREE.Mesh(particleGeo, mat);
-    p.position.copy(pos);
-    p.velocity = new THREE.Vector3(
-      (Math.random() - 0.5) * 0.2,
-      Math.random() * 0.2 + 0.05,
-      (Math.random() - 0.5) * 0.2
+  const m =
+    new THREE.Mesh(
+      cubeGeo,
+      mats[type]
     );
-    p.life = 1.0;
-    scene.add(p);
-    particles.push(p);
+
+  m.position.set(x,y,z);
+
+  m.castShadow = true;
+  m.receiveShadow = true;
+
+  scene.add(m);
+  blocks.push(m);
+
+  return m;
+}
+
+
+for(let x=-12;x<=12;x++){
+
+  for(let z=-12;z<=12;z++){
+
+    const h =
+      Math.floor(
+        Math.sin(x*.25) *
+        Math.cos(z*.25) * 2
+      );
+
+    block(x,h,z);
+
+    block(x,h-1,z,"dirt");
+    block(x,h-2,z,"dirt");
   }
 }
 
-function updateParticles() {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.position.add(p.velocity);
-    p.velocity.y -= 0.008; // Gravity
-    p.scale.multiplyScalar(0.92);
-    p.life -= 0.04;
 
-    if (p.life <= 0) {
-      scene.remove(p);
-      particles.splice(i, 1);
-    }
+/* =========================
+   HIGHLIGHT
+========================= */
+
+const highlight =
+  new THREE.Mesh(
+    new THREE.BoxGeometry(
+      1.02,1.02,1.02
+    ),
+    new THREE.MeshBasicMaterial({
+      color:0xffeb3b,
+      wireframe:true
+    })
+  );
+
+highlight.visible = false;
+
+scene.add(highlight);
+
+
+/* =========================
+   RAYCAST
+========================= */
+
+const ray =
+  new THREE.Raycaster();
+
+function hitBlock(){
+
+  const pos =
+    head.getWorldPosition(
+      new THREE.Vector3()
+    );
+
+  const quat =
+    head.getWorldQuaternion(
+      new THREE.Quaternion()
+    );
+
+  const dir =
+    new THREE.Vector3(
+      0,0,-1
+    ).applyQuaternion(quat);
+
+  ray.set(pos,dir);
+
+  const hits =
+    ray.intersectObjects(
+      blocks,false
+    );
+
+  return hits[0] || null;
+}
+
+
+function updateTarget(){
+
+  const hit = hitBlock();
+
+  if(!hit){
+
+    highlight.visible=false;
+    return;
   }
+
+  highlight.position.copy(
+    hit.object.position
+  );
+
+  highlight.visible=true;
 }
 
-/////////////////////////////////////////////////
-//// RAYCAST & INTERACTION
-/////////////////////////////////////////////////
 
-const raycaster = new THREE.Raycaster();
+/* =========================
+   BUILD / BREAK
+========================= */
 
-function getLookBlock() {
-  const dir = new THREE.Vector3(0, 0, -1);
-  dir.applyQuaternion(camera.quaternion);
-  raycaster.set(camera.getWorldPosition(new THREE.Vector3()), dir);
+function build(){
 
-  const hits = raycaster.intersectObjects(blocks);
-  return hits.length > 0 ? hits[0] : null;
+  const hit = hitBlock();
+
+  if(!hit)return;
+
+  const p =
+    hit.point.clone()
+      .add(hit.face.normal);
+
+  block(
+    Math.round(p.x),
+    Math.round(p.y),
+    Math.round(p.z),
+    "build"
+  );
 }
 
-function updateHighlight() {
-  const hit = getLookBlock();
-  if (hit) {
-    highlightBox.position.copy(hit.object.position);
-    highlightBox.visible = true;
-  } else {
-    highlightBox.visible = false;
-  }
-}
 
-function placeBlock() {
-  const hit = getLookBlock();
-  if (!hit) return;
+function removeBlock(){
 
-  const pos = hit.point.clone().add(hit.face.normal);
-  const x = Math.round(pos.x);
-  const y = Math.round(pos.y);
-  const z = Math.round(pos.z);
+  const hit = hitBlock();
 
-  const newBlock = createBlock(x, y, z, 'build');
-  spawnParticles(newBlock.position, 0x00bcd4);
-}
+  if(!hit)return;
 
-function breakBlock() {
-  const hit = getLookBlock();
-  if (!hit) return;
-
-  spawnParticles(hit.object.position, 0xff5252);
   scene.remove(hit.object);
 
-  const idx = blocks.indexOf(hit.object);
-  if (idx > -1) blocks.splice(idx, 1);
+  const i =
+    blocks.indexOf(hit.object);
+
+  if(i>=0)
+    blocks.splice(i,1);
 }
 
-/////////////////////////////////////////////////
-//// GAMEPAD CONTROLLER
-/////////////////////////////////////////////////
 
-function getPad() {
-  const pads = navigator.getGamepads();
-  for (let p of pads) {
-    if (p) return p;
+/* =========================
+   GAMEPAD
+========================= */
+
+const dead = .15;
+
+function dz(v){
+
+  return Math.abs(v)<dead ? 0 : v;
+}
+
+let buildLock=false;
+let breakLock=false;
+
+function controller(){
+
+  const pads =
+    navigator.getGamepads();
+
+  const gp =
+    [...pads].find(p=>p);
+
+  if(!gp)return;
+
+
+  const lx =
+    dz(gp.axes[0]||0);
+
+  const ly =
+    -dz(gp.axes[1]||0);
+
+  const rx =
+    dz(gp.axes[2]||0);
+
+
+  /* Turn */
+
+  player.rotation.y -=
+    rx*.04;
+
+
+  /* Move */
+
+  const speed=.12;
+
+  const forward =
+    new THREE.Vector3(
+      Math.sin(player.rotation.y),
+      0,
+      Math.cos(player.rotation.y)
+    );
+
+  const right =
+    new THREE.Vector3(
+      Math.cos(player.rotation.y),
+      0,
+      -Math.sin(player.rotation.y)
+    );
+
+  player.position.add(
+    forward.multiplyScalar(
+      ly*speed
+    )
+  );
+
+  player.position.add(
+    right.multiplyScalar(
+      lx*speed
+    )
+  );
+
+
+  /* X = jump */
+
+  if(
+    gp.buttons[0]?.pressed &&
+    ground
+  ){
+
+    velocity=.18;
+    ground=false;
   }
-  return null;
-}
 
-const DEADZONE = 0.15;
-function deadzone(v) {
-  return Math.abs(v) < DEADZONE ? 0 : v;
-}
 
-let buildPressed = false;
-let breakPressed = false;
+  /* R2 = build */
 
-function updateController() {
-  const gp = getPad();
-  if (!gp) return;
+  if(
+    gp.buttons[7]?.pressed
+  ){
 
-  let lx = deadzone(gp.axes[0]);
-  let ly = -deadzone(gp.axes[1]); // Inverted movement fix
-  let rx = deadzone(gp.axes[2]);
+    if(!buildLock){
 
-  player.rotation.y -= rx * 0.04;
-
-  const speed = 0.12;
-  const forward = new THREE.Vector3(Math.sin(player.rotation.y), 0, Math.cos(player.rotation.y));
-  const right = new THREE.Vector3(Math.cos(player.rotation.y), 0, -Math.sin(player.rotation.y));
-
-  player.position.add(forward.multiplyScalar(ly * speed));
-  player.position.add(right.multiplyScalar(lx * speed));
-
-  // Jump (X button)
-  if (gp.buttons[0].pressed && onGround) {
-    velocityY = 0.18;
-    onGround = false;
-  }
-
-  // Build (R2 trigger)
-  if (gp.buttons[7].pressed) {
-    if (!buildPressed) {
-      placeBlock();
-      buildPressed = true;
+      build();
+      buildLock=true;
     }
-  } else {
-    buildPressed = false;
+
+  }else{
+
+    buildLock=false;
   }
 
-  // Break (L2 trigger)
-  if (gp.buttons[6].pressed) {
-    if (!breakPressed) {
-      breakBlock();
-      breakPressed = true;
+
+  /* L2 = break */
+
+  if(
+    gp.buttons[6]?.pressed
+  ){
+
+    if(!breakLock){
+
+      removeBlock();
+      breakLock=true;
     }
-  } else {
-    breakPressed = false;
+
+  }else{
+
+    breakLock=false;
   }
 }
 
-/////////////////////////////////////////////////
-//// PHYSICS & ANIMATION LOOP
-/////////////////////////////////////////////////
 
-let velocityY = 0;
-let onGround = true;
+/* =========================
+   PHYSICS
+========================= */
 
-function physics() {
-  velocityY -= 0.009;
-  player.position.y += velocityY;
+let velocity=0;
+let ground=true;
 
-  if (player.position.y < 3) { // Base ground level offset
-    player.position.y = 3;
-    velocityY = 0;
-    onGround = true;
+function physics(){
+
+  velocity-=.009;
+
+  player.position.y+=velocity;
+
+  if(player.position.y<3){
+
+    player.position.y=3;
+    velocity=0;
+    ground=true;
   }
 }
 
-renderer.setAnimationLoop(() => {
-  updateController();
+
+/* =========================
+   PHONE GYROSCOPE
+========================= */
+
+let gyro=false;
+
+const euler =
+  new THREE.Euler(
+    0,0,0,"YXZ"
+  );
+
+function orientation(event){
+
+  if(!gyro)return;
+
+  euler.set(
+    THREE.MathUtils.degToRad(
+      event.beta||0
+    ),
+    THREE.MathUtils.degToRad(
+      event.alpha||0
+    ),
+    THREE.MathUtils.degToRad(
+      -(event.gamma||0)
+    ),
+    "YXZ"
+  );
+
+  head.quaternion.setFromEuler(
+    euler
+  );
+}
+
+window.addEventListener(
+  "deviceorientation",
+  orientation,
+  true
+);
+
+
+/* =========================
+   START PHONE VR
+========================= */
+
+document
+.getElementById("start")
+.addEventListener(
+  "click",
+  async()=>{
+
+    if(
+      typeof DeviceOrientationEvent !==
+      "undefined" &&
+      DeviceOrientationEvent
+        .requestPermission
+    ){
+
+      const p =
+        await DeviceOrientationEvent
+          .requestPermission();
+
+      if(p!=="granted")
+        return;
+    }
+
+    gyro=true;
+
+    try{
+
+      await screen.orientation
+        .lock("landscape");
+
+    }catch(e){}
+
+
+    try{
+
+      await document.documentElement
+        .requestFullscreen();
+
+    }catch(e){}
+
+
+    document
+      .getElementById("start")
+      .style.display="none";
+
+    document
+      .getElementById("info")
+      .style.display="none";
+  }
+);
+
+
+/* =========================
+   STEREO RENDER
+========================= */
+
+function renderStereo(){
+
+  const w=innerWidth;
+  const h=innerHeight;
+
+  const half =
+    Math.floor(w/2);
+
+
+  renderer.setScissorTest(true);
+
+
+  /* LEFT */
+
+  leftEye.aspect =
+    half/h;
+
+  leftEye.updateProjectionMatrix();
+
+  renderer.setViewport(
+    0,0,half,h
+  );
+
+  renderer.setScissor(
+    0,0,half,h
+  );
+
+  renderer.render(
+    scene,leftEye
+  );
+
+
+  /* RIGHT */
+
+  rightEye.aspect =
+    half/h;
+
+  rightEye.updateProjectionMatrix();
+
+  renderer.setViewport(
+    half,0,half,h
+  );
+
+  renderer.setScissor(
+    half,0,half,h
+  );
+
+  renderer.render(
+    scene,rightEye
+  );
+
+
+  renderer.setScissorTest(false);
+}
+
+
+/* =========================
+   LOOP
+========================= */
+
+function loop(){
+
+  controller();
+
   physics();
-  updateHighlight();
-  updateParticles();
 
-  renderer.render(scene, camera);
-});
+  updateTarget();
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+  renderStereo();
+}
+
+renderer.setAnimationLoop(loop);
+
+
+/* =========================
+   RESIZE
+========================= */
+
+window.addEventListener(
+  "resize",
+  ()=>{
+
+    renderer.setSize(
+      innerWidth,
+      innerHeight
+    );
+  }
+);
 
 </script>
+
 </body>
 </html>
