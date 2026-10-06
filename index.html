@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quaternion Sculpture - Three.js</title>
+    <title>Human Quaternion Sculpture - Three.js</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #050505;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #030305;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         #info {
             position: absolute;
@@ -18,7 +18,7 @@
             text-align: center;
             color: rgba(255, 255, 255, 0.7);
             pointer-events: none;
-            font-size: 13px;
+            font-size: 12px;
             letter-spacing: 3px;
             text-transform: uppercase;
             text-shadow: 0 2px 4px rgba(0,0,0,0.8);
@@ -26,7 +26,7 @@
     </style>
 </head>
 <body>
-    <div id="info">Quaternion Sculpture &bull; Drag to rotate, Scroll to zoom</div>
+    <div id="info">Human Quaternion Sculpture &bull; Pure Quaternion Kinematics</div>
 
     <!-- Import Maps Polyfill -->
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -46,10 +46,10 @@
 
         // 1. Scene, Camera & Renderer Setup
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050505, 0.035);
+        scene.fog = new THREE.FogExp2(0x030305, 0.03);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 4, 10);
+        camera.position.set(0, 1.5, 5.5);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -62,164 +62,173 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
+        controls.target.set(0, 1.2, 0);
         controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.6;
+        controls.autoRotateSpeed = 0.5;
 
         // 3. Lighting Architecture
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const ambientLight = new THREE.AmbientLight(0x112233, 1.5);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
-        dirLight.position.set(10, 20, 15);
-        dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 2048;
-        dirLight.shadow.mapSize.height = 2048;
+        const dirLight = new THREE.DirectionalLight(0x00f0ff, 2.0);
+        dirLight.position.set(5, 10, 7);
         scene.add(dirLight);
 
-        const pointLight1 = new THREE.PointLight(0x00f0ff, 3, 20);
-        pointLight1.position.set(-6, -3, -6);
-        scene.add(pointLight1);
+        const pointLightPink = new THREE.PointLight(0xff00aa, 3, 10);
+        pointLightPink.position.set(-3, 1.5, -2);
+        scene.add(pointLightPink);
 
-        const pointLight2 = new THREE.PointLight(0xff00aa, 3, 20);
-        pointLight2.position.set(6, 3, 6);
-        scene.add(pointLight2);
+        const pointLightCyan = new THREE.PointLight(0x00ffcc, 3, 10);
+        pointLightCyan.position.set(3, 1.5, 2);
+        scene.add(pointLightCyan);
 
-        // 4. Materials
-        const materialGold = new THREE.MeshStandardMaterial({
-            color: 0xd4af37,
-            metalness: 0.95,
-            roughness: 0.15,
-        });
-
-        const materialGlass = new THREE.MeshPhysicalMaterial({
+        // 4. Materials (Glass, Gold, Neon)
+        const matGlass = new THREE.MeshPhysicalMaterial({
             color: 0xffffff,
             metalness: 0.1,
-            roughness: 0.05,
+            roughness: 0.1,
             transmission: 0.9,
-            thickness: 1.2,
+            thickness: 1.0,
             transparent: true,
-            opacity: 0.85
+            opacity: 0.8
         });
 
-        const materialNeon = new THREE.MeshStandardMaterial({
+        const matGold = new THREE.MeshStandardMaterial({
+            color: 0xd4af37,
+            metalness: 0.9,
+            roughness: 0.2
+        });
+
+        const matNeon = new THREE.MeshStandardMaterial({
             color: 0x00ffcc,
-            emissive: 0x003322,
+            emissive: 0x004433,
             roughness: 0.2,
             metalness: 0.8
         });
 
-        // 5. Procedural Quaternion Sculpture Construction
-        const sculptureGroup = new THREE.Group();
-        scene.add(sculptureGroup);
+        // 5. Humanoid Skeletal Construction via Pure Quaternions
+        const humanGroup = new THREE.Group();
+        scene.add(humanGroup);
 
-        // Center Core Element
-        const coreGeometry = new THREE.IcosahedronGeometry(0.8, 0);
-        const coreMesh = new THREE.Mesh(coreGeometry, materialGold);
-        coreMesh.castShadow = true;
-        coreMesh.receiveShadow = true;
-        sculptureGroup.add(coreMesh);
+        // Define anatomical skeletal chain segments (Start -> End coordinates)
+        const bodyBones = [
+            // Spine / Torso
+            { start: new THREE.Vector3(0, 0.2, 0), end: new THREE.Vector3(0, 2.0, 0), count: 18, radius: 0.4 },
+            // Left Arm
+            { start: new THREE.Vector3(0, 1.8, 0), end: new THREE.Vector3(-0.9, 1.1, 0), count: 10, radius: 0.2 },
+            { start: new THREE.Vector3(-0.9, 1.1, 0), end: new THREE.Vector3(-1.4, 0.4, 0.1), count: 8, radius: 0.15 },
+            // Right Arm
+            { start: new THREE.Vector3(0, 1.8, 0), end: new THREE.Vector3(0.9, 1.1, 0), count: 10, radius: 0.2 },
+            { start: new THREE.Vector3(0.9, 1.1, 0), end: new THREE.Vector3(1.4, 0.4, 0.1), count: 8, radius: 0.15 },
+            // Left Leg
+            { start: new THREE.Vector3(-0.2, 0.3, 0), end: new THREE.Vector3(-0.3, -0.8, 0), count: 10, radius: 0.22 },
+            { start: new THREE.Vector3(-0.3, -0.8, 0), end: new THREE.Vector3(-0.35, -1.8, 0), count: 10, radius: 0.18 },
+            // Right Leg
+            { start: new THREE.Vector3(0.2, 0.3, 0), end: new THREE.Vector3(0.3, -0.8, 0), count: 10, radius: 0.22 },
+            { start: new THREE.Vector3(0.3, -0.8, 0), end: new THREE.Vector3(0.35, -1.8, 0), count: 10, radius: 0.18 }
+        ];
 
-        const count = 64;
-        const radius = 3.2;
-        const baseGeometry = new THREE.TorusGeometry(1.0, 0.06, 16, 100);
-        const ringObjects = [];
+        const ringGeometry = new THREE.TorusGeometry(1, 0.04, 16, 60);
+        const structureElements = [];
 
-        for (let i = 0; i < count; i++) {
-            const t = i / count;
-            const angle = t * Math.PI * 4; // Dual rotation loops
+        // Base quaternion generator for global orientation twist
+        const globalOrientationQ = new THREE.Quaternion();
 
-            // Select material cyclically
-            let mat = (i % 3 === 0) ? materialGlass : ((i % 3 === 1) ? materialGold : materialNeon);
+        bodyBones.forEach((bone, boneIndex) => {
+            for (let i = 0; i < bone.count; i++) {
+                const t = i / bone.count;
 
-            const mesh = new THREE.Mesh(baseGeometry, mat);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
+                // --- PURE QUATERNION POSITIONING & ORIENTATION MATH ---
+                // 1. Interpolate base position along the skeletal bone segment
+                const basePosition = new THREE.Vector3().lerpVectors(bone.start, bone.end, t);
 
-            // Positioning along a helical path
-            const x = Math.cos(angle) * (radius + Math.sin(t * Math.PI * 6) * 0.4);
-            const y = Math.sin(t * Math.PI * 4) * 1.8;
-            const z = Math.sin(angle) * (radius + Math.cos(t * Math.PI * 6) * 0.4);
-            mesh.position.set(x, y, z);
+                // 2. Generate sequential joint rotation quaternions
+                const qRotationA = new THREE.Quaternion();
+                qRotationA.setFromAxisAngle(new THREE.Vector3(0, 1, 0), t * Math.PI * 4 + boneIndex);
 
-            // Quaternion math calculations for orientation chaining
-            const q1 = new THREE.Quaternion();
-            q1.setFromAxisAngle(new THREE.Vector3(1, 0, 0), t * Math.PI * 2);
+                const qRotationB = new THREE.Quaternion();
+                qRotationB.setFromAxisAngle(new THREE.Vector3(1, 0, 0), t * Math.PI * 2);
 
-            const q2 = new THREE.Quaternion();
-            q2.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+                // 3. Chain rotations non-commutatively using quaternion multiplication
+                const jointQuaternion = new THREE.Quaternion();
+                jointQuaternion.multiplyQuaternions(qRotationA, qRotationB);
 
-            const q3 = new THREE.Quaternion();
-            q3.setFromAxisAngle(new THREE.Vector3(0, 0, 1), t * Math.PI * 6);
+                // 4. Apply quaternion rotation to a local offset vector (Quaternion Vector Conjugation)
+                const localOffset = new THREE.Vector3(Math.cos(t * Math.PI * 6) * bone.radius * (1 - t*0.3), 0, Math.sin(t * Math.PI * 6) * bone.radius * (1 - t*0.3));
+                localOffset.applyQuaternion(jointQuaternion); // Equivalent to q * v * q^-1
 
-            // Accumulate rotations using quaternion multiplication (non-commutative composition)
-            const combinedQuaternion = new THREE.Quaternion();
-            combinedQuaternion.multiplyQuaternions(q2, q1);
-            combinedQuaternion.multiply(q3);
+                const finalPosition = basePosition.clone().add(localOffset);
 
-            mesh.quaternion.copy(combinedQuaternion);
+                // Select sculptural material cyclically (Glass, Gold, Neon)
+                let mat = (i % 3 === 0) ? matGlass : ((i % 3 === 1) ? matGold : matNeon);
 
-            // Scale variation
-            const scaleFactor = 0.5 + 0.5 * Math.sin(t * Math.PI * 4);
-            mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                const mesh = new THREE.Mesh(ringGeometry, mat);
+                mesh.position.copy(finalPosition);
+                mesh.quaternion.copy(jointQuaternion);
 
-            sculptureGroup.add(mesh);
-            ringObjects.push({ mesh, initialQuaternion: combinedQuaternion.clone(), index: i });
-        }
+                // Scale elements based on anatomical profiling
+                const scale = (0.3 + 0.2 * Math.sin(t * Math.PI)) * (1.2 - t * 0.4);
+                mesh.scale.set(scale, scale, scale);
 
-        // 6. Ambient Atmosphere Particles
-        const particlesGeometry = new THREE.BufferGeometry();
-        const particlesCount = 400;
-        const posArray = new Float32Array(particlesCount * 3);
-
-        for (let i = 0; i < particlesCount * 3; i++) {
-            posArray[i] = (Math.random() - 0.5) * 20;
-        }
-
-        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        const particlesMaterial = new THREE.PointsMaterial({
-            size: 0.04,
-            color: 0x00ffff,
-            transparent: true,
-            opacity: 0.5
+                humanGroup.add(mesh);
+                structureElements.push({ mesh, initialQ: jointQuaternion.clone(), basePos: basePosition, offset: localOffset, index: i });
+            }
         });
-        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-        scene.add(particlesMesh);
 
-        // 7. Window Resizing
-        window.addEventListener('resize', onWindowResize);
-        function onWindowResize() {
+        // Head Sculpture (Polyhedral Quaternion Cluster)
+        const headGroup = new THREE.Group();
+        headGroup.position.set(0, 2.2, 0);
+        humanGroup.add(headGroup);
+
+        const headGeo = new THREE.IcosahedronGeometry(0.3, 0);
+        for (let i = 0; i < 12; i++) {
+            const phi = Math.acos(-1 + (2 * i) / 12);
+            const theta = Math.sqrt(12 * Math.PI) * phi;
+
+            // Generate positions strictly using quaternion vector rotation
+            const qNode = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), theta);
+            const pos = new THREE.Vector3(0, 0, 0.35).applyQuaternion(qNode);
+
+            const headNode = new THREE.Mesh(headGeo, i % 2 === 0 ? matGold : matGlass);
+            headNode.position.copy(pos);
+            headNode.quaternion.copy(qNode);
+            headNode.scale.set(0.4, 0.4, 0.4);
+            headGroup.add(headNode);
+        }
+
+        // 6. Window Resizing
+        window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        }
+        });
 
-        // 8. Animation Loop
+        // 7. Animation Loop (Quaternion Dynamic Evolution)
         const clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
-
             const elapsedTime = clock.getElapsedTime();
 
-            // Animate individual rings dynamically using quaternion offsets
-            ringObjects.forEach((item) => {
-                const { mesh, initialQuaternion, index } = item;
-                const timeFactor = elapsedTime * 0.4 + index * 0.08;
+            // Animate sculpture components dynamically using quaternion increments
+            structureElements.forEach((item) => {
+                const { mesh, initialQ, index } = item;
+                const timeFactor = elapsedTime * 0.5 + index * 0.1;
 
+                // Create a dynamic breathing/twisting quaternion offset
                 const dynamicQ = new THREE.Quaternion();
                 dynamicQ.setFromAxisAngle(
-                    new THREE.Vector3(Math.sin(index), Math.cos(index), 1).normalize(), 
-                    Math.sin(timeFactor) * 0.4
+                    new THREE.Vector3(Math.sin(index), Math.cos(index), 1).normalize(),
+                    Math.sin(timeFactor) * 0.3
                 );
 
-                const finalQ = new THREE.Quaternion();
-                finalQ.multiplyQuaternions(initialQuaternion, dynamicQ);
-                mesh.quaternion.copy(finalQ);
+                // Multiply initial joint quaternion with dynamic quaternion
+                const currentQ = new THREE.Quaternion();
+                currentQ.multiplyQuaternions(initialQ, dynamicQ);
+                mesh.quaternion.copy(currentQ);
             });
 
-            coreMesh.rotation.x = elapsedTime * 0.2;
-            coreMesh.rotation.y = elapsedTime * 0.3;
-            particlesMesh.rotation.y = elapsedTime * 0.015;
+            headGroup.rotation.y = elapsedTime * 0.3;
 
             controls.update();
             renderer.render(scene, camera);
