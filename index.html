@@ -1,749 +1,299 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport"
-      content="width=device-width,initial-scale=1,
-               maximum-scale=1,user-scalable=no">
-<title>Voxel Phone VR</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quaternion Sculpture</title>
 
 <style>
-html,body{
-  margin:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  background:#000;
-  touch-action:none;
-}
+    html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #050509;
+    }
 
-canvas{
-  display:block;
-  width:100%;
-  height:100%;
-}
+    canvas {
+        display: block;
+    }
 
-#start{
-  position:fixed;
-  z-index:10;
-  left:50%;
-  top:50%;
-  transform:translate(-50%,-50%);
-  padding:16px 24px;
-  border:0;
-  border-radius:10px;
-  background:#222;
-  color:white;
-  font-size:18px;
-  font-weight:bold;
-}
-
-#info{
-  position:fixed;
-  z-index:5;
-  top:10px;
-  left:10px;
-  color:white;
-  background:#0008;
-  padding:8px;
-  font:13px monospace;
-}
+    #info {
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        color: white;
+        font-family: monospace;
+        font-size: 14px;
+        z-index: 10;
+    }
 </style>
 </head>
 
 <body>
 
 <div id="info">
-PS4: Left Stick Move | Right Stick Turn<br>
-X Jump | R2 Build | L2 Break
+    Quaternion Sculpture<br>
+    Drag = rotate &nbsp; | &nbsp; Wheel = zoom
 </div>
-
-<button id="start">ENTER PHONE VR</button>
 
 <script type="module">
 
 import * as THREE from
-"https://unpkg.com/three@0.152.2/build/three.module.js";
+    "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+
+import { OrbitControls } from
+    "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
 
 
-/* =========================
-   SETTINGS
-========================= */
-
-const IPD = 0.064;
-const FOV = 75;
-const SKY = 0x7ec0ee;
-
-
-/* =========================
-   SCENE
-========================= */
+// --------------------------------------------------
+// Scene
+// --------------------------------------------------
 
 const scene = new THREE.Scene();
 
-scene.background =
-  new THREE.Color(SKY);
-
-scene.fog =
-  new THREE.FogExp2(SKY,0.025);
+scene.background = new THREE.Color(0x050509);
 
 
-/* =========================
-   PLAYER + HEAD
-========================= */
+// --------------------------------------------------
+// Camera
+// --------------------------------------------------
 
-const player =
-  new THREE.Object3D();
-
-player.position.set(0,4,8);
-
-scene.add(player);
-
-const head =
-  new THREE.Object3D();
-
-player.add(head);
-
-
-/* =========================
-   TWO EYES
-========================= */
-
-const leftEye =
-  new THREE.PerspectiveCamera(
-    FOV,1,0.1,1000
-  );
-
-const rightEye =
-  new THREE.PerspectiveCamera(
-    FOV,1,0.1,1000
-  );
-
-leftEye.position.x =
-  -IPD/2;
-
-rightEye.position.x =
-  IPD/2;
-
-head.add(leftEye);
-head.add(rightEye);
-
-
-/* =========================
-   RENDERER
-========================= */
-
-const renderer =
-  new THREE.WebGLRenderer({
-    antialias:true,
-    powerPreference:"high-performance"
-  });
-
-renderer.setPixelRatio(
-  Math.min(devicePixelRatio,2)
+const camera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    100
 );
+
+camera.position.set(0, 1.5, 8);
+
+
+// --------------------------------------------------
+// Renderer
+// --------------------------------------------------
+
+const renderer = new THREE.WebGLRenderer({
+    antialias: true
+});
+
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 renderer.setSize(
-  innerWidth,
-  innerHeight
+    window.innerWidth,
+    window.innerHeight
 );
 
-renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
 
-renderer.shadowMap.type =
-  THREE.PCFSoftShadowMap;
 
-renderer.toneMapping =
-  THREE.ACESFilmicToneMapping;
+// --------------------------------------------------
+// Controls
+// --------------------------------------------------
 
-renderer.toneMappingExposure = 1.15;
-
-document.body.appendChild(
-  renderer.domElement
+const controls = new OrbitControls(
+    camera,
+    renderer.domElement
 );
 
+controls.enableDamping = true;
 
-/* =========================
-   LIGHT
-========================= */
+
+// --------------------------------------------------
+// Lights
+// --------------------------------------------------
 
 scene.add(
-  new THREE.HemisphereLight(
+    new THREE.AmbientLight(0xffffff, 1.2)
+);
+
+const light = new THREE.DirectionalLight(
     0xffffff,
-    0x334455,
-    0.6
-  )
+    3
 );
 
-const sun =
-  new THREE.DirectionalLight(
-    0xfff5ea,1.4
-  );
+light.position.set(4, 6, 5);
 
-sun.position.set(15,30,10);
-sun.castShadow = true;
+scene.add(light);
 
-sun.shadow.mapSize.set(
-  1024,1024
+
+// --------------------------------------------------
+// Quaternion sculpture
+// --------------------------------------------------
+
+const positions = [];
+
+const rings = 180;
+const pointsPerRing = 24;
+
+
+// Quaternion:
+// q = w + xi + yj + zk
+//
+// We use the imaginary components
+// (x,y,z) as our 3D position.
+//
+// The quaternion function:
+//
+// q(t,u) =
+// cos(t)
+// + sin(t) sin(u) i
+// + cos(2t) sin(u) j
+// + sin(3t) sin(u) k
+//
+// The radius is additionally modulated,
+// creating the sculptural shape.
+// --------------------------------------------------
+
+for (let i = 0; i <= rings; i++) {
+
+    const t =
+        (i / rings) * Math.PI * 6;
+
+    for (let j = 0; j < pointsPerRing; j++) {
+
+        const u =
+            (j / pointsPerRing) * Math.PI * 2;
+
+        // Quaternion components
+
+        const w = Math.cos(t);
+
+        const x =
+            Math.sin(t) *
+            Math.cos(u);
+
+        const y =
+            Math.cos(2 * t) *
+            Math.sin(u);
+
+        const z =
+            Math.sin(3 * t) *
+            Math.cos(u);
+
+
+        // Quaternion magnitude
+
+        const magnitude =
+            Math.sqrt(
+                w*w +
+                x*x +
+                y*y +
+                z*z
+            );
+
+
+        // Use the quaternion magnitude
+        // to deform the sculpture.
+
+        const radius =
+            1.0 +
+            0.35 * Math.sin(
+                5 * t + 3 * u
+            );
+
+
+        positions.push(
+            x * radius,
+            y * radius,
+            z * radius
+        );
+    }
+}
+
+
+// --------------------------------------------------
+// Geometry
+// --------------------------------------------------
+
+const geometry =
+    new THREE.BufferGeometry();
+
+geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(
+        positions,
+        3
+    )
 );
 
-scene.add(sun);
+
+// --------------------------------------------------
+// Material
+// --------------------------------------------------
+
+const material =
+    new THREE.PointsMaterial({
+
+        color: 0x66ccff,
+
+        size: 0.045,
+
+        transparent: true,
+
+        opacity: 0.9,
+
+        blending:
+            THREE.AdditiveBlending
+    });
 
 
-/* =========================
-   TEXTURE
-========================= */
+// --------------------------------------------------
+// Sculpture
+// --------------------------------------------------
 
-function texture(color){
-
-  const c =
-    document.createElement("canvas");
-
-  c.width = c.height = 16;
-
-  const ctx = c.getContext("2d");
-  const base = new THREE.Color(color);
-
-  for(let x=0;x<16;x++)
-    for(let y=0;y<16;y++){
-
-      const n =
-        (Math.random()-.5)*.12;
-
-      ctx.fillStyle =
-        `rgb(
-          ${(base.r+n)*255|0},
-          ${(base.g+n)*255|0},
-          ${(base.b+n)*255|0}
-        )`;
-
-      ctx.fillRect(x,y,1,1);
-    }
-
-  const t =
-    new THREE.CanvasTexture(c);
-
-  t.magFilter =
-    THREE.NearestFilter;
-
-  t.minFilter =
-    THREE.NearestFilter;
-
-  return t;
-}
-
-
-const mats = {
-
-  grass:
-    new THREE.MeshStandardMaterial({
-      map:texture(0x43a047),
-      roughness:.8
-    }),
-
-  dirt:
-    new THREE.MeshStandardMaterial({
-      map:texture(0x6d4c41),
-      roughness:.9
-    }),
-
-  build:
-    new THREE.MeshStandardMaterial({
-      map:texture(0x00bcd4),
-      emissive:0x006064,
-      emissiveIntensity:.3
-    })
-};
-
-
-/* =========================
-   VOXELS
-========================= */
-
-const blocks = [];
-
-const cubeGeo =
-  new THREE.BoxGeometry(1,1,1);
-
-
-function block(x,y,z,type="grass"){
-
-  const m =
-    new THREE.Mesh(
-      cubeGeo,
-      mats[type]
+const sculpture =
+    new THREE.Points(
+        geometry,
+        material
     );
 
-  m.position.set(x,y,z);
-
-  m.castShadow = true;
-  m.receiveShadow = true;
-
-  scene.add(m);
-  blocks.push(m);
-
-  return m;
-}
+scene.add(sculpture);
 
 
-for(let x=-12;x<=12;x++){
+// --------------------------------------------------
+// Animation
+// --------------------------------------------------
 
-  for(let z=-12;z<=12;z++){
+function animate() {
 
-    const h =
-      Math.floor(
-        Math.sin(x*.25) *
-        Math.cos(z*.25) * 2
-      );
+    requestAnimationFrame(animate);
 
-    block(x,h,z);
+    sculpture.rotation.y += 0.002;
 
-    block(x,h-1,z,"dirt");
-    block(x,h-2,z,"dirt");
-  }
-}
+    sculpture.rotation.x =
+        Math.sin(Date.now() * 0.0003) * 0.15;
 
+    controls.update();
 
-/* =========================
-   HIGHLIGHT
-========================= */
-
-const highlight =
-  new THREE.Mesh(
-    new THREE.BoxGeometry(
-      1.02,1.02,1.02
-    ),
-    new THREE.MeshBasicMaterial({
-      color:0xffeb3b,
-      wireframe:true
-    })
-  );
-
-highlight.visible = false;
-
-scene.add(highlight);
-
-
-/* =========================
-   RAYCAST
-========================= */
-
-const ray =
-  new THREE.Raycaster();
-
-function hitBlock(){
-
-  const pos =
-    head.getWorldPosition(
-      new THREE.Vector3()
+    renderer.render(
+        scene,
+        camera
     );
-
-  const quat =
-    head.getWorldQuaternion(
-      new THREE.Quaternion()
-    );
-
-  const dir =
-    new THREE.Vector3(
-      0,0,-1
-    ).applyQuaternion(quat);
-
-  ray.set(pos,dir);
-
-  const hits =
-    ray.intersectObjects(
-      blocks,false
-    );
-
-  return hits[0] || null;
 }
 
+animate();
 
-function updateTarget(){
 
-  const hit = hitBlock();
-
-  if(!hit){
-
-    highlight.visible=false;
-    return;
-  }
-
-  highlight.position.copy(
-    hit.object.position
-  );
-
-  highlight.visible=true;
-}
-
-
-/* =========================
-   BUILD / BREAK
-========================= */
-
-function build(){
-
-  const hit = hitBlock();
-
-  if(!hit)return;
-
-  const p =
-    hit.point.clone()
-      .add(hit.face.normal);
-
-  block(
-    Math.round(p.x),
-    Math.round(p.y),
-    Math.round(p.z),
-    "build"
-  );
-}
-
-
-function removeBlock(){
-
-  const hit = hitBlock();
-
-  if(!hit)return;
-
-  scene.remove(hit.object);
-
-  const i =
-    blocks.indexOf(hit.object);
-
-  if(i>=0)
-    blocks.splice(i,1);
-}
-
-
-/* =========================
-   GAMEPAD
-========================= */
-
-const dead = .15;
-
-function dz(v){
-
-  return Math.abs(v)<dead ? 0 : v;
-}
-
-let buildLock=false;
-let breakLock=false;
-
-function controller(){
-
-  const pads =
-    navigator.getGamepads();
-
-  const gp =
-    [...pads].find(p=>p);
-
-  if(!gp)return;
-
-
-  const lx =
-    dz(gp.axes[0]||0);
-
-  const ly =
-    -dz(gp.axes[1]||0);
-
-  const rx =
-    dz(gp.axes[2]||0);
-
-
-  /* Turn */
-
-  player.rotation.y -=
-    rx*.04;
-
-
-  /* Move */
-
-  const speed=.12;
-
-  const forward =
-    new THREE.Vector3(
-      Math.sin(player.rotation.y),
-      0,
-      Math.cos(player.rotation.y)
-    );
-
-  const right =
-    new THREE.Vector3(
-      Math.cos(player.rotation.y),
-      0,
-      -Math.sin(player.rotation.y)
-    );
-
-  player.position.add(
-    forward.multiplyScalar(
-      ly*speed
-    )
-  );
-
-  player.position.add(
-    right.multiplyScalar(
-      lx*speed
-    )
-  );
-
-
-  /* X = jump */
-
-  if(
-    gp.buttons[0]?.pressed &&
-    ground
-  ){
-
-    velocity=.18;
-    ground=false;
-  }
-
-
-  /* R2 = build */
-
-  if(
-    gp.buttons[7]?.pressed
-  ){
-
-    if(!buildLock){
-
-      build();
-      buildLock=true;
-    }
-
-  }else{
-
-    buildLock=false;
-  }
-
-
-  /* L2 = break */
-
-  if(
-    gp.buttons[6]?.pressed
-  ){
-
-    if(!breakLock){
-
-      removeBlock();
-      breakLock=true;
-    }
-
-  }else{
-
-    breakLock=false;
-  }
-}
-
-
-/* =========================
-   PHYSICS
-========================= */
-
-let velocity=0;
-let ground=true;
-
-function physics(){
-
-  velocity-=.009;
-
-  player.position.y+=velocity;
-
-  if(player.position.y<3){
-
-    player.position.y=3;
-    velocity=0;
-    ground=true;
-  }
-}
-
-
-/* =========================
-   PHONE GYROSCOPE
-========================= */
-
-let gyro=false;
-
-const euler =
-  new THREE.Euler(
-    0,0,0,"YXZ"
-  );
-
-function orientation(event){
-
-  if(!gyro)return;
-
-  euler.set(
-    THREE.MathUtils.degToRad(
-      event.beta||0
-    ),
-    THREE.MathUtils.degToRad(
-      event.alpha||0
-    ),
-    THREE.MathUtils.degToRad(
-      -(event.gamma||0)
-    ),
-    "YXZ"
-  );
-
-  head.quaternion.setFromEuler(
-    euler
-  );
-}
+// --------------------------------------------------
+// Resize
+// --------------------------------------------------
 
 window.addEventListener(
-  "deviceorientation",
-  orientation,
-  true
-);
+    "resize",
+    () => {
 
+        camera.aspect =
+            window.innerWidth /
+            window.innerHeight;
 
-/* =========================
-   START PHONE VR
-========================= */
+        camera.updateProjectionMatrix();
 
-document
-.getElementById("start")
-.addEventListener(
-  "click",
-  async()=>{
-
-    if(
-      typeof DeviceOrientationEvent !==
-      "undefined" &&
-      DeviceOrientationEvent
-        .requestPermission
-    ){
-
-      const p =
-        await DeviceOrientationEvent
-          .requestPermission();
-
-      if(p!=="granted")
-        return;
+        renderer.setSize(
+            window.innerWidth,
+            window.innerHeight
+        );
     }
-
-    gyro=true;
-
-    try{
-
-      await screen.orientation
-        .lock("landscape");
-
-    }catch(e){}
-
-
-    try{
-
-      await document.documentElement
-        .requestFullscreen();
-
-    }catch(e){}
-
-
-    document
-      .getElementById("start")
-      .style.display="none";
-
-    document
-      .getElementById("info")
-      .style.display="none";
-  }
-);
-
-
-/* =========================
-   STEREO RENDER
-========================= */
-
-function renderStereo(){
-
-  const w=innerWidth;
-  const h=innerHeight;
-
-  const half =
-    Math.floor(w/2);
-
-
-  renderer.setScissorTest(true);
-
-
-  /* LEFT */
-
-  leftEye.aspect =
-    half/h;
-
-  leftEye.updateProjectionMatrix();
-
-  renderer.setViewport(
-    0,0,half,h
-  );
-
-  renderer.setScissor(
-    0,0,half,h
-  );
-
-  renderer.render(
-    scene,leftEye
-  );
-
-
-  /* RIGHT */
-
-  rightEye.aspect =
-    half/h;
-
-  rightEye.updateProjectionMatrix();
-
-  renderer.setViewport(
-    half,0,half,h
-  );
-
-  renderer.setScissor(
-    half,0,half,h
-  );
-
-  renderer.render(
-    scene,rightEye
-  );
-
-
-  renderer.setScissorTest(false);
-}
-
-
-/* =========================
-   LOOP
-========================= */
-
-function loop(){
-
-  controller();
-
-  physics();
-
-  updateTarget();
-
-  renderStereo();
-}
-
-renderer.setAnimationLoop(loop);
-
-
-/* =========================
-   RESIZE
-========================= */
-
-window.addEventListener(
-  "resize",
-  ()=>{
-
-    renderer.setSize(
-      innerWidth,
-      innerHeight
-    );
-  }
 );
 
 </script>
