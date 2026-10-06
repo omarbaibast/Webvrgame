@@ -1,210 +1,231 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quaternion Sculpture</title>
-
+    <title>Quaternion Sculpture - Three.js</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background: black;
+            background-color: #050505;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            pointer-events: none;
+            font-size: 13px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
     </style>
 </head>
-
 <body>
+    <div id="info">Quaternion Sculpture &bull; Drag to rotate, Scroll to zoom</div>
 
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
-    }
-}
-</script>
+    <!-- Import Maps Polyfill -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
 
-<script type="module">
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-import * as THREE from "three";
+        // 1. Scene, Camera & Renderer Setup
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.035);
 
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 4, 10);
 
-// -------------------------
-// Scene
-// -------------------------
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
 
-const scene = new THREE.Scene();
+        // 2. Camera Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.6;
 
+        // 3. Lighting Architecture
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
 
-// -------------------------
-// Camera
-// -------------------------
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+        dirLight.position.set(10, 20, 15);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
 
-const camera = new THREE.PerspectiveCamera(
-    60,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    100
-);
+        const pointLight1 = new THREE.PointLight(0x00f0ff, 3, 20);
+        pointLight1.position.set(-6, -3, -6);
+        scene.add(pointLight1);
 
-camera.position.z = 8;
+        const pointLight2 = new THREE.PointLight(0xff00aa, 3, 20);
+        pointLight2.position.set(6, 3, 6);
+        scene.add(pointLight2);
 
+        // 4. Materials
+        const materialGold = new THREE.MeshStandardMaterial({
+            color: 0xd4af37,
+            metalness: 0.95,
+            roughness: 0.15,
+        });
 
-// -------------------------
-// Renderer
-// -------------------------
+        const materialGlass = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            metalness: 0.1,
+            roughness: 0.05,
+            transmission: 0.9,
+            thickness: 1.2,
+            transparent: true,
+            opacity: 0.85
+        });
 
-const renderer = new THREE.WebGLRenderer({
-    antialias: true
-});
+        const materialNeon = new THREE.MeshStandardMaterial({
+            color: 0x00ffcc,
+            emissive: 0x003322,
+            roughness: 0.2,
+            metalness: 0.8
+        });
 
-renderer.setSize(
-    window.innerWidth,
-    window.innerHeight
-);
+        // 5. Procedural Quaternion Sculpture Construction
+        const sculptureGroup = new THREE.Group();
+        scene.add(sculptureGroup);
 
-document.body.appendChild(renderer.domElement);
+        // Center Core Element
+        const coreGeometry = new THREE.IcosahedronGeometry(0.8, 0);
+        const coreMesh = new THREE.Mesh(coreGeometry, materialGold);
+        coreMesh.castShadow = true;
+        coreMesh.receiveShadow = true;
+        sculptureGroup.add(coreMesh);
 
+        const count = 64;
+        const radius = 3.2;
+        const baseGeometry = new THREE.TorusGeometry(1.0, 0.06, 16, 100);
+        const ringObjects = [];
 
-// -------------------------
-// Quaternion sculpture
-// -------------------------
+        for (let i = 0; i < count; i++) {
+            const t = i / count;
+            const angle = t * Math.PI * 4; // Dual rotation loops
 
-const geometry =
-    new THREE.BufferGeometry();
+            // Select material cyclically
+            let mat = (i % 3 === 0) ? materialGlass : ((i % 3 === 1) ? materialGold : materialNeon);
 
-const vertices = [];
+            const mesh = new THREE.Mesh(baseGeometry, mat);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
 
+            // Positioning along a helical path
+            const x = Math.cos(angle) * (radius + Math.sin(t * Math.PI * 6) * 0.4);
+            const y = Math.sin(t * Math.PI * 4) * 1.8;
+            const z = Math.sin(angle) * (radius + Math.cos(t * Math.PI * 6) * 0.4);
+            mesh.position.set(x, y, z);
 
-// We create many points.
-//
-// Each point starts on a circle.
-// A quaternion rotates that point.
-//
-// q = rotation around the Y axis.
+            // Quaternion math calculations for orientation chaining
+            const q1 = new THREE.Quaternion();
+            q1.setFromAxisAngle(new THREE.Vector3(1, 0, 0), t * Math.PI * 2);
 
-for (let i = 0; i < 3000; i++) {
+            const q2 = new THREE.Quaternion();
+            q2.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
 
-    const t = i * 0.025;
+            const q3 = new THREE.Quaternion();
+            q3.setFromAxisAngle(new THREE.Vector3(0, 0, 1), t * Math.PI * 6);
 
-    const radius =
-        1.5 +
-        0.5 * Math.sin(t * 3.0);
+            // Accumulate rotations using quaternion multiplication (non-commutative composition)
+            const combinedQuaternion = new THREE.Quaternion();
+            combinedQuaternion.multiplyQuaternions(q2, q1);
+            combinedQuaternion.multiply(q3);
 
-    // Original point
-    const point = new THREE.Vector3(
-        radius * Math.cos(t),
-        0.15 * Math.sin(t * 5.0),
-        radius * Math.sin(t)
-    );
+            mesh.quaternion.copy(combinedQuaternion);
 
+            // Scale variation
+            const scaleFactor = 0.5 + 0.5 * Math.sin(t * Math.PI * 4);
+            mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-    // -------------------------
-    // QUATERNION
-    // -------------------------
+            sculptureGroup.add(mesh);
+            ringObjects.push({ mesh, initialQuaternion: combinedQuaternion.clone(), index: i });
+        }
 
-    const quaternion =
-        new THREE.Quaternion();
+        // 6. Ambient Atmosphere Particles
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 400;
+        const posArray = new Float32Array(particlesCount * 3);
 
-    quaternion.setFromAxisAngle(
-        new THREE.Vector3(0, 1, 0),
-        t * 0.7
-    );
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 20;
+        }
 
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.04,
+            color: 0x00ffff,
+            transparent: true,
+            opacity: 0.5
+        });
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
 
-    // Rotate the point
-    point.applyQuaternion(quaternion);
+        // 7. Window Resizing
+        window.addEventListener('resize', onWindowResize);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
 
+        // 8. Animation Loop
+        const clock = new THREE.Clock();
 
-    // Add another deformation
+        function animate() {
+            requestAnimationFrame(animate);
 
-    point.y +=
-        Math.sin(t * 2.0) * 0.8;
+            const elapsedTime = clock.getElapsedTime();
 
+            // Animate individual rings dynamically using quaternion offsets
+            ringObjects.forEach((item) => {
+                const { mesh, initialQuaternion, index } = item;
+                const timeFactor = elapsedTime * 0.4 + index * 0.08;
 
-    vertices.push(
-        point.x,
-        point.y,
-        point.z
-    );
-}
+                const dynamicQ = new THREE.Quaternion();
+                dynamicQ.setFromAxisAngle(
+                    new THREE.Vector3(Math.sin(index), Math.cos(index), 1).normalize(), 
+                    Math.sin(timeFactor) * 0.4
+                );
 
+                const finalQ = new THREE.Quaternion();
+                finalQ.multiplyQuaternions(initialQuaternion, dynamicQ);
+                mesh.quaternion.copy(finalQ);
+            });
 
-geometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(
-        vertices,
-        3
-    )
-);
+            coreMesh.rotation.x = elapsedTime * 0.2;
+            coreMesh.rotation.y = elapsedTime * 0.3;
+            particlesMesh.rotation.y = elapsedTime * 0.015;
 
+            controls.update();
+            renderer.render(scene, camera);
+        }
 
-// -------------------------
-// Material
-// -------------------------
-
-const material =
-    new THREE.PointsMaterial({
-        color: 0x00ffff,
-        size: 0.035
-    });
-
-
-// -------------------------
-// Object
-// -------------------------
-
-const sculpture =
-    new THREE.Points(
-        geometry,
-        material
-    );
-
-scene.add(sculpture);
-
-
-// -------------------------
-// Animation
-// -------------------------
-
-function animate() {
-
-    requestAnimationFrame(animate);
-
-    sculpture.rotation.y += 0.003;
-    sculpture.rotation.x += 0.001;
-
-    renderer.render(
-        scene,
-        camera
-    );
-}
-
-animate();
-
-
-// -------------------------
-// Resize
-// -------------------------
-
-window.addEventListener(
-    "resize",
-    () => {
-
-        camera.aspect =
-            window.innerWidth /
-            window.innerHeight;
-
-        camera.updateProjectionMatrix();
-
-        renderer.setSize(
-            window.innerWidth,
-            window.innerHeight
-        );
-    }
-);
-
-</script>
-
+        animate();
+    </script>
 </body>
 </html>
