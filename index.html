@@ -10,17 +10,10 @@
 </head>
 <body>
 
-    <script type="importmap">
-        {
-          "imports": {
-            "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-          }
-        }
-    </script>
+    <!-- Load Three.js via standard script tag (bypasses local file CORS restrictions) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <script type="module">
-        import * as THREE from 'three';
-
+    <script>
         // 1. Scene, Camera, Renderer
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -55,11 +48,9 @@
         // Generate atoms grouped by body segments
         const atomMetaData = [];
         const dummy = new THREE.Object3D();
-        let instanceIndex = 0;
 
         bodyParts.forEach(part => {
             for (let i = 0; i < part.count; i++) {
-                // Distribute atoms inside each body part's local volume
                 const u = Math.random() * Math.PI * 2;
                 const v = Math.acos(Math.random() * 2 - 1);
                 const r = Math.cbrt(Math.random()) * part.radius;
@@ -71,9 +62,13 @@
                 );
                 localPos.x += part.offset.x;
 
-                // Base polar quaternion for internal atom orientation
                 const theta = Math.PI * 0.25;
-                const q = new THREE.Quaternion(localPos.x * Math.sin(theta), localPos.y * Math.sin(theta), localPos.z * Math.sin(theta), Math.cos(theta));
+                const q = new THREE.Quaternion(
+                    localPos.x * Math.sin(theta), 
+                    localPos.y * Math.sin(theta), 
+                    localPos.z * Math.sin(theta), 
+                    Math.cos(theta)
+                );
 
                 atomMetaData.push({
                     partName: part.name,
@@ -97,7 +92,6 @@
             requestAnimationFrame(animate);
             const t = time * 0.002;
 
-            // Create quaternion rotations for joints (e.g., arms swinging, torso twisting)
             const armQuaternion = new THREE.Quaternion();
             const legQuaternion = new THREE.Quaternion();
             const torsoQuaternion = new THREE.Quaternion();
@@ -109,10 +103,31 @@
             atomMetaData.forEach((atom, idx) => {
                 let currentPos = atom.basePos.clone();
 
-                // Apply joint transformations based on body part using quaternions
                 if (atom.partName.includes('Arm')) {
-                    // Pivot arms around shoulders
                     const shoulderOffset = new THREE.Vector3(atom.partName.includes('left') ? -0.7 : 0.7, 1.5, 0);
                     currentPos.sub(shoulderOffset);
                     currentPos.applyQuaternion(armQuaternion);
                     currentPos.add(shoulderOffset);
+                } else if (atom.partName.includes('Leg')) {
+                    const hipOffset = new THREE.Vector3(atom.partName.includes('left') ? -0.35 : 0.35, -0.2, 0);
+                    currentPos.sub(hipOffset);
+                    currentPos.applyQuaternion(legQuaternion);
+                    currentPos.add(hipOffset);
+                } else if (atom.partName === 'torso') {
+                    currentPos.y -= 1.0;
+                    currentPos.applyQuaternion(torsoQuaternion);
+                    currentPos.y += 1.0;
+                }
+
+                const pulse = Math.sin(t * 2 + atom.phase) * 0.03;
+                currentPos.addScalar(pulse);
+
+                dummy.position.copy(currentPos);
+                dummy.quaternion.copy(atom.quaternion);
+                dummy.scale.set(1, 1, 1);
+
+                dummy.updateMatrix();
+                instancedMesh.setMatrixAt(idx, dummy.matrix);
+            });
+
+            
