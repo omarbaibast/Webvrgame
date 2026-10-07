@@ -2,15 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Quaternion Bio-Structure</title>
+    <title>Quaternion Bio-Humanoid</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #05050a; }
+        body { margin: 0; overflow: hidden; background-color: #030307; }
         canvas { display: block; }
     </style>
 </head>
 <body>
 
-    <!-- Import Three.js via ES Modules -->
     <script type="importmap">
         {
           "imports": {
@@ -29,89 +28,91 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // 2. Geometry & Materials (Core vs Membrane)
-        const atomGeometry = new THREE.SphereGeometry(0.12, 16, 16);
-        const coreMaterial = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.2, metalness: 0.9 });
-        const membraneMaterial = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.75 });
+        // 2. Cellular Atom Geometry & Material
+        const atomGeometry = new THREE.SphereGeometry(0.08, 16, 16);
+        const atomMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x38bdf8, 
+            roughness: 0.1, 
+            metalness: 0.8,
+            emissive: 0x0284c7,
+            emissiveIntensity: 0.3
+        });
 
-        const totalAtoms = 300;
-        const instancedMesh = new THREE.InstancedMesh(atomGeometry, membraneMaterial, totalAtoms);
+        // Define body regions (clusters of atoms forming a humanoid silhouette)
+        const bodyParts = [
+            { name: 'head', count: 40, offset: new THREE.Vector3(0, 2.5, 0), radius: 0.4 },
+            { name: 'torso', count: 120, offset: new THREE.Vector3(0, 1.0, 0), radius: 0.8 },
+            { name: 'leftArm', count: 50, offset: new THREE.Vector3(-1.0, 1.2, 0), radius: 0.3 },
+            { name: 'rightArm', count: 50, offset: new THREE.Vector3(1.0, 1.2, 0), radius: 0.3 },
+            { name: 'leftLeg', count: 60, offset: new THREE.Vector3(-0.4, -0.8, 0), radius: 0.35 },
+            { name: 'rightLeg', count: 60, offset: new THREE.Vector3(0.4, -0.8, 0), radius: 0.35 }
+        ];
+
+        const totalAtoms = bodyParts.reduce((sum, part) => sum + part.count, 0);
+        const instancedMesh = new THREE.InstancedMesh(atomGeometry, atomMaterial, totalAtoms);
         scene.add(instancedMesh);
 
-        // 3. Generate Spherical Lattice using Polar Quaternions
+        // Generate atoms grouped by body segments
         const atomMetaData = [];
         const dummy = new THREE.Object3D();
+        let instanceIndex = 0;
 
-        function getFibonacciPoint(i, total) {
-            const phi = i * 2.39996;
-            const y = 1 - (i / (total - 1)) * 2;
-            const r = Math.sqrt(1 - y * y);
-            return { x: Math.cos(phi) * r, y: y, z: Math.sin(phi) * r };
-        }
+        bodyParts.forEach(part => {
+            for (let i = 0; i < part.count; i++) {
+                // Distribute atoms inside each body part's local volume
+                const u = Math.random() * Math.PI * 2;
+                const v = Math.acos(Math.random() * 2 - 1);
+                const r = Math.cbrt(Math.random()) * part.radius;
 
-        const theta = Math.PI * 0.35; // Polar angle parameter
-        const baseRadius = 4.0;
+                const localPos = new THREE.Vector3(
+                    r * Math.sin(v) * Math.cos(u),
+                    r * Math.sin(v) * Math.sin(u) + part.offset.y,
+                    r * Math.cos(v) + part.offset.z
+                );
+                localPos.x += part.offset.x;
 
-        for (let i = 0; i < totalAtoms; i++) {
-            const v = getFibonacciPoint(i, totalAtoms);
+                // Base polar quaternion for internal atom orientation
+                const theta = Math.PI * 0.25;
+                const q = new THREE.Quaternion(localPos.x * Math.sin(theta), localPos.y * Math.sin(theta), localPos.z * Math.sin(theta), Math.cos(theta));
 
-            // Polar Quaternion Formula: q = cos(theta) + sin(theta) * v
-            const w = Math.cos(theta);
-            const q = new THREE.Quaternion(v.x * Math.sin(theta), v.y * Math.sin(theta), v.z * Math.sin(theta), w);
+                atomMetaData.push({
+                    partName: part.name,
+                    basePos: localPos,
+                    quaternion: q,
+                    phase: Math.random() * Math.PI
+                });
+            }
+        });
 
-            atomMetaData.push({
-                basePos: new THREE.Vector3(v.x * baseRadius, v.y * baseRadius, v.z * baseRadius),
-                quaternion: q,
-                frequency: 2.0 + (i % 3) * 0.5,
-                phase: i * 0.1
-            });
-        }
-
-        // 4. Lighting
-        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
+        // 3. Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
         dirLight.position.set(10, 20, 15);
         scene.add(dirLight);
 
-        camera.position.set(0, 0, 12);
+        camera.position.set(0, 1, 6);
 
-        // 5. Animation Loop (Breathing Pulse)
+        // 4. Articulated Animation Loop (Quaternion Joint Rotations)
         function animate(time) {
             requestAnimationFrame(animate);
-            const t = time * 0.001;
+            const t = time * 0.002;
+
+            // Create quaternion rotations for joints (e.g., arms swinging, torso twisting)
+            const armQuaternion = new THREE.Quaternion();
+            const legQuaternion = new THREE.Quaternion();
+            const torsoQuaternion = new THREE.Quaternion();
+
+            armQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.sin(t) * 0.4);
+            legQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.sin(t) * 0.4);
+            torsoQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.sin(t * 0.5) * 0.2);
 
             atomMetaData.forEach((atom, idx) => {
-                // Biological rhythm pulse
-                const pulse = Math.sin(t * atom.frequency + atom.phase) * 0.2;
-                const currentPos = atom.basePos.clone().multiplyScalar(1 + (pulse * 0.15));
+                let currentPos = atom.basePos.clone();
 
-                dummy.position.copy(currentPos);
-                dummy.quaternion.copy(atom.quaternion);
-                
-                const scale = 1 + (pulse * 0.1);
-                dummy.scale.set(scale, scale, scale);
-
-                dummy.updateMatrix();
-                instancedMesh.setMatrixAt(idx, dummy.matrix);
-            });
-
-            instancedMesh.instanceMatrix.needsUpdate = true;
-
-            // Rotate entire structure for 3D depth inspection
-            instancedMesh.rotation.y = t * 0.15;
-            instancedMesh.rotation.x = Math.sin(t * 0.08) * 0.2;
-
-            renderer.render(scene, camera);
-        }
-
-        animate(0);
-
-        // Handle Resizing
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
-</body>
-</html>
+                // Apply joint transformations based on body part using quaternions
+                if (atom.partName.includes('Arm')) {
+                    // Pivot arms around shoulders
+                    const shoulderOffset = new THREE.Vector3(atom.partName.includes('left') ? -0.7 : 0.7, 1.5, 0);
+                    currentPos.sub(shoulderOffset);
+                    currentPos.applyQuaternion(armQuaternion);
+                    currentPos.add(shoulderOffset);
