@@ -2,40 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>C60 Buckminsterfullerene - Quaternion Molecule</title>
+    <title>C60 Buckyball - Mobile Safe</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #010104; font-family: monospace; }
-        #info {
-            position: absolute; top: 15px; width: 100%; text-align: center;
-            color: #38bdf8; font-size: 16px; pointer-events: none;
-            text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); z-index: 10;
+        body { margin: 0; overflow: hidden; background-color: #020208; font-family: sans-serif; }
+        #status {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            color: #38bdf8; font-size: 14px; background: rgba(0,0,0,0.7);
+            padding: 8px 16px; border-radius: 20px; border: 1px solid #0284c7;
+            pointer-events: none; z-index: 10;
         }
-        #error-log { color: #ff4444; position: absolute; top: 50px; left: 20px; z-index: 100; font-size: 14px; }
+        #error-box {
+            position: absolute; top: 70px; left: 20px; right: 20px;
+            color: #f43f5e; font-size: 12px; background: rgba(0,0,0,0.8);
+            padding: 10px; border-radius: 5px; display: none; z-index: 20;
+        }
     </style>
 </head>
 <body>
-    <div id="info">C₆₀ Buckminsterfullerene (Buckyball) — Quaternion Lattice</div>
-    <div id="error-log"></div>
+    <div id="status">Loading Three.js & Molecule...</div>
+    <div id="error-box"></div>
 
+    <!-- Load Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
+        const statusEl = document.getElementById('status');
+        const errorBox = document.getElementById('error-box');
+
         window.onerror = function(msg, url, line) {
-            document.getElementById('error-log').innerText = "Error: " + msg + " (Line: " + line + ")";
+            errorBox.style.display = 'block';
+            errorBox.innerText = "Error: " + msg + " (Line: " + line + ")";
+            statusEl.innerText = "Failed to load.";
             return true;
         };
 
-        try {
-            const scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x010104, 0.05);
+        if (typeof THREE === 'undefined') {
+            errorBox.style.display = 'block';
+            errorBox.innerText = "CDN blocked! Check your internet connection or open this file via a local server.";
+            statusEl.innerText = "Connection Error";
+        } else {
+            statusEl.innerText = "Rendering C₆₀ Buckyball...";
 
+            const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
             document.body.appendChild(renderer.domElement);
 
-            // --- 1. MATHEMATICAL GENERATION OF C60 VERTICES ---
+            // --- 1. GENERATE C60 VERTICES ---
             const phi = (1 + Math.sqrt(5)) / 2;
             const carbonVertices = [];
 
@@ -58,10 +72,9 @@
             addCyclicPerms(0, 1, 3 * phi);
             addCyclicPerms(1, 2 + phi, 2 * phi);
             addCyclicPerms(phi, 2, 2 + phi);
-
             carbonVertices.forEach(v => v.multiplyScalar(0.55));
 
-            // --- 2. DETECT COVALENT BONDS ---
+            // --- 2. DETECT BONDS ---
             const bonds = [];
             for (let i = 0; i < carbonVertices.length; i++) {
                 for (let j = i + 1; j < carbonVertices.length; j++) {
@@ -72,29 +85,22 @@
                 }
             }
 
-            // --- 3. MESHES ---
+            // --- 3. MOBILE-SAFE MATERIALS & MESHES ---
             const atomGeo = new THREE.SphereGeometry(0.12, 16, 16);
-            const atomMat = new THREE.MeshPhysicalMaterial({
-                color: 0x06b6d4,
-                roughness: 0.1,
-                metalness: 0.1,
-                transmission: 0.85,
-                thickness: 0.5,
-                clearcoat: 1.0,
-                iridescence: 0.9,
+            const atomMat = new THREE.MeshStandardMaterial({
+                color: 0x38bdf8,
+                roughness: 0.2,
+                metalness: 0.8,
                 emissive: 0x0284c7,
                 emissiveIntensity: 0.4
             });
-
             const atomMesh = new THREE.InstancedMesh(atomGeo, atomMat, carbonVertices.length);
 
             const bondGeo = new THREE.CylinderGeometry(0.035, 0.035, 1, 8);
             const bondMat = new THREE.MeshStandardMaterial({
                 color: 0x94a3b8,
-                roughness: 0.2,
-                metalness: 0.8,
-                emissive: 0x1e293b,
-                emissiveIntensity: 0.3
+                roughness: 0.3,
+                metalness: 0.5
             });
             const bondMesh = new THREE.InstancedMesh(bondGeo, bondMat, bonds.length);
 
@@ -103,14 +109,75 @@
             masterGroup.add(bondMesh);
             scene.add(masterGroup);
 
-            // --- 4. INITIALIZE DATA & QUATERNIONS ---
-            const atomData = [];
+            // --- 4. INITIALIZE MATRICES ---
             const dummy = new THREE.Object3D();
-            const color = new THREE.Color();
+            const atomData = [];
 
             carbonVertices.forEach((pos, idx) => {
-                const theta = Math.PI * 0.25;
-                const q = new THREE.Quaternion(
-                    pos.x * Math.sin(theta),
-                    pos.y * Math.sin(theta),
-                    pos.z * Math.sin(theta
+                dummy.position.copy(pos);
+                dummy.scale.set(1, 1, 1);
+                dummy.updateMatrix();
+                atomMesh.setMatrixAt(idx, dummy.matrix);
+
+                atomData.push({ basePos: pos.clone(), phase: Math.random() * Math.PI * 2 });
+            });
+            atomMesh.instanceMatrix.needsUpdate = true;
+
+            const upVector = new THREE.Vector3(0, 1, 0);
+            bonds.forEach((bond, idx) => {
+                const midpoint = bond.start.clone().add(bond.end).multiplyScalar(0.5);
+                const distance = bond.start.distanceTo(bond.end);
+
+                dummy.position.copy(midpoint);
+                const subVector = bond.end.clone().sub(bond.start).normalize();
+                dummy.quaternion.setFromUnitVectors(upVector, subVector);
+                dummy.scale.set(1, distance, 1);
+                dummy.updateMatrix();
+
+                bondMesh.setMatrixAt(idx, dummy.matrix);
+            });
+            bondMesh.instanceMatrix.needsUpdate = true;
+
+            // --- 5. LIGHTING ---
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            camera.position.set(0, 0, 4.5);
+
+            // --- 6. ANIMATION LOOP ---
+            function animate(time) {
+                requestAnimationFrame(animate);
+                const t = time * 0.001;
+
+                // Subtle organic pulse
+                atomData.forEach((atom, idx) => {
+                    let currentPos = atom.basePos.clone();
+                    const pulse = Math.sin(t * 3.0 + atom.phase) * 0.015;
+                    currentPos.addScalar(pulse);
+
+                    dummy.position.copy(currentPos);
+                    dummy.scale.set(1, 1, 1);
+                    dummy.updateMatrix();
+                    atomMesh.setMatrixAt(idx, dummy.matrix);
+                });
+                atomMesh.instanceMatrix.needsUpdate = true;
+
+                masterGroup.rotation.x = t * 0.3;
+                masterGroup.rotation.y = t * 0.4;
+
+                renderer.render(scene, camera);
+            }
+
+            animate(0);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+    </script>
+</body>
+</html>
