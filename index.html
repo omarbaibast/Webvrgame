@@ -2,20 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Textured Quaternion Bio-Humanoid</title>
+    <title>C60 Buckminsterfullerene - Quaternion Molecule</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #010103; }
+        body { margin: 0; overflow: hidden; background-color: #010104; }
         canvas { display: block; }
+        #info {
+            position: absolute; top: 15px; width: 100%; text-align: center;
+            color: #38bdf8; font-family: monospace; font-size: 16px; pointer-events: none;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
     </style>
 </head>
 <body>
+    <div id="info">C₆₀ Buckminsterfullerene (Buckyball) — Quaternion Lattice</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
         const scene = new THREE.Scene();
-        // Add subtle fog for depth atmospheric glow
-        scene.fog = new THREE.FogExp2(0x010103, 0.08);
+        scene.fog = new THREE.FogExp2(0x010104, 0.05);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -23,110 +28,51 @@
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         document.body.appendChild(renderer.domElement);
 
-        // High-end biological texture: Glass-like transmission, iridescence, and clearcoat gloss
-        const atomGeometry = new THREE.SphereGeometry(0.065, 24, 24);
-        const atomMaterial = new THREE.MeshPhysicalMaterial({ 
-            color: 0x38bdf8, 
-            roughness: 0.1, 
-            metalness: 0.1,
-            transmission: 0.75,      // Semi-transparent gel/cell look
-            thickness: 0.6,          // Light refraction depth
-            clearcoat: 1.0,          // Wet, glossy membrane sheen
-            clearcoatRoughness: 0.05,
-            iridescence: 0.9,        // Pearlescent angle-based color shift
-            iridescenceIOR: 1.3,
-            emissive: 0x0284c7,
-            emissiveIntensity: 0.35
-        });
+        // --- 1. MATHEMATICAL GENERATION OF C60 VERTICES (Truncated Icosahedron) ---
+        const phi = (1 + Math.sqrt(5)) / 2; // Golden Ratio
+        const carbonVertices = [];
 
-        // Anatomical body parts
-        const bodyParts = [
-            { name: 'head', count: 70, offset: new THREE.Vector3(0, 2.4, 0), scale: new THREE.Vector3(0.35, 0.45, 0.38) },
-            { name: 'neck', count: 25, offset: new THREE.Vector3(0, 1.85, 0), scale: new THREE.Vector3(0.18, 0.25, 0.18) },
-            { name: 'chest', count: 180, offset: new THREE.Vector3(0, 1.3, 0), scale: new THREE.Vector3(0.65, 0.5, 0.4) },
-            { name: 'pelvis', count: 120, offset: new THREE.Vector3(0, 0.5, 0), scale: new THREE.Vector3(0.55, 0.35, 0.4) },
-            { name: 'leftUpperArm', count: 45, offset: new THREE.Vector3(-0.8, 1.3, 0), scale: new THREE.Vector3(0.18, 0.4, 0.18) },
-            { name: 'leftLowerArm', count: 40, offset: new THREE.Vector3(-0.8, 0.7, 0), scale: new THREE.Vector3(0.15, 0.38, 0.15) },
-            { name: 'rightUpperArm', count: 45, offset: new THREE.Vector3(0.8, 1.3, 0), scale: new THREE.Vector3(0.18, 0.4, 0.18) },
-            { name: 'rightLowerArm', count: 40, offset: new THREE.Vector3(0.8, 0.7, 0), scale: new THREE.Vector3(0.15, 0.38, 0.15) },
-            { name: 'leftUpperLeg', count: 60, offset: new THREE.Vector3(-0.3, -0.1, 0), scale: new THREE.Vector3(0.22, 0.5, 0.22) },
-            { name: 'leftLowerLeg', count: 50, offset: new THREE.Vector3(-0.3, -0.8, 0), scale: new THREE.Vector3(0.18, 0.48, 0.18) },
-            { name: 'rightUpperLeg', count: 60, offset: new THREE.Vector3(0.3, -0.1, 0), scale: new THREE.Vector3(0.22, 0.5, 0.22) },
-            { name: 'rightLowerLeg', count: 50, offset: new THREE.Vector3(0.3, -0.8, 0), scale: new THREE.Vector3(0.18, 0.48, 0.18) }
-        ];
+        function addCyclicPerms(x, y, z) {
+            const coords = [[x, y, z], [z, x, y], [y, z, x]];
+            coords.forEach(c => {
+                for (let sx of [-1, 1]) {
+                    for (let sy of [-1, 1]) {
+                        for (let sz of [-1, 1]) {
+                            const v = new THREE.Vector3(c[0]*sx, c[1]*sy, c[2]*sz);
+                            if (!carbonVertices.some(existing => existing.distanceTo(v) < 0.01)) {
+                                carbonVertices.push(v);
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
-        const totalAtoms = bodyParts.reduce((sum, part) => sum + part.count, 0);
-        const instancedMesh = new THREE.InstancedMesh(atomGeometry, atomMaterial, totalAtoms);
-        scene.add(instancedMesh);
+        // Standard Ih symmetry orbits for C60
+        addCyclicPerms(0, 1, 3 * phi);
+        addCyclicPerms(1, 2 + phi, 2 * phi);
+        addCyclicPerms(phi, 2, 2 + phi);
 
-        const atomMetaData = [];
-        const dummy = new THREE.Object3D();
-        const color = new THREE.Color();
+        // Scale to molecular radius
+        carbonVertices.forEach(v => v.multiplyScalar(0.55));
 
-        let globalIndex = 0;
-        bodyParts.forEach(part => {
-            for (let i = 0; i < part.count; i++) {
-                const u = Math.random() * Math.PI * 2;
-                const v = Math.acos(Math.random() * 2 - 1);
-                const r = Math.cbrt(Math.random());
+        // --- 2. DETECT COVALENT BONDS BETWEEN CARBON ATOMS ---
+        const bonds = [];
+        const bondMin = 0.8;
+        const bondMax = 1.3;
 
-                const localPos = new THREE.Vector3(
-                    r * Math.sin(v) * Math.cos(u) * part.scale.x + part.offset.x,
-                    r * Math.sin(v) * Math.sin(u) * part.scale.y + part.offset.y,
-                    r * Math.cos(v) * part.scale.z + part.offset.z
-                );
-
-                const theta = Math.PI * 0.3;
-                const q = new THREE.Quaternion(
-                    localPos.x * Math.sin(theta), 
-                    localPos.y * Math.sin(theta), 
-                    localPos.z * Math.sin(theta), 
-                    Math.cos(theta)
-                );
-
-                // Assign dynamic bioluminescent color gradient based on height (cyan to magenta)
-                const heightRatio = (localPos.y + 1.0) / 3.5;
-                color.setHSL(0.55 + heightRatio * 0.25, 0.9, 0.6);
-                instancedMesh.setColorAt(globalIndex, color);
-
-                atomMetaData.push({
-                    partName: part.name,
-                    basePos: localPos,
-                    quaternion: q,
-                    phase: Math.random() * Math.PI * 2
-                });
-                globalIndex++;
+        for (let i = 0; i < carbonVertices.length; i++) {
+            for (let j = i + 1; j < carbonVertices.length; j++) {
+                const dist = carbonVertices[i].distanceTo(carbonVertices[j]);
+                if (dist >= bondMin && dist <= bondMax) {
+                    bonds.push({ start: carbonVertices[i], end: carbonVertices[j] });
+                }
             }
-        });
-        instancedMesh.instanceColor.needsUpdate = true;
+        }
 
-        // Enhanced Studio Lighting for High-End Reflections
-        scene.add(new THREE.AmbientLight(0x0a1128, 1.5));
-        
-        const keyLight = new THREE.DirectionalLight(0x38bdf8, 3.0);
-        keyLight.position.set(5, 10, 7);
-        scene.add(keyLight);
-
-        const rimLight = new THREE.DirectionalLight(0xf43f5e, 2.5); // Magenta rim light for contrast
-        rimLight.position.set(-5, 5, -5);
-        scene.add(rimLight);
-
-        const floorLight = new THREE.PointLight(0x06b6d4, 2, 10);
-        floorLight.position.set(0, -2, 2);
-        scene.add(floorLight);
-
-        camera.position.set(0, 1.0, 5.0);
-
-        function animate(time) {
-            requestAnimationFrame(animate);
-            const t = time * 0.0015;
-
-            const armRot = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.sin(t) * 0.4);
-            const legRot = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.sin(t) * 0.4);
-            const torsoRot = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.sin(t * 0.5) * 0.15);
-
-            atomMetaData.forEach((atom, idx) => {
-                let currentPos = atom.basePos.clone();
-
-                if (atom.partName.includes('Arm')) {
-                    const shoulder = new THREE.Vector3(atom.partName.includes('left') ? -0.8 : 0.8, 
+        // --- 3. MATERIALS & INSTANCED MESHES ---
+        // Carbon Atom Material (Glassy, Iridescent, Bioluminescent)
+        const atomGeo = new THREE.SphereGeometry(0.12, 24, 24);
+        const atomMat = new THREE.MeshPhysicalMaterial({
+            color: 0x06b6d4,
+            rough
