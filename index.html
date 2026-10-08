@@ -2,506 +2,941 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quaternion Spatial Encryption</title>
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<title>Mathematical Human Growth</title>
 
 <style>
-    body {
+    html, body {
         margin: 0;
-        background: #111;
-        color: #eee;
-        font-family: Arial, sans-serif;
+        width: 100%;
+        height: 100%;
         overflow: hidden;
+        background: #050509;
+        font-family: Arial, sans-serif;
+        color: white;
     }
 
-    #ui {
+    #info {
         position: absolute;
         top: 10px;
         left: 10px;
         z-index: 10;
-        background: rgba(20,20,20,0.92);
-        padding: 15px;
+        background: rgba(0,0,0,.65);
+        padding: 12px;
         border-radius: 10px;
-        width: 280px;
+        max-width: 330px;
     }
 
-    h2 {
-        margin-top: 0;
-        font-size: 19px;
+    #info h2 {
+        margin: 0 0 7px 0;
+        font-size: 18px;
     }
 
-    label {
-        display: block;
-        margin-top: 7px;
+    #info p {
+        margin: 4px 0;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    #controls {
+        position: absolute;
+        bottom: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+
+        background: rgba(0,0,0,.75);
+        padding: 12px;
+        border-radius: 12px;
+
+        width: min(90vw, 500px);
+        box-sizing: border-box;
+    }
+
+    .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 7px 0;
+    }
+
+    .row label {
+        width: 100px;
         font-size: 13px;
     }
 
-    input {
-        width: 55px;
-        margin-right: 4px;
-        background: #222;
-        color: white;
-        border: 1px solid #555;
-        border-radius: 4px;
-        padding: 5px;
+    input[type=range] {
+        flex: 1;
     }
 
     button {
-        margin-top: 10px;
-        padding: 8px 10px;
         border: none;
-        border-radius: 5px;
+        border-radius: 7px;
+        padding: 8px 13px;
+        margin-right: 5px;
         cursor: pointer;
     }
 
-    #status {
-        margin-top: 12px;
-        font-size: 12px;
-        line-height: 1.5;
-        color: #aaa;
-    }
-
-    #view {
-        width: 100%;
-        margin-top: 10px;
-    }
-
-    #canvas {
-        position: fixed;
-        inset: 0;
+    #timeValue {
+        width: 45px;
+        text-align: right;
     }
 </style>
 </head>
 
 <body>
 
-<div id="ui">
+<div id="info">
+    <h2>Mathematical Human Growth</h2>
 
-    <h2>Quaternion Spatial Encryption</h2>
+    <p>
+        Start with a single mathematical sphere.
+        Growth fields progressively create the head, torso,
+        arms and legs.
+    </p>
 
-    <div>
-        <b>Quaternion key</b>
+    <p>
+        Model:
+        <b>sphere → growth fields → human form → smoothing</b>
+    </p>
+
+    <p id="stage">Stage: primordial sphere</p>
+</div>
+
+<div id="controls">
+
+    <div class="row">
+        <label>Growth time</label>
+
+        <input
+            id="time"
+            type="range"
+            min="0"
+            max="1"
+            step="0.001"
+            value="0">
+
+        <span id="timeValue">0.00</span>
     </div>
 
-    <label>
-        w:
-        <input id="qw" type="number" step="0.01" value="0.9239">
-    </label>
+    <div class="row">
+        <label>Symmetry</label>
 
-    <label>
-        x:
-        <input id="qx" type="number" step="0.01" value="0">
-    </label>
+        <input
+            id="symmetry"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="1">
+    </div>
 
-    <label>
-        y:
-        <input id="qy" type="number" step="0.01" value="0.3827">
-    </label>
+    <div class="row">
+        <label>Smoothing</label>
 
-    <label>
-        z:
-        <input id="qz" type="number" step="0.01" value="0">
-    </label>
+        <input
+            id="smooth"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.7">
+    </div>
 
-    <label>
-        Number of points:
-        <input id="pointCount" type="number" value="3000" min="100" max="20000">
-    </label>
-
-    <button onclick="generateObject()">Generate Object</button>
-    <button onclick="encryptObject()">Encrypt</button>
-    <button onclick="decryptObject()">Decrypt</button>
-
-    <select id="view" onchange="changeView()">
-        <option value="original">Original</option>
-        <option value="encrypted">Encrypted</option>
-        <option value="decrypted">Decrypted</option>
-    </select>
-
-    <div id="status">
-        Ready.
+    <div>
+        <button id="play">▶ Grow</button>
+        <button id="reset">Reset</button>
     </div>
 
 </div>
 
-<div id="canvas"></div>
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
+}
+</script>
 
 <script type="module">
 
-import * as THREE from
-'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+import * as THREE from "three";
+import { MarchingCubes }
+    from "three/addons/objects/MarchingCubes.js";
 
-
-// ============================================================
-// THREE.JS SETUP
-// ============================================================
+/* -------------------------------------------------------
+   SCENE
+------------------------------------------------------- */
 
 const scene = new THREE.Scene();
 
-scene.background = new THREE.Color(0x111111);
+scene.background = new THREE.Color(0x050509);
 
 const camera = new THREE.PerspectiveCamera(
-    60,
+    45,
     window.innerWidth / window.innerHeight,
     0.1,
-    1000
+    100
 );
 
-camera.position.set(0, 0, 7);
+camera.position.set(0, 1.0, 7);
 
 const renderer = new THREE.WebGLRenderer({
     antialias: true
 });
 
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, 2)
+);
 
-document.getElementById("canvas").appendChild(renderer.domElement);
+renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
 
-
-// ============================================================
-// POINT DATA
-// ============================================================
-
-let originalPoints = [];
-let encryptedPoints = [];
-let decryptedPoints = [];
-
-let pointCloud = null;
+document.body.appendChild(renderer.domElement);
 
 
-// ============================================================
-// QUATERNION FUNCTIONS
-// ============================================================
+/* -------------------------------------------------------
+   LIGHTING
+------------------------------------------------------- */
 
-// Quaternion multiplication
-function qMultiply(a, b) {
+const ambient = new THREE.HemisphereLight(
+    0xffffff,
+    0x222233,
+    2.2
+);
 
-    return {
-        w: a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z,
+scene.add(ambient);
 
-        x: a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
+const light = new THREE.DirectionalLight(
+    0xffffff,
+    3
+);
 
-        y: a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x,
+light.position.set(4, 6, 5);
 
-        z: a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w
-    };
+scene.add(light);
+
+
+/* -------------------------------------------------------
+   HUMAN MATERIAL
+------------------------------------------------------- */
+
+const material = new THREE.MeshStandardMaterial({
+    roughness: 0.55,
+    metalness: 0.05
+});
+
+
+/* -------------------------------------------------------
+   MARCHING CUBES
+------------------------------------------------------- */
+
+const resolution = 48;
+
+const human = new MarchingCubes(
+    resolution,
+    material,
+    true,
+    true
+);
+
+human.scale.set(2.5, 2.5, 2.5);
+
+human.position.y = 0;
+
+scene.add(human);
+
+
+/* -------------------------------------------------------
+   MATHEMATICAL FUNCTIONS
+------------------------------------------------------- */
+
+function sigmoid(x, center, sharpness = 10) {
+
+    return 1 /
+        (1 + Math.exp(
+            -sharpness * (x - center)
+        ));
 }
 
 
-// Quaternion conjugate
-function qConjugate(q) {
+function clamp01(x) {
 
-    return {
-        w: q.w,
-        x: -q.x,
-        y: -q.y,
-        z: -q.z
-    };
+    return Math.max(
+        0,
+        Math.min(1, x)
+    );
 }
 
 
-// Normalize quaternion
-function qNormalize(q) {
+/*
+    Smooth radial field.
 
-    const length = Math.sqrt(
-        q.w*q.w +
-        q.x*q.x +
-        q.y*q.y +
-        q.z*q.z
+    p = point
+    c = center
+    r = radius
+*/
+
+function blob(p, c, r, strength = 1) {
+
+    const dx = p.x - c.x;
+    const dy = p.y - c.y;
+    const dz = p.z - c.z;
+
+    const d2 =
+        dx * dx +
+        dy * dy +
+        dz * dz;
+
+    return strength *
+        Math.exp(
+            -d2 / (r * r)
+        );
+}
+
+
+/*
+    Capsule-like field.
+
+    This gives us arms and legs.
+*/
+
+function capsule(
+    p,
+    a,
+    b,
+    radius,
+    strength = 1
+) {
+
+    const ab = new THREE.Vector3(
+        b.x - a.x,
+        b.y - a.y,
+        b.z - a.z
     );
 
-    return {
-        w: q.w / length,
-        x: q.x / length,
-        y: q.y / length,
-        z: q.z / length
-    };
+    const ap = new THREE.Vector3(
+        p.x - a.x,
+        p.y - a.y,
+        p.z - a.z
+    );
+
+    const ab2 = ab.lengthSq();
+
+    let t = 0;
+
+    if (ab2 > 0) {
+
+        t =
+            ap.dot(ab) /
+            ab2;
+
+        t = clamp01(t);
+    }
+
+    const closest = new THREE.Vector3(
+        a.x + ab.x * t,
+        a.y + ab.y * t,
+        a.z + ab.z * t
+    );
+
+    const dx = p.x - closest.x;
+    const dy = p.y - closest.y;
+    const dz = p.z - closest.z;
+
+    const d2 =
+        dx * dx +
+        dy * dy +
+        dz * dz;
+
+    return strength *
+        Math.exp(
+            -d2 / (radius * radius)
+        );
 }
 
 
-// ============================================================
-// QUATERNION ROTATION
-// ============================================================
+/* -------------------------------------------------------
+   GROWTH FIELD
+------------------------------------------------------- */
 
-function rotatePoint(point, q) {
-
-    // Pure quaternion representing the point
-    const p = {
-        w: 0,
-        x: point.x,
-        y: point.y,
-        z: point.z
-    };
-
-    const qConj = qConjugate(q);
-
-    // p' = q p q*
-    const first = qMultiply(q, p);
-    const result = qMultiply(first, qConj);
-
-    return {
-        x: result.x,
-        y: result.y,
-        z: result.z
-    };
-}
-
-
-// ============================================================
-// GENERATE 3D OBJECT
-// ============================================================
-
-function generateObject() {
-
-    const count =
-        parseInt(document.getElementById("pointCount").value);
-
-    originalPoints = [];
+function calculateField(p, time, symmetry) {
 
     /*
-        Generate points on the surface of a sphere.
-
-        This gives us a recognizable 3D object
-        whose geometry can be observed before
-        and after transformation.
+        Start with a primordial sphere.
     */
 
-    for (let i = 0; i < count; i++) {
-
-        const phi =
-            Math.acos(1 - 2 * (i + 0.5) / count);
-
-        const theta =
-            Math.PI * (1 + Math.sqrt(5)) * i;
-
-        const radius = 2;
-
-        const x =
-            radius *
-            Math.sin(phi) *
-            Math.cos(theta);
-
-        const y =
-            radius *
-            Math.sin(phi) *
-            Math.sin(theta);
-
-        const z =
-            radius *
-            Math.cos(phi);
-
-        originalPoints.push({
-            x: x,
-            y: y,
-            z: z
-        });
-    }
-
-    encryptedPoints = [];
-    decryptedPoints = [];
-
-    updatePointCloud(originalPoints);
-
-    document.getElementById("status").innerHTML =
-        "Generated " + count + " points.";
-}
-
-
-// ============================================================
-// READ QUATERNION KEY
-// ============================================================
-
-function getQuaternion() {
-
-    const q = {
-
-        w: parseFloat(
-            document.getElementById("qw").value
-        ),
-
-        x: parseFloat(
-            document.getElementById("qx").value
-        ),
-
-        y: parseFloat(
-            document.getElementById("qy").value
-        ),
-
-        z: parseFloat(
-            document.getElementById("qz").value
-        )
-    };
-
-    return qNormalize(q);
-}
-
-
-// ============================================================
-// ENCRYPT
-// ============================================================
-
-function encryptObject() {
-
-    if (originalPoints.length === 0) {
-
-        generateObject();
-    }
-
-    const q = getQuaternion();
-
-    encryptedPoints = [];
-
-    for (const p of originalPoints) {
-
-        const encrypted =
-            rotatePoint(p, q);
-
-        encryptedPoints.push(encrypted);
-    }
-
-    document.getElementById("status").innerHTML =
-        "Encrypted using:<br>" +
-        "q = (" +
-        q.w.toFixed(4) + ", " +
-        q.x.toFixed(4) + ", " +
-        q.y.toFixed(4) + ", " +
-        q.z.toFixed(4) + ")";
-
-    document.getElementById("view").value = "encrypted";
-
-    updatePointCloud(encryptedPoints);
-}
-
-
-// ============================================================
-// DECRYPT
-// ============================================================
-
-function decryptObject() {
-
-    if (encryptedPoints.length === 0) {
-
-        encryptObject();
-    }
-
-    const q = getQuaternion();
-
-    const inverse =
-        qConjugate(q);
-
-    decryptedPoints = [];
-
-    for (const p of encryptedPoints) {
-
-        const decrypted =
-            rotatePoint(p, inverse);
-
-        decryptedPoints.push(decrypted);
-    }
-
-    document.getElementById("status").innerHTML =
-        "Decrypted using q*.";
-
-    document.getElementById("view").value =
-        "decrypted";
-
-    updatePointCloud(decryptedPoints);
-}
-
-
-// ============================================================
-// VIEW SWITCH
-// ============================================================
-
-function changeView() {
-
-    const view =
-        document.getElementById("view").value;
-
-    if (view === "original") {
-
-        updatePointCloud(originalPoints);
-
-    } else if (view === "encrypted") {
-
-        updatePointCloud(encryptedPoints);
-
-    } else if (view === "decrypted") {
-
-        updatePointCloud(decryptedPoints);
-    }
-}
-
-
-// ============================================================
-// CREATE / UPDATE POINT CLOUD
-// ============================================================
-
-function updatePointCloud(points) {
-
-    if (!points || points.length === 0) {
-        return;
-    }
-
-    if (pointCloud) {
-
-        scene.remove(pointCloud);
-
-        pointCloud.geometry.dispose();
-        pointCloud.material.dispose();
-    }
-
-    const positions =
-        new Float32Array(points.length * 3);
-
-    for (let i = 0; i < points.length; i++) {
-
-        positions[i * 3 + 0] = points[i].x;
-
-        positions[i * 3 + 1] = points[i].y;
-
-        positions[i * 3 + 2] = points[i].z;
-    }
-
-    const geometry =
-        new THREE.BufferGeometry();
-
-    geometry.setAttribute(
-        "position",
-        new THREE.BufferAttribute(
-            positions,
-            3
-        )
-    );
-
-    const material =
-        new THREE.PointsMaterial({
-            size: 0.035
-        });
-
-    pointCloud =
-        new THREE.Points(
-            geometry,
-            material
+    let field =
+        blob(
+            p,
+            new THREE.Vector3(0, 0, 0),
+            0.85
         );
 
-    scene.add(pointCloud);
+
+    /*
+        At time 0 the object is basically
+        just a sphere.
+    */
+
+    if (time < 0.05) {
+
+        return field;
+    }
+
+
+    /*
+        ------------------------------------------------
+        TORSO
+        ------------------------------------------------
+    */
+
+    const torsoGrowth =
+        sigmoid(time, 0.15, 14);
+
+    field +=
+        blob(
+            p,
+            new THREE.Vector3(0, 0.15, 0),
+            0.70,
+            torsoGrowth * 1.7
+        );
+
+
+    field +=
+        blob(
+            p,
+            new THREE.Vector3(0, -0.65, 0),
+            0.50,
+            torsoGrowth * 1.2
+        );
+
+
+    /*
+        ------------------------------------------------
+        HEAD
+        ------------------------------------------------
+    */
+
+    const headGrowth =
+        sigmoid(time, 0.35, 14);
+
+    field +=
+        blob(
+            p,
+            new THREE.Vector3(0, 1.05, 0),
+            0.38,
+            headGrowth * 2.0
+        );
+
+
+    /*
+        NECK
+    */
+
+    field +=
+        capsule(
+            p,
+            new THREE.Vector3(0, 0.55, 0),
+            new THREE.Vector3(0, 0.82, 0),
+            0.22,
+            headGrowth
+        );
+
+
+    /*
+        ------------------------------------------------
+        ARMS
+        ------------------------------------------------
+    */
+
+    const armGrowth =
+        sigmoid(time, 0.48, 12);
+
+
+    let s = symmetry;
+
+
+    /*
+        Left arm
+    */
+
+    field +=
+        capsule(
+            p,
+            new THREE.Vector3(-0.48, 0.45, 0),
+            new THREE.Vector3(-0.95, -0.05, 0),
+            0.20,
+            armGrowth * s * 1.6
+        );
+
+
+    field +=
+        capsule(
+            p,
+            new THREE.Vector3(-0.95, -0.05, 0),
+            new THREE.Vector3(-1.15, -0.65, 0),
+            0.16,
+            armGrowth * s * 1.4
+        );
+
+
+    /*
+        Right arm
+    */
+
+    field +=
+        capsule(
+            p,
+            new THREE.Vector3(0.48, 0.45, 0),
+            new THREE.Vector3(0.95, -0.05, 0),
+            0.20,
+            armGrowth * s * 1.6
+        );
+
+
+    field +=
+        capsule(
+            p,
+            new THREE.Vector3(0.95, -0.05, 0),
+            new THREE.Vector3(1.15, -0.65, 0),
+            0.16,
+            armGrowth * s * 1.4
+        );
+
+
+    /*
+        Hands
+    */
+
+    field +=
+        blob(
+            p,
+            new THREE.Vector3(-1.15, -0.70, 0),
+            0.20,
+            armGrowth * s
+        );
+
+    field +=
+        blob(
+            p,
+            new THREE.Vector3(1.15, -0.70, 0),
+            0.20,
+            armGrowth * s
+        );
+
+
+    /*
+        ------------------------------------------------
+        LEGS
+        ------------------------------------------------
+    */
+
+    const legGrowth =
+        sigmoid(time, 0.58, 12);
+
+
+    /*
+        Left leg
+    */
+
+    field +=
+        capsule(
+            p,
+            new THREE.Vector3(-0.25, -0.65, 0),
+            new THREE.Vector3(-0.35, -1.35, 0),
+            0.25,
+            legGrowth * s * 1.8
+        );
+
+    field +=
+        capsule(
+            p,
+            new THREE.Vector3(-0.35, -1.35, 0),
+            new THREE.Vector3(-0.42, -2.05, 0),
+            0.20,
+            legGrowth * s * 1.6
+        );
+
+
+    /*
+        Right leg
+    */
+
+    field +=
+        capsule(
+            p,
+            new THREE.Vector3(0.25, -0.65, 0),
+            new THREE.Vector3(0.35, -1.35, 0),
+            0.25,
+            legGrowth * s * 1.8
+        );
+
+    field +=
+        capsule(
+            p,
+            new THREE.Vector3(0.35, -1.35, 0),
+            new THREE.Vector3(0.42, -2.05, 0),
+            0.20,
+            legGrowth * s * 1.6
+        );
+
+
+    /*
+        Feet
+    */
+
+    field +=
+        blob(
+            p,
+            new THREE.Vector3(-0.48, -2.10, 0.08),
+            0.25,
+            legGrowth * s
+        );
+
+    field +=
+        blob(
+            p,
+            new THREE.Vector3(0.48, -2.10, 0.08),
+            0.25,
+            legGrowth * s
+        );
+
+
+    /*
+        ------------------------------------------------
+        SHOULDERS
+        ------------------------------------------------
+    */
+
+    field +=
+        blob(
+            p,
+            new THREE.Vector3(-0.48, 0.45, 0),
+            0.30,
+            armGrowth * s
+        );
+
+    field +=
+        blob(
+            p,
+            new THREE.Vector3(0.48, 0.45, 0),
+            0.30,
+            armGrowth * s
+        );
+
+
+    return field;
 }
 
 
-// ============================================================
-// ANIMATION
-// ============================================================
+/* -------------------------------------------------------
+   UPDATE MESH
+------------------------------------------------------- */
 
-function animate() {
+function updateHuman(time) {
+
+    const symmetry =
+        parseFloat(
+            document.getElementById("symmetry").value
+        );
+
+    const smoothing =
+        parseFloat(
+            document.getElementById("smooth").value
+        );
+
+
+    human.reset();
+
+
+    /*
+        Marching Cubes coordinate system:
+        roughly -1 to +1.
+    */
+
+    for (let x = 0; x < resolution; x++) {
+
+        for (let y = 0; y < resolution; y++) {
+
+            for (let z = 0; z < resolution; z++) {
+
+                const px =
+                    (x / (resolution - 1)) * 2 - 1;
+
+                const py =
+                    (y / (resolution - 1)) * 2 - 1;
+
+                const pz =
+                    (z / (resolution - 1)) * 2 - 1;
+
+
+                /*
+                    Our mathematical coordinate system
+                    is stretched vertically.
+                */
+
+                const p = new THREE.Vector3(
+                    px * 1.25,
+                    py * 1.55,
+                    pz * 1.05
+                );
+
+
+                let value =
+                    calculateField(
+                        p,
+                        time,
+                        symmetry
+                    );
+
+
+                /*
+                    "Smoothing" parameter.
+
+                    This is not a numerical Ricci-flow
+                    solver. It acts as a field smoothing
+                    control.
+                */
+
+                value =
+                    Math.pow(
+                        value,
+                        1.0 - smoothing * 0.25
+                    );
+
+
+                human.setCell(
+                    x,
+                    y,
+                    z,
+                    value
+                );
+            }
+        }
+    }
+
+
+    /*
+        Iso-surface threshold.
+    */
+
+    human.isolation = 0.9;
+
+    human.update();
+
+
+    /*
+        Slowly rotate the organism.
+    */
+
+    human.rotation.y += 0.002;
+}
+
+
+/* -------------------------------------------------------
+   STAGE DESCRIPTION
+------------------------------------------------------- */
+
+function updateStage(t) {
+
+    const stage =
+        document.getElementById("stage");
+
+    if (t < 0.15) {
+
+        stage.textContent =
+            "Stage: primordial sphere";
+
+    } else if (t < 0.35) {
+
+        stage.textContent =
+            "Stage: torso emerging";
+
+    } else if (t < 0.48) {
+
+        stage.textContent =
+            "Stage: head + neck emerging";
+
+    } else if (t < 0.58) {
+
+        stage.textContent =
+            "Stage: arms emerging";
+
+    } else if (t < 0.75) {
+
+        stage.textContent =
+            "Stage: legs emerging";
+
+    } else {
+
+        stage.textContent =
+            "Stage: human-like mathematical organism";
+    }
+}
+
+
+/* -------------------------------------------------------
+   CONTROLS
+------------------------------------------------------- */
+
+const timeSlider =
+    document.getElementById("time");
+
+const timeValue =
+    document.getElementById("timeValue");
+
+const playButton =
+    document.getElementById("play");
+
+const resetButton =
+    document.getElementById("reset");
+
+let playing = false;
+
+
+timeSlider.addEventListener(
+    "input",
+    () => {
+
+        const t =
+            parseFloat(timeSlider.value);
+
+        timeValue.textContent =
+            t.toFixed(2);
+
+        updateStage(t);
+
+        updateHuman(t);
+    }
+);
+
+
+playButton.addEventListener(
+    "click",
+    () => {
+
+        playing = !playing;
+
+        playButton.textContent =
+            playing
+            ? "⏸ Pause"
+            : "▶ Grow";
+    }
+);
+
+
+resetButton.addEventListener(
+    "click",
+    () => {
+
+        playing = false;
+
+        playButton.textContent =
+            "▶ Grow";
+
+        timeSlider.value = 0;
+
+        timeValue.textContent =
+            "0.00";
+
+        updateStage(0);
+
+        updateHuman(0);
+    }
+);
+
+
+/* -------------------------------------------------------
+   MOUSE / TOUCH ROTATION
+------------------------------------------------------- */
+
+let dragging = false;
+let previousX = 0;
+
+renderer.domElement.addEventListener(
+    "pointerdown",
+    e => {
+
+        dragging = true;
+        previousX = e.clientX;
+    }
+);
+
+window.addEventListener(
+    "pointerup",
+    () => {
+
+        dragging = false;
+    }
+);
+
+window.addEventListener(
+    "pointermove",
+    e => {
+
+        if (!dragging) return;
+
+        const dx =
+            e.clientX - previousX;
+
+        human.rotation.y +=
+            dx * 0.01;
+
+        previousX =
+            e.clientX;
+    }
+);
+
+
+/* -------------------------------------------------------
+   ANIMATION
+------------------------------------------------------- */
+
+let lastTime = performance.now();
+
+function animate(now) {
 
     requestAnimationFrame(animate);
 
-    if (pointCloud) {
 
-        pointCloud.rotation.y += 0.002;
+    const dt =
+        (now - lastTime) / 1000;
+
+    lastTime = now;
+
+
+    if (playing) {
+
+        let t =
+            parseFloat(timeSlider.value);
+
+        t += dt * 0.08;
+
+        if (t >= 1) {
+
+            t = 1;
+            playing = false;
+
+            playButton.textContent =
+                "▶ Grow";
+        }
+
+        timeSlider.value = t;
+
+        timeValue.textContent =
+            t.toFixed(2);
+
+        updateStage(t);
+
+        updateHuman(t);
     }
+
 
     renderer.render(
         scene,
@@ -509,12 +944,10 @@ function animate() {
     );
 }
 
-animate();
 
-
-// ============================================================
-// RESIZE
-// ============================================================
+/* -------------------------------------------------------
+   RESIZE
+------------------------------------------------------- */
 
 window.addEventListener(
     "resize",
@@ -534,17 +967,15 @@ window.addEventListener(
 );
 
 
-// Make functions available to HTML buttons
-window.generateObject = generateObject;
-window.encryptObject = encryptObject;
-window.decryptObject = decryptObject;
-window.changeView = changeView;
+/* -------------------------------------------------------
+   START
+------------------------------------------------------- */
 
+updateHuman(0);
 
-// Generate initial object
-generateObject();
+animate(performance.now());
 
 </script>
 
 </body>
-</html>
+    </html>
