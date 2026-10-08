@@ -1,183 +1,772 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>C60 Buckyball - Mobile Safe</title>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #020208; font-family: sans-serif; }
-        #status {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            color: #38bdf8; font-size: 14px; background: rgba(0,0,0,0.7);
-            padding: 8px 16px; border-radius: 20px; border: 1px solid #0284c7;
-            pointer-events: none; z-index: 10;
-        }
-        #error-box {
-            position: absolute; top: 70px; left: 20px; right: 20px;
-            color: #f43f5e; font-size: 12px; background: rgba(0,0,0,0.8);
-            padding: 10px; border-radius: 5px; display: none; z-index: 20;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Quaternion Sculpture</title>
+
+<style>
+    html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #050509;
+        font-family: Arial, sans-serif;
+    }
+
+    canvas {
+        display: block;
+    }
+
+    #ui {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        width: 280px;
+        padding: 15px;
+        background: rgba(0,0,0,0.72);
+        color: white;
+        border-radius: 12px;
+        backdrop-filter: blur(8px);
+    }
+
+    #ui h2 {
+        margin: 0 0 10px 0;
+        font-size: 20px;
+    }
+
+    .control {
+        margin: 12px 0;
+    }
+
+    label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+
+    input {
+        width: 100%;
+    }
+
+    button {
+        width: 100%;
+        padding: 9px;
+        margin-top: 8px;
+        border: none;
+        border-radius: 7px;
+        cursor: pointer;
+    }
+
+    #info {
+        font-size: 11px;
+        line-height: 1.4;
+        opacity: 0.7;
+        margin-top: 12px;
+    }
+</style>
 </head>
+
 <body>
-    <div id="status">Loading Three.js & Molecule...</div>
-    <div id="error-box"></div>
 
-    <!-- Load Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<div id="ui">
 
-    <script>
-        const statusEl = document.getElementById('status');
-        const errorBox = document.getElementById('error-box');
+    <h2>Quaternion Sculpture</h2>
 
-        window.onerror = function(msg, url, line) {
-            errorBox.style.display = 'block';
-            errorBox.innerText = "Error: " + msg + " (Line: " + line + ")";
-            statusEl.innerText = "Failed to load.";
-            return true;
-        };
+    <div class="control">
+        <label>
+            Rotation strength:
+            <span id="rotationValue">3.0</span>
+        </label>
+        <input id="rotation"
+               type="range"
+               min="0"
+               max="10"
+               step="0.01"
+               value="3">
+    </div>
 
-        if (typeof THREE === 'undefined') {
-            errorBox.style.display = 'block';
-            errorBox.innerText = "CDN blocked! Check your internet connection or open this file via a local server.";
-            statusEl.innerText = "Connection Error";
-        } else {
-            statusEl.innerText = "Rendering C₆₀ Buckyball...";
+    <div class="control">
+        <label>
+            Deformation:
+            <span id="deformationValue">0.35</span>
+        </label>
+        <input id="deformation"
+               type="range"
+               min="0"
+               max="1.5"
+               step="0.01"
+               value="0.35">
+    </div>
 
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+    <div class="control">
+        <label>
+            Frequency:
+            <span id="frequencyValue">5</span>
+        </label>
+        <input id="frequency"
+               type="range"
+               min="1"
+               max="15"
+               step="1"
+               value="5">
+    </div>
 
-            // --- 1. GENERATE C60 VERTICES ---
-            const phi = (1 + Math.sqrt(5)) / 2;
-            const carbonVertices = [];
+    <div class="control">
+        <label>
+            Twist:
+            <span id="twistValue">2.0</span>
+        </label>
+        <input id="twist"
+               type="range"
+               min="-10"
+               max="10"
+               step="0.01"
+               value="2">
+    </div>
 
-            function addCyclicPerms(x, y, z) {
-                const coords = [[x, y, z], [z, x, y], [y, z, x]];
-                coords.forEach(c => {
-                    for (let sx of [-1, 1]) {
-                        for (let sy of [-1, 1]) {
-                            for (let sz of [-1, 1]) {
-                                const v = new THREE.Vector3(c[0]*sx, c[1]*sy, c[2]*sz);
-                                if (!carbonVertices.some(existing => existing.distanceTo(v) < 0.01)) {
-                                    carbonVertices.push(v);
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+    <button id="randomize">
+        Randomize Sculpture
+    </button>
 
-            addCyclicPerms(0, 1, 3 * phi);
-            addCyclicPerms(1, 2 + phi, 2 * phi);
-            addCyclicPerms(phi, 2, 2 + phi);
-            carbonVertices.forEach(v => v.multiplyScalar(0.55));
+    <button id="reset">
+        Reset Sphere
+    </button>
 
-            // --- 2. DETECT BONDS ---
-            const bonds = [];
-            for (let i = 0; i < carbonVertices.length; i++) {
-                for (let j = i + 1; j < carbonVertices.length; j++) {
-                    const dist = carbonVertices[i].distanceTo(carbonVertices[j]);
-                    if (dist >= 0.8 && dist <= 1.3) {
-                        bonds.push({ start: carbonVertices[i], end: carbonVertices[j] });
-                    }
-                }
-            }
+    <div id="info">
+        Every vertex begins on a sphere.
+        A position-dependent quaternion rotates
+        each vertex independently, producing a
+        continuous deformation field.
+    </div>
 
-            // --- 3. MOBILE-SAFE MATERIALS & MESHES ---
-            const atomGeo = new THREE.SphereGeometry(0.12, 16, 16);
-            const atomMat = new THREE.MeshStandardMaterial({
-                color: 0x38bdf8,
-                roughness: 0.2,
-                metalness: 0.8,
-                emissive: 0x0284c7,
-                emissiveIntensity: 0.4
-            });
-            const atomMesh = new THREE.InstancedMesh(atomGeo, atomMat, carbonVertices.length);
+</div>
 
-            const bondGeo = new THREE.CylinderGeometry(0.035, 0.035, 1, 8);
-            const bondMat = new THREE.MeshStandardMaterial({
-                color: 0x94a3b8,
-                roughness: 0.3,
-                metalness: 0.5
-            });
-            const bondMesh = new THREE.InstancedMesh(bondGeo, bondMat, bonds.length);
 
-            const masterGroup = new THREE.Group();
-            masterGroup.add(atomMesh);
-            masterGroup.add(bondMesh);
-            scene.add(masterGroup);
+<script type="module">
 
-            // --- 4. INITIALIZE MATRICES ---
-            const dummy = new THREE.Object3D();
-            const atomData = [];
+import * as THREE from
+    "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
 
-            carbonVertices.forEach((pos, idx) => {
-                dummy.position.copy(pos);
-                dummy.scale.set(1, 1, 1);
-                dummy.updateMatrix();
-                atomMesh.setMatrixAt(idx, dummy.matrix);
+import { OrbitControls } from
+    "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
 
-                atomData.push({ basePos: pos.clone(), phase: Math.random() * Math.PI * 2 });
-            });
-            atomMesh.instanceMatrix.needsUpdate = true;
 
-            const upVector = new THREE.Vector3(0, 1, 0);
-            bonds.forEach((bond, idx) => {
-                const midpoint = bond.start.clone().add(bond.end).multiplyScalar(0.5);
-                const distance = bond.start.distanceTo(bond.end);
+// ----------------------------------------------------
+// SCENE
+// ----------------------------------------------------
 
-                dummy.position.copy(midpoint);
-                const subVector = bond.end.clone().sub(bond.start).normalize();
-                dummy.quaternion.setFromUnitVectors(upVector, subVector);
-                dummy.scale.set(1, distance, 1);
-                dummy.updateMatrix();
+const scene = new THREE.Scene();
 
-                bondMesh.setMatrixAt(idx, dummy.matrix);
-            });
-            bondMesh.instanceMatrix.needsUpdate = true;
+scene.background = new THREE.Color(0x050509);
 
-            // --- 5. LIGHTING ---
-            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-            dirLight.position.set(5, 10, 7);
-            scene.add(dirLight);
 
-            camera.position.set(0, 0, 4.5);
+// ----------------------------------------------------
+// CAMERA
+// ----------------------------------------------------
 
-            // --- 6. ANIMATION LOOP ---
-            function animate(time) {
-                requestAnimationFrame(animate);
-                const t = time * 0.001;
+const camera = new THREE.PerspectiveCamera(
+    45,
+    window.innerWidth / window.innerHeight,
+    0.01,
+    100
+);
 
-                // Subtle organic pulse
-                atomData.forEach((atom, idx) => {
-                    let currentPos = atom.basePos.clone();
-                    const pulse = Math.sin(t * 3.0 + atom.phase) * 0.015;
-                    currentPos.addScalar(pulse);
+camera.position.set(3, 2.5, 5);
 
-                    dummy.position.copy(currentPos);
-                    dummy.scale.set(1, 1, 1);
-                    dummy.updateMatrix();
-                    atomMesh.setMatrixAt(idx, dummy.matrix);
-                });
-                atomMesh.instanceMatrix.needsUpdate = true;
 
-                masterGroup.rotation.x = t * 0.3;
-                masterGroup.rotation.y = t * 0.4;
+// ----------------------------------------------------
+// RENDERER
+// ----------------------------------------------------
 
-                renderer.render(scene, camera);
-            }
+const renderer = new THREE.WebGLRenderer({
+    antialias: true
+});
 
-            animate(0);
+renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, 2)
+);
 
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-        }
-    </script>
+renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
+
+renderer.outputColorSpace =
+    THREE.SRGBColorSpace;
+
+document.body.appendChild(renderer.domElement);
+
+
+// ----------------------------------------------------
+// CAMERA CONTROLS
+// ----------------------------------------------------
+
+const controls = new OrbitControls(
+    camera,
+    renderer.domElement
+);
+
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+
+
+// ----------------------------------------------------
+// LIGHTS
+// ----------------------------------------------------
+
+const ambient = new THREE.AmbientLight(
+    0xffffff,
+    1.2
+);
+
+scene.add(ambient);
+
+
+const light1 = new THREE.DirectionalLight(
+    0xffffff,
+    4
+);
+
+light1.position.set(3, 4, 5);
+
+scene.add(light1);
+
+
+const light2 = new THREE.PointLight(
+    0x4488ff,
+    20,
+    10
+);
+
+light2.position.set(-3, 1, 2);
+
+scene.add(light2);
+
+
+const light3 = new THREE.PointLight(
+    0xff4477,
+    15,
+    10
+);
+
+light3.position.set(3, -2, -2);
+
+scene.add(light3);
+
+
+// ----------------------------------------------------
+// ORIGINAL SPHERE
+// ----------------------------------------------------
+
+const resolution = 160;
+
+const geometry = new THREE.SphereGeometry(
+    1,
+    resolution,
+    resolution
+);
+
+
+// Save the original sphere positions.
+
+const originalPositions =
+    geometry.attributes.position.clone();
+
+
+// ----------------------------------------------------
+// MATERIAL
+// ----------------------------------------------------
+
+const material = new THREE.MeshPhysicalMaterial({
+
+    color: 0x1888ff,
+
+    metalness: 0.45,
+
+    roughness: 0.18,
+
+    transmission: 0.05,
+
+    clearcoat: 1.0,
+
+    clearcoatRoughness: 0.1,
+
+    side: THREE.DoubleSide
+});
+
+
+const sculpture =
+    new THREE.Mesh(
+        geometry,
+        material
+    );
+
+scene.add(sculpture);
+
+
+// ----------------------------------------------------
+// QUATERNION
+// ----------------------------------------------------
+
+const quaternion =
+    new THREE.Quaternion();
+
+
+// Temporary vectors
+
+const original =
+    new THREE.Vector3();
+
+const point =
+    new THREE.Vector3();
+
+const axis =
+    new THREE.Vector3();
+
+
+// ----------------------------------------------------
+// PARAMETERS
+// ----------------------------------------------------
+
+let rotationStrength = 3.0;
+
+let deformationStrength = 0.35;
+
+let frequency = 5;
+
+let twistStrength = 2.0;
+
+
+// ----------------------------------------------------
+// MAIN SCULPTURE FUNCTION
+// ----------------------------------------------------
+
+function sculpt() {
+
+    const position =
+        geometry.attributes.position;
+
+    for (
+        let i = 0;
+        i < position.count;
+        i++
+    ) {
+
+        // --------------------------------------------
+        // ORIGINAL SPHERE POINT
+        // --------------------------------------------
+
+        original.fromBufferAttribute(
+            originalPositions,
+            i
+        );
+
+        point.copy(original);
+
+
+        // --------------------------------------------
+        // SPHERICAL COORDINATES
+        // --------------------------------------------
+
+        const x = original.x;
+        const y = original.y;
+        const z = original.z;
+
+        const r = original.length();
+
+        const theta =
+            Math.atan2(z, x);
+
+        const phi =
+            Math.acos(
+                THREE.MathUtils.clamp(
+                    y / r,
+                    -1,
+                    1
+                )
+            );
+
+
+        // --------------------------------------------
+        // POSITION-DEPENDENT ROTATION ANGLE
+        // --------------------------------------------
+
+        const wave =
+            Math.sin(
+                frequency * theta +
+                2.0 * phi
+            );
+
+        const wave2 =
+            Math.sin(
+                frequency * phi +
+                theta * 2.0
+            );
+
+
+        let angle =
+            rotationStrength *
+            (
+                0.5 * wave +
+                0.5 * wave2
+            );
+
+
+        // Add a twist depending on height
+
+        angle +=
+            twistStrength * y;
+
+
+        // --------------------------------------------
+        // ROTATION AXIS
+        // --------------------------------------------
+
+        axis.set(
+
+            Math.sin(phi) *
+            Math.cos(theta),
+
+            Math.cos(phi),
+
+            Math.sin(phi) *
+            Math.sin(theta)
+
+        );
+
+
+        axis.normalize();
+
+
+        // --------------------------------------------
+        // CREATE QUATERNION
+        // --------------------------------------------
+
+        quaternion.setFromAxisAngle(
+            axis,
+            angle
+        );
+
+
+        // --------------------------------------------
+        // ROTATE THE POINT
+        // --------------------------------------------
+
+        point.applyQuaternion(
+            quaternion
+        );
+
+
+        // --------------------------------------------
+        // RADIAL DEFORMATION
+        // --------------------------------------------
+
+        const deformation =
+            1.0 +
+
+            deformationStrength *
+
+            Math.sin(
+                frequency * theta
+            ) *
+
+            Math.sin(
+                frequency * phi
+            );
+
+
+        point.multiplyScalar(
+            deformation
+        );
+
+
+        // --------------------------------------------
+        // SECOND SMALL DEFORMATION
+        // --------------------------------------------
+
+        point.x +=
+            deformationStrength *
+            0.25 *
+            Math.sin(
+                3.0 * y +
+                4.0 * theta
+            );
+
+        point.z +=
+            deformationStrength *
+            0.25 *
+            Math.cos(
+                3.0 * y +
+                4.0 * theta
+            );
+
+
+        // --------------------------------------------
+        // WRITE NEW POSITION
+        // --------------------------------------------
+
+        position.setXYZ(
+            i,
+            point.x,
+            point.y,
+            point.z
+        );
+    }
+
+
+    position.needsUpdate = true;
+
+    geometry.computeVertexNormals();
+}
+
+
+// ----------------------------------------------------
+// UI
+// ----------------------------------------------------
+
+const rotationSlider =
+    document.getElementById("rotation");
+
+const deformationSlider =
+    document.getElementById("deformation");
+
+const frequencySlider =
+    document.getElementById("frequency");
+
+const twistSlider =
+    document.getElementById("twist");
+
+
+rotationSlider.oninput = () => {
+
+    rotationStrength =
+        parseFloat(rotationSlider.value);
+
+    document.getElementById(
+        "rotationValue"
+    ).textContent =
+        rotationStrength.toFixed(2);
+
+    sculpt();
+};
+
+
+deformationSlider.oninput = () => {
+
+    deformationStrength =
+        parseFloat(deformationSlider.value);
+
+    document.getElementById(
+        "deformationValue"
+    ).textContent =
+        deformationStrength.toFixed(2);
+
+    sculpt();
+};
+
+
+frequencySlider.oninput = () => {
+
+    frequency =
+        parseFloat(frequencySlider.value);
+
+    document.getElementById(
+        "frequencyValue"
+    ).textContent =
+        frequency;
+
+    sculpt();
+};
+
+
+twistSlider.oninput = () => {
+
+    twistStrength =
+        parseFloat(twistSlider.value);
+
+    document.getElementById(
+        "twistValue"
+    ).textContent =
+        twistStrength.toFixed(2);
+
+    sculpt();
+};
+
+
+// ----------------------------------------------------
+// RANDOMIZE
+// ----------------------------------------------------
+
+document.getElementById(
+    "randomize"
+).onclick = () => {
+
+    rotationStrength =
+        Math.random() * 8;
+
+    deformationStrength =
+        Math.random() * 1.2;
+
+    frequency =
+        Math.floor(
+            2 + Math.random() * 10
+        );
+
+    twistStrength =
+        -5 + Math.random() * 10;
+
+
+    rotationSlider.value =
+        rotationStrength;
+
+    deformationSlider.value =
+        deformationStrength;
+
+    frequencySlider.value =
+        frequency;
+
+    twistSlider.value =
+        twistStrength;
+
+
+    document.getElementById(
+        "rotationValue"
+    ).textContent =
+        rotationStrength.toFixed(2);
+
+    document.getElementById(
+        "deformationValue"
+    ).textContent =
+        deformationStrength.toFixed(2);
+
+    document.getElementById(
+        "frequencyValue"
+    ).textContent =
+        frequency;
+
+    document.getElementById(
+        "twistValue"
+    ).textContent =
+        twistStrength.toFixed(2);
+
+
+    sculpt();
+};
+
+
+// ----------------------------------------------------
+// RESET
+// ----------------------------------------------------
+
+document.getElementById(
+    "reset"
+).onclick = () => {
+
+    rotationStrength = 0;
+
+    deformationStrength = 0;
+
+    frequency = 5;
+
+    twistStrength = 0;
+
+
+    rotationSlider.value = 0;
+
+    deformationSlider.value = 0;
+
+    frequencySlider.value = 5;
+
+    twistSlider.value = 0;
+
+
+    document.getElementById(
+        "rotationValue"
+    ).textContent = "0.00";
+
+    document.getElementById(
+        "deformationValue"
+    ).textContent = "0.00";
+
+    document.getElementById(
+        "frequencyValue"
+    ).textContent = "5";
+
+    document.getElementById(
+        "twistValue"
+    ).textContent = "0.00";
+
+
+    sculpt();
+};
+
+
+// ----------------------------------------------------
+// INITIAL SCULPTURE
+// ----------------------------------------------------
+
+sculpt();
+
+
+// ----------------------------------------------------
+// ANIMATION
+// ----------------------------------------------------
+
+const clock = new THREE.Clock();
+
+function animate() {
+
+    requestAnimationFrame(
+        animate
+    );
+
+    const t =
+        clock.getElapsedTime();
+
+
+    // Slowly rotate the entire sculpture.
+
+    sculpture.rotation.y =
+        t * 0.12;
+
+
+    controls.update();
+
+    renderer.render(
+        scene,
+        camera
+    );
+}
+
+animate();
+
+
+// ----------------------------------------------------
+// RESIZE
+// ----------------------------------------------------
+
+window.addEventListener(
+    "resize",
+    () => {
+
+        camera.aspect =
+            window.innerWidth /
+            window.innerHeight;
+
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(
+            window.innerWidth,
+            window.innerHeight
+        );
+    }
+);
+
+</script>
+
 </body>
 </html>
