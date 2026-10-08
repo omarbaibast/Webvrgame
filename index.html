@@ -1,134 +1,122 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-    <title>Quaternion Sculpture</title>
+<title>Quaternion Sculpture</title>
 
-    <style>
-        html, body {
-            margin: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #050505;
-            font-family: Arial;
-        }
+<style>
+html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#050509;
+}
 
-        canvas {
-            display: block;
-        }
+canvas{
+    display:block;
+}
 
-        #ui {
-            position: absolute;
-            z-index: 10;
-            top: 10px;
-            left: 10px;
-            width: 250px;
-            padding: 15px;
+#ui{
+    position:absolute;
+    top:10px;
+    left:10px;
+    z-index:10;
 
-            background: rgba(0,0,0,0.75);
-            color: white;
+    width:230px;
+    padding:15px;
 
-            border-radius: 12px;
-        }
+    color:white;
+    background:rgba(0,0,0,.75);
+    border-radius:12px;
 
-        #ui h2 {
-            margin-top: 0;
-        }
+    font-family:Arial;
+}
 
-        .control {
-            margin: 15px 0;
-        }
+#ui h2{
+    margin-top:0;
+}
 
-        input {
-            width: 100%;
-        }
+label{
+    display:block;
+    margin-top:12px;
+}
 
-        button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 8px;
-            border: 0;
-            border-radius: 6px;
-        }
-    </style>
+input{
+    width:100%;
+}
+</style>
 </head>
 
 <body>
 
 <div id="ui">
 
-    <h2>Quaternion Sculpture</h2>
+<h2>Quaternion Sculpture</h2>
 
-    <div class="control">
-        Rotation
-        <input id="rotation"
-               type="range"
-               min="0"
-               max="8"
-               step="0.01"
-               value="2.5">
-    </div>
+<label>
+Rotation
+<input id="rotation"
+       type="range"
+       min="0"
+       max="8"
+       value="2.5"
+       step="0.01">
+</label>
 
-    <div class="control">
-        Deformation
-        <input id="deformation"
-               type="range"
-               min="0"
-               max="1.5"
-               step="0.01"
-               value="0.4">
-    </div>
+<label>
+Deformation
+<input id="deformation"
+       type="range"
+       min="0"
+       max="1"
+       value=".4"
+       step=".01">
+</label>
 
-    <div class="control">
-        Frequency
-        <input id="frequency"
-               type="range"
-               min="1"
-               max="12"
-               step="1"
-               value="5">
-    </div>
+<label>
+Frequency
+<input id="frequency"
+       type="range"
+       min="1"
+       max="12"
+       value="5"
+       step="1">
+</label>
 
-    <div class="control">
-        Twist
-        <input id="twist"
-               type="range"
-               min="-8"
-               max="8"
-               step="0.01"
-               value="2">
-    </div>
-
-    <button id="random">
-        Random Sculpture
-    </button>
-
-    <button id="sphere">
-        Reset Sphere
-    </button>
+<label>
+Twist
+<input id="twist"
+       type="range"
+       min="-8"
+       max="8"
+       value="2"
+       step=".01">
+</label>
 
 </div>
 
 
-<!-- THREE.JS -->
+<!-- ONLY EXTERNAL LIBRARY -->
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+</script>
 
 
 <script>
 
-console.log("Starting Quaternion Sculpture");
+/*
+========================================================
+QUATERNION SCULPTURE
+========================================================
+*/
 
 
-// =====================================================
+// ------------------------------------------------------
 // SCENE
-// =====================================================
+// ------------------------------------------------------
 
 const scene = new THREE.Scene();
 
@@ -136,9 +124,9 @@ scene.background =
     new THREE.Color(0x050509);
 
 
-// =====================================================
+// ------------------------------------------------------
 // CAMERA
-// =====================================================
+// ------------------------------------------------------
 
 const camera =
     new THREE.PerspectiveCamera(
@@ -149,20 +137,16 @@ const camera =
         100
     );
 
-camera.position.set(
-    0,
-    0,
-    4
-);
+camera.position.z = 4;
 
 
-// =====================================================
+// ------------------------------------------------------
 // RENDERER
-// =====================================================
+// ------------------------------------------------------
 
 const renderer =
     new THREE.WebGLRenderer({
-        antialias: true
+        antialias:true
     });
 
 renderer.setSize(
@@ -171,7 +155,7 @@ renderer.setSize(
 );
 
 renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio, 2)
+    Math.min(window.devicePixelRatio,2)
 );
 
 document.body.appendChild(
@@ -179,22 +163,9 @@ document.body.appendChild(
 );
 
 
-// =====================================================
-// CONTROLS
-// =====================================================
-
-const controls =
-    new THREE.OrbitControls(
-        camera,
-        renderer.domElement
-    );
-
-controls.enableDamping = true;
-
-
-// =====================================================
+// ------------------------------------------------------
 // LIGHT
-// =====================================================
+// ------------------------------------------------------
 
 const light =
     new THREE.DirectionalLight(
@@ -219,15 +190,15 @@ scene.add(
 );
 
 
-// =====================================================
+// ------------------------------------------------------
 // SPHERE
-// =====================================================
+// ------------------------------------------------------
 
 const geometry =
     new THREE.SphereGeometry(
         1,
-        120,
-        120
+        100,
+        100
     );
 
 
@@ -237,26 +208,24 @@ const original =
     geometry.attributes.position.clone();
 
 
-// =====================================================
+// ------------------------------------------------------
 // MATERIAL
-// =====================================================
+// ------------------------------------------------------
 
 const material =
-    new THREE.MeshStandardMaterial({
+    new THREE.MeshPhongMaterial({
 
-        color: 0x2080ff,
+        color:0x2088ff,
 
-        metalness: 0.5,
+        shininess:120,
 
-        roughness: 0.2,
-
-        side: THREE.DoubleSide
+        side:THREE.DoubleSide
     });
 
 
-// =====================================================
-// SCULPTURE
-// =====================================================
+// ------------------------------------------------------
+// MESH
+// ------------------------------------------------------
 
 const sculpture =
     new THREE.Mesh(
@@ -267,26 +236,17 @@ const sculpture =
 scene.add(sculpture);
 
 
-// =====================================================
-// PARAMETERS
-// =====================================================
+// ------------------------------------------------------
+// QUATERNION
+// ------------------------------------------------------
 
-let rotation =
-    2.5;
-
-let deformation =
-    0.4;
-
-let frequency =
-    5;
-
-let twist =
-    2;
+const q =
+    new THREE.Quaternion();
 
 
-// =====================================================
+// ------------------------------------------------------
 // VECTORS
-// =====================================================
+// ------------------------------------------------------
 
 const p =
     new THREE.Vector3();
@@ -294,25 +254,35 @@ const p =
 const axis =
     new THREE.Vector3();
 
-const q =
-    new THREE.Quaternion();
+
+// ------------------------------------------------------
+// PARAMETERS
+// ------------------------------------------------------
+
+let rotation = 2.5;
+
+let deformation = .4;
+
+let frequency = 5;
+
+let twist = 2;
 
 
-// =====================================================
-// SCULPT
-// =====================================================
+// ------------------------------------------------------
+// SCULPTURE FUNCTION
+// ------------------------------------------------------
 
-function sculpt() {
+function sculpt(){
 
     const positions =
         geometry.attributes.position;
 
 
-    for (
-        let i = 0;
-        i < positions.count;
+    for(
+        let i=0;
+        i<positions.count;
         i++
-    ) {
+    ){
 
         // Original sphere point
 
@@ -327,31 +297,25 @@ function sculpt() {
         const z = p.z;
 
 
-        // ---------------------------------------------
+        // ------------------------------------------
         // SPHERICAL COORDINATES
-        // ---------------------------------------------
+        // ------------------------------------------
 
         const theta =
-            Math.atan2(z, x);
+            Math.atan2(z,x);
 
         const phi =
-            Math.acos(
-                Math.max(
-                    -1,
-                    Math.min(
-                        1,
-                        y
-                    )
-                )
-            );
+            Math.acos(y);
 
 
-        // ---------------------------------------------
+        // ------------------------------------------
         // QUATERNION ROTATION ANGLE
-        // ---------------------------------------------
+        // ------------------------------------------
 
         let angle =
+
             rotation *
+
             Math.sin(
                 frequency * theta
             );
@@ -361,11 +325,12 @@ function sculpt() {
             twist * y;
 
 
-        // ---------------------------------------------
+        // ------------------------------------------
         // ROTATION AXIS
-        // ---------------------------------------------
+        // ------------------------------------------
 
         axis.set(
+
             Math.sin(phi) *
             Math.cos(theta),
 
@@ -373,15 +338,15 @@ function sculpt() {
 
             Math.sin(phi) *
             Math.sin(theta)
-        );
 
+        );
 
         axis.normalize();
 
 
-        // ---------------------------------------------
-        // CREATE QUATERNION
-        // ---------------------------------------------
+        // ------------------------------------------
+        // BUILD QUATERNION
+        // ------------------------------------------
 
         q.setFromAxisAngle(
             axis,
@@ -389,38 +354,38 @@ function sculpt() {
         );
 
 
-        // ---------------------------------------------
-        // APPLY QUATERNION
-        // ---------------------------------------------
+        // ------------------------------------------
+        // ROTATE POINT
+        // ------------------------------------------
 
         p.applyQuaternion(q);
 
 
-        // ---------------------------------------------
-        // RADIAL SCULPTING
-        // ---------------------------------------------
+        // ------------------------------------------
+        // RADIAL DEFORMATION
+        // ------------------------------------------
 
-        const deformationAmount =
+        const scale =
 
             1 +
 
             deformation *
+
             Math.sin(
                 frequency * theta
             ) *
+
             Math.sin(
                 frequency * phi
             );
 
 
-        p.multiplyScalar(
-            deformationAmount
-        );
+        p.multiplyScalar(scale);
 
 
-        // ---------------------------------------------
-        // WRITE POSITION
-        // ---------------------------------------------
+        // ------------------------------------------
+        // WRITE BACK TO MESH
+        // ------------------------------------------
 
         positions.setXYZ(
             i,
@@ -428,6 +393,7 @@ function sculpt() {
             p.y,
             p.z
         );
+
     }
 
 
@@ -437,139 +403,90 @@ function sculpt() {
 }
 
 
-// =====================================================
+// ------------------------------------------------------
 // SLIDERS
-// =====================================================
+// ------------------------------------------------------
 
-document.getElementById(
-    "rotation"
-).oninput = function() {
+document
+.getElementById("rotation")
+.addEventListener(
+    "input",
+    function(){
 
-    rotation =
-        Number(this.value);
+        rotation =
+            Number(this.value);
 
-    sculpt();
-};
-
-
-document.getElementById(
-    "deformation"
-).oninput = function() {
-
-    deformation =
-        Number(this.value);
-
-    sculpt();
-};
+        sculpt();
+    }
+);
 
 
-document.getElementById(
-    "frequency"
-).oninput = function() {
+document
+.getElementById("deformation")
+.addEventListener(
+    "input",
+    function(){
 
-    frequency =
-        Number(this.value);
+        deformation =
+            Number(this.value);
 
-    sculpt();
-};
-
-
-document.getElementById(
-    "twist"
-).oninput = function() {
-
-    twist =
-        Number(this.value);
-
-    sculpt();
-};
+        sculpt();
+    }
+);
 
 
-// =====================================================
-// RANDOM
-// =====================================================
+document
+.getElementById("frequency")
+.addEventListener(
+    "input",
+    function(){
 
-document.getElementById(
-    "random"
-).onclick = function() {
+        frequency =
+            Number(this.value);
 
-    rotation =
-        Math.random() * 7;
-
-    deformation =
-        Math.random() * 1.2;
-
-    frequency =
-        2 +
-        Math.floor(
-            Math.random() * 10
-        );
-
-    twist =
-        -5 +
-        Math.random() * 10;
+        sculpt();
+    }
+);
 
 
-    document.getElementById(
-        "rotation"
-    ).value = rotation;
+document
+.getElementById("twist")
+.addEventListener(
+    "input",
+    function(){
 
-    document.getElementById(
-        "deformation"
-    ).value = deformation;
+        twist =
+            Number(this.value);
 
-    document.getElementById(
-        "frequency"
-    ).value = frequency;
-
-    document.getElementById(
-        "twist"
-    ).value = twist;
+        sculpt();
+    }
+);
 
 
-    sculpt();
-};
-
-
-// =====================================================
-// RESET
-// =====================================================
-
-document.getElementById(
-    "sphere"
-).onclick = function() {
-
-    rotation = 0;
-
-    deformation = 0;
-
-    twist = 0;
-
-    sculpt();
-};
-
-
-// =====================================================
-// INITIAL SCULPTURE
-// =====================================================
+// ------------------------------------------------------
+// CREATE INITIAL SCULPTURE
+// ------------------------------------------------------
 
 sculpt();
 
 
-// =====================================================
+// ------------------------------------------------------
 // ANIMATION
-// =====================================================
+// ------------------------------------------------------
 
-function animate() {
+function animate(){
 
     requestAnimationFrame(
         animate
     );
 
     sculpture.rotation.y +=
-        0.003;
+        0.005;
 
-    controls.update();
+    sculpture.rotation.x =
+        Math.sin(
+            Date.now()*0.0003
+        )*.15;
 
     renderer.render(
         scene,
@@ -580,13 +497,13 @@ function animate() {
 animate();
 
 
-// =====================================================
+// ------------------------------------------------------
 // RESIZE
-// =====================================================
+// ------------------------------------------------------
 
 window.addEventListener(
     "resize",
-    function() {
+    function(){
 
         camera.aspect =
             window.innerWidth /
@@ -599,11 +516,6 @@ window.addEventListener(
             window.innerHeight
         );
     }
-);
-
-
-console.log(
-    "Quaternion sculpture running"
 );
 
 </script>
