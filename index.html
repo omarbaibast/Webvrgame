@@ -1,52 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
-<title>Quaternion Sculpture</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quaternion Spatial Encryption</title>
 
 <style>
-html,body{
-    margin:0;
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    background:#050509;
-}
+    body {
+        margin: 0;
+        background: #111;
+        color: #eee;
+        font-family: Arial, sans-serif;
+        overflow: hidden;
+    }
 
-canvas{
-    display:block;
-}
+    #ui {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        background: rgba(20,20,20,0.92);
+        padding: 15px;
+        border-radius: 10px;
+        width: 280px;
+    }
 
-#ui{
-    position:absolute;
-    top:10px;
-    left:10px;
-    z-index:10;
+    h2 {
+        margin-top: 0;
+        font-size: 19px;
+    }
 
-    width:230px;
-    padding:15px;
+    label {
+        display: block;
+        margin-top: 7px;
+        font-size: 13px;
+    }
 
-    color:white;
-    background:rgba(0,0,0,.75);
-    border-radius:12px;
+    input {
+        width: 55px;
+        margin-right: 4px;
+        background: #222;
+        color: white;
+        border: 1px solid #555;
+        border-radius: 4px;
+        padding: 5px;
+    }
 
-    font-family:Arial;
-}
+    button {
+        margin-top: 10px;
+        padding: 8px 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
 
-#ui h2{
-    margin-top:0;
-}
+    #status {
+        margin-top: 12px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #aaa;
+    }
 
-label{
-    display:block;
-    margin-top:12px;
-}
+    #view {
+        width: 100%;
+        margin-top: 10px;
+    }
 
-input{
-    width:100%;
-}
+    #canvas {
+        position: fixed;
+        inset: 0;
+    }
 </style>
 </head>
 
@@ -54,439 +77,431 @@ input{
 
 <div id="ui">
 
-<h2>Quaternion Sculpture</h2>
+    <h2>Quaternion Spatial Encryption</h2>
 
-<label>
-Rotation
-<input id="rotation"
-       type="range"
-       min="0"
-       max="8"
-       value="2.5"
-       step="0.01">
-</label>
+    <div>
+        <b>Quaternion key</b>
+    </div>
 
-<label>
-Deformation
-<input id="deformation"
-       type="range"
-       min="0"
-       max="1"
-       value=".4"
-       step=".01">
-</label>
+    <label>
+        w:
+        <input id="qw" type="number" step="0.01" value="0.9239">
+    </label>
 
-<label>
-Frequency
-<input id="frequency"
-       type="range"
-       min="1"
-       max="12"
-       value="5"
-       step="1">
-</label>
+    <label>
+        x:
+        <input id="qx" type="number" step="0.01" value="0">
+    </label>
 
-<label>
-Twist
-<input id="twist"
-       type="range"
-       min="-8"
-       max="8"
-       value="2"
-       step=".01">
-</label>
+    <label>
+        y:
+        <input id="qy" type="number" step="0.01" value="0.3827">
+    </label>
+
+    <label>
+        z:
+        <input id="qz" type="number" step="0.01" value="0">
+    </label>
+
+    <label>
+        Number of points:
+        <input id="pointCount" type="number" value="3000" min="100" max="20000">
+    </label>
+
+    <button onclick="generateObject()">Generate Object</button>
+    <button onclick="encryptObject()">Encrypt</button>
+    <button onclick="decryptObject()">Decrypt</button>
+
+    <select id="view" onchange="changeView()">
+        <option value="original">Original</option>
+        <option value="encrypted">Encrypted</option>
+        <option value="decrypted">Decrypted</option>
+    </select>
+
+    <div id="status">
+        Ready.
+    </div>
 
 </div>
 
+<div id="canvas"></div>
 
-<!-- ONLY EXTERNAL LIBRARY -->
+<script type="module">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
-</script>
-
-
-<script>
-
-/*
-========================================================
-QUATERNION SCULPTURE
-========================================================
-*/
+import * as THREE from
+'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 
-// ------------------------------------------------------
-// SCENE
-// ------------------------------------------------------
+// ============================================================
+// THREE.JS SETUP
+// ============================================================
 
 const scene = new THREE.Scene();
 
-scene.background =
-    new THREE.Color(0x050509);
+scene.background = new THREE.Color(0x111111);
 
-
-// ------------------------------------------------------
-// CAMERA
-// ------------------------------------------------------
-
-const camera =
-    new THREE.PerspectiveCamera(
-        45,
-        window.innerWidth /
-        window.innerHeight,
-        0.1,
-        100
-    );
-
-camera.position.z = 4;
-
-
-// ------------------------------------------------------
-// RENDERER
-// ------------------------------------------------------
-
-const renderer =
-    new THREE.WebGLRenderer({
-        antialias:true
-    });
-
-renderer.setSize(
-    window.innerWidth,
-    window.innerHeight
+const camera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
 );
 
-renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio,2)
-);
+camera.position.set(0, 0, 7);
 
-document.body.appendChild(
-    renderer.domElement
-);
+const renderer = new THREE.WebGLRenderer({
+    antialias: true
+});
 
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
 
-// ------------------------------------------------------
-// LIGHT
-// ------------------------------------------------------
+document.getElementById("canvas").appendChild(renderer.domElement);
 
-const light =
-    new THREE.DirectionalLight(
-        0xffffff,
-        3
-    );
 
-light.position.set(
-    3,
-    4,
-    5
-);
+// ============================================================
+// POINT DATA
+// ============================================================
 
-scene.add(light);
+let originalPoints = [];
+let encryptedPoints = [];
+let decryptedPoints = [];
 
+let pointCloud = null;
 
-scene.add(
-    new THREE.AmbientLight(
-        0xffffff,
-        1
-    )
-);
 
+// ============================================================
+// QUATERNION FUNCTIONS
+// ============================================================
 
-// ------------------------------------------------------
-// SPHERE
-// ------------------------------------------------------
+// Quaternion multiplication
+function qMultiply(a, b) {
 
-const geometry =
-    new THREE.SphereGeometry(
-        1,
-        100,
-        100
-    );
+    return {
+        w: a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z,
 
+        x: a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
 
-// Save original sphere
+        y: a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x,
 
-const original =
-    geometry.attributes.position.clone();
-
-
-// ------------------------------------------------------
-// MATERIAL
-// ------------------------------------------------------
-
-const material =
-    new THREE.MeshPhongMaterial({
-
-        color:0x2088ff,
-
-        shininess:120,
-
-        side:THREE.DoubleSide
-    });
-
-
-// ------------------------------------------------------
-// MESH
-// ------------------------------------------------------
-
-const sculpture =
-    new THREE.Mesh(
-        geometry,
-        material
-    );
-
-scene.add(sculpture);
-
-
-// ------------------------------------------------------
-// QUATERNION
-// ------------------------------------------------------
-
-const q =
-    new THREE.Quaternion();
-
-
-// ------------------------------------------------------
-// VECTORS
-// ------------------------------------------------------
-
-const p =
-    new THREE.Vector3();
-
-const axis =
-    new THREE.Vector3();
-
-
-// ------------------------------------------------------
-// PARAMETERS
-// ------------------------------------------------------
-
-let rotation = 2.5;
-
-let deformation = .4;
-
-let frequency = 5;
-
-let twist = 2;
-
-
-// ------------------------------------------------------
-// SCULPTURE FUNCTION
-// ------------------------------------------------------
-
-function sculpt(){
-
-    const positions =
-        geometry.attributes.position;
-
-
-    for(
-        let i=0;
-        i<positions.count;
-        i++
-    ){
-
-        // Original sphere point
-
-        p.fromBufferAttribute(
-            original,
-            i
-        );
-
-
-        const x = p.x;
-        const y = p.y;
-        const z = p.z;
-
-
-        // ------------------------------------------
-        // SPHERICAL COORDINATES
-        // ------------------------------------------
-
-        const theta =
-            Math.atan2(z,x);
-
-        const phi =
-            Math.acos(y);
-
-
-        // ------------------------------------------
-        // QUATERNION ROTATION ANGLE
-        // ------------------------------------------
-
-        let angle =
-
-            rotation *
-
-            Math.sin(
-                frequency * theta
-            );
-
-
-        angle +=
-            twist * y;
-
-
-        // ------------------------------------------
-        // ROTATION AXIS
-        // ------------------------------------------
-
-        axis.set(
-
-            Math.sin(phi) *
-            Math.cos(theta),
-
-            Math.cos(phi),
-
-            Math.sin(phi) *
-            Math.sin(theta)
-
-        );
-
-        axis.normalize();
-
-
-        // ------------------------------------------
-        // BUILD QUATERNION
-        // ------------------------------------------
-
-        q.setFromAxisAngle(
-            axis,
-            angle
-        );
-
-
-        // ------------------------------------------
-        // ROTATE POINT
-        // ------------------------------------------
-
-        p.applyQuaternion(q);
-
-
-        // ------------------------------------------
-        // RADIAL DEFORMATION
-        // ------------------------------------------
-
-        const scale =
-
-            1 +
-
-            deformation *
-
-            Math.sin(
-                frequency * theta
-            ) *
-
-            Math.sin(
-                frequency * phi
-            );
-
-
-        p.multiplyScalar(scale);
-
-
-        // ------------------------------------------
-        // WRITE BACK TO MESH
-        // ------------------------------------------
-
-        positions.setXYZ(
-            i,
-            p.x,
-            p.y,
-            p.z
-        );
-
-    }
-
-
-    positions.needsUpdate = true;
-
-    geometry.computeVertexNormals();
+        z: a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w
+    };
 }
 
 
-// ------------------------------------------------------
-// SLIDERS
-// ------------------------------------------------------
+// Quaternion conjugate
+function qConjugate(q) {
 
-document
-.getElementById("rotation")
-.addEventListener(
-    "input",
-    function(){
-
-        rotation =
-            Number(this.value);
-
-        sculpt();
-    }
-);
+    return {
+        w: q.w,
+        x: -q.x,
+        y: -q.y,
+        z: -q.z
+    };
+}
 
 
-document
-.getElementById("deformation")
-.addEventListener(
-    "input",
-    function(){
+// Normalize quaternion
+function qNormalize(q) {
 
-        deformation =
-            Number(this.value);
-
-        sculpt();
-    }
-);
-
-
-document
-.getElementById("frequency")
-.addEventListener(
-    "input",
-    function(){
-
-        frequency =
-            Number(this.value);
-
-        sculpt();
-    }
-);
-
-
-document
-.getElementById("twist")
-.addEventListener(
-    "input",
-    function(){
-
-        twist =
-            Number(this.value);
-
-        sculpt();
-    }
-);
-
-
-// ------------------------------------------------------
-// CREATE INITIAL SCULPTURE
-// ------------------------------------------------------
-
-sculpt();
-
-
-// ------------------------------------------------------
-// ANIMATION
-// ------------------------------------------------------
-
-function animate(){
-
-    requestAnimationFrame(
-        animate
+    const length = Math.sqrt(
+        q.w*q.w +
+        q.x*q.x +
+        q.y*q.y +
+        q.z*q.z
     );
 
-    sculpture.rotation.y +=
-        0.005;
+    return {
+        w: q.w / length,
+        x: q.x / length,
+        y: q.y / length,
+        z: q.z / length
+    };
+}
 
-    sculpture.rotation.x =
-        Math.sin(
-            Date.now()*0.0003
-        )*.15;
+
+// ============================================================
+// QUATERNION ROTATION
+// ============================================================
+
+function rotatePoint(point, q) {
+
+    // Pure quaternion representing the point
+    const p = {
+        w: 0,
+        x: point.x,
+        y: point.y,
+        z: point.z
+    };
+
+    const qConj = qConjugate(q);
+
+    // p' = q p q*
+    const first = qMultiply(q, p);
+    const result = qMultiply(first, qConj);
+
+    return {
+        x: result.x,
+        y: result.y,
+        z: result.z
+    };
+}
+
+
+// ============================================================
+// GENERATE 3D OBJECT
+// ============================================================
+
+function generateObject() {
+
+    const count =
+        parseInt(document.getElementById("pointCount").value);
+
+    originalPoints = [];
+
+    /*
+        Generate points on the surface of a sphere.
+
+        This gives us a recognizable 3D object
+        whose geometry can be observed before
+        and after transformation.
+    */
+
+    for (let i = 0; i < count; i++) {
+
+        const phi =
+            Math.acos(1 - 2 * (i + 0.5) / count);
+
+        const theta =
+            Math.PI * (1 + Math.sqrt(5)) * i;
+
+        const radius = 2;
+
+        const x =
+            radius *
+            Math.sin(phi) *
+            Math.cos(theta);
+
+        const y =
+            radius *
+            Math.sin(phi) *
+            Math.sin(theta);
+
+        const z =
+            radius *
+            Math.cos(phi);
+
+        originalPoints.push({
+            x: x,
+            y: y,
+            z: z
+        });
+    }
+
+    encryptedPoints = [];
+    decryptedPoints = [];
+
+    updatePointCloud(originalPoints);
+
+    document.getElementById("status").innerHTML =
+        "Generated " + count + " points.";
+}
+
+
+// ============================================================
+// READ QUATERNION KEY
+// ============================================================
+
+function getQuaternion() {
+
+    const q = {
+
+        w: parseFloat(
+            document.getElementById("qw").value
+        ),
+
+        x: parseFloat(
+            document.getElementById("qx").value
+        ),
+
+        y: parseFloat(
+            document.getElementById("qy").value
+        ),
+
+        z: parseFloat(
+            document.getElementById("qz").value
+        )
+    };
+
+    return qNormalize(q);
+}
+
+
+// ============================================================
+// ENCRYPT
+// ============================================================
+
+function encryptObject() {
+
+    if (originalPoints.length === 0) {
+
+        generateObject();
+    }
+
+    const q = getQuaternion();
+
+    encryptedPoints = [];
+
+    for (const p of originalPoints) {
+
+        const encrypted =
+            rotatePoint(p, q);
+
+        encryptedPoints.push(encrypted);
+    }
+
+    document.getElementById("status").innerHTML =
+        "Encrypted using:<br>" +
+        "q = (" +
+        q.w.toFixed(4) + ", " +
+        q.x.toFixed(4) + ", " +
+        q.y.toFixed(4) + ", " +
+        q.z.toFixed(4) + ")";
+
+    document.getElementById("view").value = "encrypted";
+
+    updatePointCloud(encryptedPoints);
+}
+
+
+// ============================================================
+// DECRYPT
+// ============================================================
+
+function decryptObject() {
+
+    if (encryptedPoints.length === 0) {
+
+        encryptObject();
+    }
+
+    const q = getQuaternion();
+
+    const inverse =
+        qConjugate(q);
+
+    decryptedPoints = [];
+
+    for (const p of encryptedPoints) {
+
+        const decrypted =
+            rotatePoint(p, inverse);
+
+        decryptedPoints.push(decrypted);
+    }
+
+    document.getElementById("status").innerHTML =
+        "Decrypted using q*.";
+
+    document.getElementById("view").value =
+        "decrypted";
+
+    updatePointCloud(decryptedPoints);
+}
+
+
+// ============================================================
+// VIEW SWITCH
+// ============================================================
+
+function changeView() {
+
+    const view =
+        document.getElementById("view").value;
+
+    if (view === "original") {
+
+        updatePointCloud(originalPoints);
+
+    } else if (view === "encrypted") {
+
+        updatePointCloud(encryptedPoints);
+
+    } else if (view === "decrypted") {
+
+        updatePointCloud(decryptedPoints);
+    }
+}
+
+
+// ============================================================
+// CREATE / UPDATE POINT CLOUD
+// ============================================================
+
+function updatePointCloud(points) {
+
+    if (!points || points.length === 0) {
+        return;
+    }
+
+    if (pointCloud) {
+
+        scene.remove(pointCloud);
+
+        pointCloud.geometry.dispose();
+        pointCloud.material.dispose();
+    }
+
+    const positions =
+        new Float32Array(points.length * 3);
+
+    for (let i = 0; i < points.length; i++) {
+
+        positions[i * 3 + 0] = points[i].x;
+
+        positions[i * 3 + 1] = points[i].y;
+
+        positions[i * 3 + 2] = points[i].z;
+    }
+
+    const geometry =
+        new THREE.BufferGeometry();
+
+    geometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(
+            positions,
+            3
+        )
+    );
+
+    const material =
+        new THREE.PointsMaterial({
+            size: 0.035
+        });
+
+    pointCloud =
+        new THREE.Points(
+            geometry,
+            material
+        );
+
+    scene.add(pointCloud);
+}
+
+
+// ============================================================
+// ANIMATION
+// ============================================================
+
+function animate() {
+
+    requestAnimationFrame(animate);
+
+    if (pointCloud) {
+
+        pointCloud.rotation.y += 0.002;
+    }
 
     renderer.render(
         scene,
@@ -497,13 +512,13 @@ function animate(){
 animate();
 
 
-// ------------------------------------------------------
+// ============================================================
 // RESIZE
-// ------------------------------------------------------
+// ============================================================
 
 window.addEventListener(
     "resize",
-    function(){
+    () => {
 
         camera.aspect =
             window.innerWidth /
@@ -517,6 +532,17 @@ window.addEventListener(
         );
     }
 );
+
+
+// Make functions available to HTML buttons
+window.generateObject = generateObject;
+window.encryptObject = encryptObject;
+window.decryptObject = decryptObject;
+window.changeView = changeView;
+
+
+// Generate initial object
+generateObject();
 
 </script>
 
