@@ -2,78 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dance & Bend: AI Body Synths</title>
+    <title>Pro Interactive Dance Synth</title>
     <style>
-        body {
-            margin: 0;
-            background: #090909;
-            color: #f1f1f1;
-            font-family: system-ui, -apple-system, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-        #container {
-            position: relative;
-            width: 80vw;
-            height: 60vh;
-            max-width: 960px;
-            max-height: 720px;
-            border-radius: 20px;
-            overflow: hidden;
-            border: 4px solid #1a1a1a;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
-        }
-        video, canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            transform: scaleX(-1); /* Mirror view for intuition */
-            object-fit: cover;
-        }
-        #ui {
-            margin-top: 20px;
-            text-align: center;
-            width: 80vw;
-            max-width: 960px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        button {
-            background: linear-gradient(135deg, #ec4899, #8b5cf6);
-            color: white;
-            border: none;
-            padding: 16px 32px;
-            font-size: 18px;
-            border-radius: 100px;
-            cursor: pointer;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
-        }
-        button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 16px rgba(236, 72, 153, 0.6);
-        }
-        #display-text {
-            margin-top: 10px;
-            font-family: monospace;
-            font-size: 14px;
-            color: #888;
-            height: 1.5em;
-        }
+        body { margin: 0; background: #0b0c10; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        #container { position: relative; width: 800px; height: 600px; border-radius: 16px; overflow: hidden; border: 2px solid #1f2833; }
+        video, canvas { position: absolute; width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
+        #btn { margin-top: 15px; padding: 12px 28px; background: #66fcf1; color: #0b0c10; font-weight: bold; border: none; border-radius: 20px; cursor: pointer; font-size: 16px; }
     </style>
 
-    <!-- MediaPipe Pose and Camera dependencies -->
+    <!-- Tone.js, MediaPipe & Camera Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 </head>
@@ -81,222 +19,111 @@
 
     <div id="container">
         <video id="webcam" playsinline></video>
-        <canvas id="output_canvas"></canvas>
+        <canvas id="canvas"></canvas>
     </div>
-
-    <div id="ui">
-        <button id="start-btn">Connect Body & Sound</button>
-        <div id="display-text">Status: Waiting to connect...</div>
-    </div>
+    <button id="btn">Initialize High-Quality Audio Engine</button>
 
     <script>
         const videoElement = document.getElementById('webcam');
-        const canvasElement = document.getElementById('output_canvas');
+        const canvasElement = document.getElementById('canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        const startBtn = document.getElementById('start-btn');
-        const displayText = document.getElementById('display-text');
+        const btn = document.getElementById('btn');
 
-        // Audio System State
-        let audioCtx = null;
-        let mainSynth = null;
-        let filter = null;
-        let gainNode = null;
-        let panner = null;
-        let distortion = null;
-        let isRunning = false;
-        
-        // Pose State for Movement Calc
-        let previousLandmarks = null;
-        let movementIntensity = 0;
+        let synth, subBass, filter, reverb, delay;
+        let isAudioReady = false;
+        let lastPlayedNote = "";
 
-        // --- 1. Audio Engine Setup (The "Bending" Machine) ---
-        function initAudio() {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
-            // Oscillator: Source sound (the "clay" you are bending)
-            mainSynth = audioCtx.createOscillator();
-            mainSynth.type = 'sawtooth'; // Complex waveform good for filtering
-            mainSynth.frequency.setValueAtTime(110, audioCtx.currentTime); // Base note
+        // --- 1. A Pentatonic Scale in MIDI Note Values ---
+        // A Minor Pentatonic across 2 octaves (A2 to E5)
+        const scaleMidi = [45, 48, 50, 52, 55, 57, 60, 62, 64, 67, 69, 72, 74, 76];
 
-            // Filter: The primary "bending" effect (Low-pass with resonance)
-            filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(500, audioCtx.currentTime);
-            filter.Q.setValueAtTime(12, audioCtx.currentTime); // High resonance for "wah-wah" squelch
+        // --- 2. Advanced Audio Graph Setup ---
+        async function setupAudioEngine() {
+            await Tone.start();
 
-            // Distortion: Adds grit based on overall movement speed
-            distortion = audioCtx.createWaveShaper();
-            distortion.curve = makeDistortionCurve(0); // Start with clean sound
-            distortion.oversample = '4x';
+            // Reverb & Delay Effects Chain
+            reverb = new Tone.Reverb({ decay: 4, wet: 0.35 }).toDestination();
+            await reverb.generate();
 
-            // Panner: Moves sound left/right
-            panner = audioCtx.createStereoPanner();
-            panner.pan.setValueAtTime(0, audioCtx.currentTime);
+            delay = new Tone.FeedbackDelay({
+                delayTime: "8n.", // Dotted eighth-note delay
+                feedback: 0.3,
+                wet: 0.25
+            }).connect(reverb);
 
-            // Master Output/Volume
-            gainNode = audioCtx.createGain();
-            gainNode.gain.setValueAtTime(0, audioCtx.currentTime); // Start silent
+            // Filter for brightness/squelch
+            filter = new Tone.Filter({
+                frequency: 800,
+                type: "lowpass",
+                rolloff: -24
+            }).connect(delay);
 
-            // Audio Graph Routing:
-            // Synth -> Filter -> Distortion -> Panner -> Gain -> Out
-            mainSynth.connect(filter);
-            filter.connect(distortion);
-            distortion.connect(panner);
-            panner.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            mainSynth.start();
+            // Polyphonic Synth Patch (Warm Pad / Pluck)
+            synth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "fatfat" }, // Thick dual-sawtooth
+                envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 1.2 }
+            }).connect(filter);
+
+            // Deep Sub-Bass Synth
+            subBass = new Tone.MonoSynth({
+                oscillator: { type: "triangle" },
+                envelope: { attack: 0.1, decay: 0.3, sustain: 0.8, release: 0.8 }
+            }).toDestination();
+
+            isAudioReady = true;
         }
 
-        // --- 2. MediaPipe Pose Setup ---
-        const pose = new Pose({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-        });
+        // Quantize a 0.0 - 1.0 position to the nearest note in our scale
+        function mapPositionToNote(normalizedVal) {
+            const index = Math.floor((1.0 - normalizedVal) * scaleMidi.length);
+            const clampedIndex = Math.max(0, Math.min(scaleMidi.length - 1, index));
+            return Tone.Frequency(scaleMidi[clampedIndex], "midi").toNote();
+        }
 
-        pose.setOptions({
-            modelComplexity: 1,
-            smoothLandmarks: true,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.7
-        });
-
+        // --- 3. Pose Tracking and Music Mapping ---
+        const pose = new Pose({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
+        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.7 });
         pose.onResults(onPoseResults);
 
-        // --- 3. Body Landmarks Tracking Loop ---
         function onPoseResults(results) {
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            if (results.poseLandmarks) {
-                drawPoseSkeleton(results.poseLandmarks);
-                updateAudioFromPose(results.poseLandmarks);
-            } else {
-                // No body visible: mute audio slowly
-                if (gainNode && isRunning) gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2);
-                displayText.innerText = "Waiting for a dancer...";
+            if (results.poseLandmarks && isAudioReady) {
+                const landmarks = results.poseLandmarks;
+
+                // Right Wrist (16): Plays melodic notes on height change
+                const rWrist = landmarks[16];
+                const currentNote = mapPositionToNote(rWrist.y);
+
+                if (currentNote !== lastPlayedNote) {
+                    synth.triggerAttackRelease(currentNote, "8n");
+                    lastPlayedNote = currentNote;
+                }
+
+                // Left Wrist (15): Controls Cutoff Filter (X) and Delay Wetness (Y)
+                const lWrist = landmarks[15];
+                const filterFreq = 200 + ((1.0 - lWrist.x) * 4000);
+                filter.frequency.setTargetAtTime(filterFreq, Tone.now(), 0.05);
+
+                // Nose / Head height controls Sub-Bass pitch
+                const nose = landmarks[0];
+                const bassNote = Tone.Frequency(scaleMidi[Math.floor((1.0 - nose.y) * 4)], "midi").toNote();
+                subBass.frequency.setTargetAtTime(bassNote, Tone.now(), 0.1);
             }
             canvasCtx.restore();
         }
 
-        // --- 4. Mapping Dance to Audio (The Mapping) ---
-        function updateAudioFromPose(landmarks) {
-            if (!isRunning) return;
-
-            // Key landmarks (index values):
-            // Nose (0), L Wrist (15), R Wrist (16), L Hip (23), R Hip (24)
-
-            // Right Wrist -> Pitch & Tone Bending
-            const rWrist = landmarks[16];
-            // Horizontal (X) controls Filter Cutoff (Squelch)
-            // Normalized range is 0 (left) to 1 (right). Video is mirrored, so invert X.
-            const filterX = 1.0 - rWrist.x;
-            const filterCutoff = 200 + (filterX * 4800); // 200Hz to 5kHz
-            
-            // Vertical (Y) controls Main Pitch (Octaves)
-            const pitchY = rWrist.y; // 0 is top of screen
-            const pitchBase = 55; // A1 note
-            const synthFreq = pitchBase + ((1.0 - pitchY) * 330); // 55Hz to 385Hz
-
-            // Left Wrist -> Volume & Panning
-            const lWrist = landmarks[15];
-            const volY = lWrist.y;
-            const masterVol = Math.max(0, Math.min(0.3, (1.0 - volY) * 0.3)); // Cap volume at 0.3
-            
-            // Pan left/right based on left hand position
-            const panX = (lWrist.x - 0.5) * 2; // -1 to 1 range (not inverted, matches mirrored canvas)
-
-            // --- Apply Smoothed Changes (Web Audio API) ---
-            mainSynth.frequency.setTargetAtTime(synthFreq, audioCtx.currentTime, 0.05);
-            filter.frequency.setTargetAtTime(filterCutoff, audioCtx.currentTime, 0.05);
-            gainNode.gain.setTargetAtTime(masterVol, audioCtx.currentTime, 0.05);
-            panner.pan.setTargetAtTime(panX, audioCtx.currentTime, 0.05);
-
-            // --- Movement Intensity Calculation ---
-            calculateMovementIntensity(landmarks);
-
-            // Overdrive intensity from movement speed
-            const distCurveAmount = Math.max(0, Math.min(20, movementIntensity * 100)); // Map intensity to 0-20
-            distortion.curve = makeDistortionCurve(distCurveAmount);
-
-            displayText.innerText = `Pitch: ${Math.round(synthFreq)}Hz | Filter: ${Math.round(filterCutoff)}Hz | Int: ${movementIntensity.toFixed(2)}`;
-        }
-
-        // Helper to calculate body velocity between frames
-        function calculateMovementIntensity(currentLandmarks) {
-            if (previousLandmarks) {
-                let totalDiff = 0;
-                // Average speed of nose and wrists
-                const points = [0, 15, 16]; 
-                for (let i = 0; i < points.length; i++) {
-                    const idx = points[i];
-                    const diffX = Math.abs(currentLandmarks[idx].x - previousLandmarks[idx].x);
-                    const diffY = Math.abs(currentLandmarks[idx].y - previousLandmarks[idx].y);
-                    totalDiff += diffX + diffY;
-                }
-                // Low-pass smooth the intensity value
-                movementIntensity = (movementIntensity * 0.9) + (totalDiff * 0.1);
-            }
-            previousLandmarks = JSON.parse(JSON.stringify(currentLandmarks)); // Clone landmarks
-        }
-
-        // --- Utility: Distortion Curve generator ---
-        function makeDistortionCurve(amount) {
-            const k = typeof amount === 'number' ? amount : 50;
-            const n_samples = 44100;
-            const curve = new Float32Array(n_samples);
-            const deg = Math.PI / 180;
-            let i = 0, x;
-            for ( ; i < n_samples; ++i ) {
-                x = i * 2 / n_samples - 1;
-                curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
-            }
-            return curve;
-        };
-
-        // Utility: Visual skeleton drawing on canvas
-        function drawPoseSkeleton(landmarks) {
-            canvasCtx.lineWidth = 4;
-            canvasCtx.strokeStyle = '#8b5cf6'; // Violet
-            canvasCtx.fillStyle = '#ec4899';   // Pink
-
-            // Simple point drawing
-            for (let i = 0; i < landmarks.length; i++) {
-                const landmark = landmarks[i];
-                if (landmark.visibility < 0.6) continue;
-                const x = landmark.x * canvasElement.width;
-                const y = landmark.y * canvasElement.height;
-                canvasCtx.beginPath();
-                canvasCtx.arc(x, y, 6, 0, 2 * Math.PI);
-                canvasCtx.fill();
-            }
-            // (You could expand this to draw actual lines connecting the joints)
-        }
-
-        // --- 5. Initialisation & Button Handler ---
-        startBtn.addEventListener('click', async () => {
-            startBtn.style.display = 'none';
-            initAudio();
-            if (audioCtx.state === 'suspended') await audioCtx.resume();
-            isRunning = true;
-
+        btn.addEventListener('click', async () => {
+            btn.style.display = 'none';
+            await setupAudioEngine();
             const camera = new Camera(videoElement, {
-                onFrame: async () => {
-                    await pose.send({ image: videoElement });
-                },
-                width: 960,
-                height: 720
+                onFrame: async () => { await pose.send({ image: videoElement }); },
+                width: 800, height: 600
             });
             camera.start();
         });
-
-        // Ensure canvas size is locked to container aspect ratio
-        function resizeCanvas() {
-            canvasElement.width = videoElement.clientWidth || 960;
-            canvasElement.height = videoElement.clientHeight || 720;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        videoElement.addEventListener('loadedmetadata', resizeCanvas);
     </script>
 </body>
 </html>
