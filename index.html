@@ -2,15 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Studio-Grade AI Dance Producer</title>
+    <title>AI Dance Song Producer - Debug Version</title>
     <style>
-        body { margin: 0; background: #070709; color: #fff; font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        #container { position: relative; width: 800px; height: 600px; border-radius: 16px; overflow: hidden; border: 2px solid #3f3f46; background: #000; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
+        body { margin: 0; background: #0a0a0c; color: #fff; font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        #container { position: relative; width: 800px; height: 600px; border-radius: 16px; overflow: hidden; border: 2px solid #27272a; background: #000; }
         video, canvas { position: absolute; width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
         #ui { margin-top: 15px; text-align: center; }
-        button { padding: 16px 36px; background: linear-gradient(135deg, #6366f1, #a855f7); color: white; font-weight: bold; border: none; border-radius: 30px; cursor: pointer; font-size: 16px; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5); transition: transform 0.2s; }
-        button:hover { transform: scale(1.05); }
-        #info { margin-top: 10px; color: #a1a1aa; font-family: monospace; font-size: 14px; }
+        button { padding: 14px 32px; background: #ec4899; color: white; font-weight: bold; border: none; border-radius: 30px; cursor: pointer; font-size: 16px; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4); }
+        #info { margin-top: 10px; color: #a1a1aa; font-family: monospace; font-size: 14px; max-width: 800px; word-break: break-all; }
     </style>
 
     <!-- Tone.js, MediaPipe & Camera Libraries -->
@@ -25,8 +24,8 @@
         <canvas id="canvas" width="800" height="600"></canvas>
     </div>
     <div id="ui">
-        <button id="btn">Load Studio Samples & Start</button>
-        <div id="info">Status: Waiting for asset load...</div>
+        <button id="btn">Click to Start Engine & Camera</button>
+        <div id="info">Status: Waiting for user click...</div>
     </div>
 
     <script>
@@ -37,94 +36,71 @@
         const infoEl = document.getElementById('info');
 
         let isEngineRunning = false;
-        let pianoSampler, kickSynth, hihatSynth, compressor, reverb, delay;
+        let kick, hihat, pianoChordSynth, leadSynth, reverb, delay;
         let lastNotePlayed = "";
+        const leadScale = ["A4", "C5", "D5", "E5", "G5", "A5"];
 
-        // Professional Pentatonic scale for smooth, melodic playback
-        const leadScale = ["C4", "D4", "F4", "G4", "A4", "C5", "D5", "F5", "G5"];
-
-        function logStatus(msg) {
+        function logStatus(msg, isError = false) {
+            console.log(msg);
+            infoEl.style.color = isError ? "#f87171" : "#a1a1aa";
             infoEl.innerText = msg;
         }
 
-        async function initStudioEngine() {
-            logStatus("Starting audio context & loading studio samples...");
-            await Tone.start();
-            Tone.Transport.bpm.value = 115; // Smooth modern tempo
+        async function initMusicEngine() {
+            try {
+                logStatus("Starting Tone.js context...");
+                await Tone.start();
+                Tone.Transport.bpm.value = 120;
 
-            // --- MASTER STUDIO EFFECTS CHAIN ---
-            compressor = new Tone.Compressor({
-                threshold: -20,
-                ratio: 4,
-                attack: 0.003,
-                release: 0.25
-            }).toDestination(); // Glues everything together like a final master track
+                logStatus("Generating Reverb impulse response...");
+                reverb = new Tone.Reverb({ decay: 3, wet: 0.4 }).toDestination();
+                await reverb.generate();
 
-            reverb = new Tone.Reverb({
-                decay: 4.5,
-                wet: 0.35
-            });
-            await reverb.generate();
-            reverb.connect(compressor);
+                delay = new Tone.FeedbackDelay({ delayTime: "8n", feedback: 0.3, wet: 0.2 }).connect(reverb);
 
-            delay = new Tone.FeedbackDelay({
-                delayTime: "4n.",
-                feedback: 0.25,
-                wet: 0.2
-            }).connect(reverb);
+                kick = new Tone.MembraneSynth({
+                    pitchDecay: 0.05, octaves: 6,
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 0.4 }
+                }).toDestination();
 
-            // --- 1. REAL PIANO SAMPLER (Replaces cheap synth beeps) ---
-            // Loads actual recorded acoustic grand piano audio notes from CDN
-            pianoSampler = new Tone.Sampler({
-                urls: {
-                    "C4": "C4.mp3",
-                    "Dis4": "Ds4.mp3",
-                    "F#4": "Fs4.mp3",
-                    "A4": "A4.mp3",
-                },
-                baseUrl: "https://tonejs.github.io/audio/salamander/",
-                onload: () => {
-                    logStatus("Piano samples loaded! Starting beat transport...");
-                    startTransport();
-                }
-            }).connect(delay);
+                hihat = new Tone.NoiseSynth({
+                    filter: { type: "highpass", frequency: 5000 },
+                    envelope: { attack: 0.001, decay: 0.08, sustain: 0 }
+                }).connect(reverb);
 
-            // --- 2. PUNCHY KICK & CRISP HI-HAT ---
-            kickSynth = new Tone.MembraneSynth({
-                pitchDecay: 0.02,
-                octaves: 8,
-                oscillator: { type: "sine" },
-                envelope: { attack: 0.001, decay: 0.5, sustain: 0, release: 0.5 }
-            }).connect(compressor);
+                pianoChordSynth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "triangle" },
+                    envelope: { attack: 0.05, decay: 1.5, sustain: 0.2, release: 1.5 }
+                }).connect(reverb);
 
-            hihatSynth = new Tone.NoiseSynth({
-                filter: { type: "highpass", frequency: 6000 },
-                envelope: { attack: 0.001, decay: 0.05, sustain: 0 }
-            }).connect(reverb);
+                const chordProgression = [
+                    ["A3", "C4", "E4"], ["F3", "A3", "C4"],
+                    ["C3", "E3", "G3"], ["G3", "B3", "D4"]
+                ];
+                let chordStep = 0;
+
+                leadSynth = new Tone.Synth({
+                    oscillator: { type: "sawtooth" },
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.5 }
+                }).connect(delay);
+
+                new Tone.Loop(time => { kick.triggerAttackRelease("C1", "4n", time); }, "4n").start(0);
+                new Tone.Loop(time => { hihat.triggerAttackRelease("16n", time); }, "8n").start("8n");
+                new Tone.Loop(time => {
+                    pianoChordSynth.triggerAttackRelease(chordProgression[chordStep], "1m", time);
+                    chordStep = (chordStep + 1) % chordProgression.length;
+                }, "1m").start(0);
+
+                Tone.Transport.start();
+                isEngineRunning = true;
+                logStatus("Audio engine running successfully!");
+            } catch (err) {
+                logStatus("Audio Error: " + err.message, true);
+                console.error(err);
+            }
         }
 
-        function startTransport() {
-            // 4-on-the-floor professional house beat kick
-            new Tone.Loop(time => {
-                kickSynth.triggerAttackRelease("C1", "8n", time, 0.9);
-            }, "4n").start(0);
-
-            // Off-beat hi-hat groove
-            new Tone.Loop(time => {
-                hihatSynth.triggerAttackRelease("16n", time, 0.4);
-            }, "8n").start("8n");
-
-            // Ambient background chord progression played via piano sampler
-            const chordLoop = new Tone.Loop(time => {
-                pianoSampler.triggerAttackRelease(["C3", "G3", "C4"], "2m", time, 0.5);
-            }, "2m").start(0);
-
-            Tone.Transport.start();
-            isEngineRunning = true;
-            logStatus("Studio engine active! Move your right hand to play live piano melodies.");
-        }
-
-        // --- POSE TRACKING ---
         const pose = new Pose({ 
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` 
         });
@@ -136,17 +112,15 @@
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            if (results.poseLandmarks && isEngineRunning && pianoSampler.loaded) {
+            if (results.poseLandmarks && isEngineRunning) {
                 const landmarks = results.poseLandmarks;
                 const rWrist = landmarks[16];
-                
-                // Map right hand height to piano notes
                 const noteIndex = Math.floor((1.0 - rWrist.y) * leadScale.length);
                 const clampedIdx = Math.max(0, Math.min(leadScale.length - 1, noteIndex));
                 const activeNote = leadScale[clampedIdx];
 
                 if (activeNote !== lastNotePlayed) {
-                    pianoSampler.triggerAttackRelease(activeNote, "4n", Tone.now(), 0.8);
+                    leadSynth.triggerAttackRelease(activeNote, "8n");
                     lastNotePlayed = activeNote;
                 }
             }
@@ -155,16 +129,24 @@
 
         btn.addEventListener('click', async () => {
             btn.style.display = 'none';
-            await initStudioEngine();
+            logStatus("Initializing audio and requesting camera permission...");
+            
+            await initMusicEngine();
 
-            const camera = new Camera(videoElement, {
-                onFrame: async () => {
-                    await pose.send({ image: videoElement });
-                },
-                width: 800,
-                height: 600
-            });
-            await camera.start();
+            try {
+                const camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        await pose.send({ image: videoElement });
+                    },
+                    width: 800,
+                    height: 600
+                });
+                await camera.start();
+                logStatus("Camera active! Step back and move your right hand.");
+            } catch (err) {
+                logStatus("Camera Error: " + err.message + ". Make sure you allowed webcam access and are running via a local server (http://localhost).", true);
+                console.error(err);
+            }
         });
     </script>
 </body>
