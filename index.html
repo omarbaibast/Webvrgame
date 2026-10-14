@@ -1,152 +1,427 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <title>AI Dance Song Producer - Debug Version</title>
-    <style>
-        body { margin: 0; background: #0a0a0c; color: #fff; font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        #container { position: relative; width: 800px; height: 600px; border-radius: 16px; overflow: hidden; border: 2px solid #27272a; background: #000; }
-        video, canvas { position: absolute; width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
-        #ui { margin-top: 15px; text-align: center; }
-        button { padding: 14px 32px; background: #ec4899; color: white; font-weight: bold; border: none; border-radius: 30px; cursor: pointer; font-size: 16px; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4); }
-        #info { margin-top: 10px; color: #a1a1aa; font-family: monospace; font-size: 14px; max-width: 800px; word-break: break-all; }
-    </style>
-
-    <!-- Tone.js, MediaPipe & Camera Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-</head>
-<body>
-
-    <div id="container">
-        <video id="webcam" playsinline></video>
-        <canvas id="canvas" width="800" height="600"></canvas>
-    </div>
-    <div id="ui">
-        <button id="btn">Click to Start Engine & Camera</button>
-        <div id="info">Status: Waiting for user click...</div>
-    </div>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KineticBeat - Motion-Driven AI Music Prompter</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        const videoElement = document.getElementById('webcam');
-        const canvasElement = document.getElementById('canvas');
-        const canvasCtx = canvasElement.getContext('2d');
-        const btn = document.getElementById('btn');
-        const infoEl = document.getElementById('info');
-
-        let isEngineRunning = false;
-        let kick, hihat, pianoChordSynth, leadSynth, reverb, delay;
-        let lastNotePlayed = "";
-        const leadScale = ["A4", "C5", "D5", "E5", "G5", "A5"];
-
-        function logStatus(msg, isError = false) {
-            console.log(msg);
-            infoEl.style.color = isError ? "#f87171" : "#a1a1aa";
-            infoEl.innerText = msg;
-        }
-
-        async function initMusicEngine() {
-            try {
-                logStatus("Starting Tone.js context...");
-                await Tone.start();
-                Tone.Transport.bpm.value = 120;
-
-                logStatus("Generating Reverb impulse response...");
-                reverb = new Tone.Reverb({ decay: 3, wet: 0.4 }).toDestination();
-                await reverb.generate();
-
-                delay = new Tone.FeedbackDelay({ delayTime: "8n", feedback: 0.3, wet: 0.2 }).connect(reverb);
-
-                kick = new Tone.MembraneSynth({
-                    pitchDecay: 0.05, octaves: 6,
-                    oscillator: { type: "sine" },
-                    envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 0.4 }
-                }).toDestination();
-
-                hihat = new Tone.NoiseSynth({
-                    filter: { type: "highpass", frequency: 5000 },
-                    envelope: { attack: 0.001, decay: 0.08, sustain: 0 }
-                }).connect(reverb);
-
-                pianoChordSynth = new Tone.PolySynth(Tone.Synth, {
-                    oscillator: { type: "triangle" },
-                    envelope: { attack: 0.05, decay: 1.5, sustain: 0.2, release: 1.5 }
-                }).connect(reverb);
-
-                const chordProgression = [
-                    ["A3", "C4", "E4"], ["F3", "A3", "C4"],
-                    ["C3", "E3", "G3"], ["G3", "B3", "D4"]
-                ];
-                let chordStep = 0;
-
-                leadSynth = new Tone.Synth({
-                    oscillator: { type: "sawtooth" },
-                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.5 }
-                }).connect(delay);
-
-                new Tone.Loop(time => { kick.triggerAttackRelease("C1", "4n", time); }, "4n").start(0);
-                new Tone.Loop(time => { hihat.triggerAttackRelease("16n", time); }, "8n").start("8n");
-                new Tone.Loop(time => {
-                    pianoChordSynth.triggerAttackRelease(chordProgression[chordStep], "1m", time);
-                    chordStep = (chordStep + 1) % chordProgression.length;
-                }, "1m").start(0);
-
-                Tone.Transport.start();
-                isEngineRunning = true;
-                logStatus("Audio engine running successfully!");
-            } catch (err) {
-                logStatus("Audio Error: " + err.message, true);
-                console.error(err);
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            50: '#f0fdf4',
+                            500: '#10b981',
+                            900: '#064e3b',
+                            950: '#022c22'
+                        }
+                    }
+                }
             }
         }
+    </script>
+    <!-- MediaPipe Pose & Camera Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .glow-cyan {
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.25);
+        }
+        .glow-emerald {
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-cyan-500 selection:text-slate-950">
 
-        const pose = new Pose({ 
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` 
-        });
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center glow-cyan">
+                    <i data-lucide="activity" class="w-6 h-6 text-slate-950"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight mono text-cyan-400">KINETIC<span class="text-emerald-400">BEAT</span></h1>
+                    <p class="text-xs text-slate-400">Real-time Kinematic AI Music Generator</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div id="status-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium mono">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span id="status-text">Initializing Camera...</span>
+                </div>
+            </div>
+        </div>
+    </header>
 
-        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.7 });
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        pose.onResults(results => {
+        <!-- Left Column: Video & Skeleton Overlay -->
+        <div class="lg:col-span-7 flex flex-col space-y-4">
+            <div class="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 aspect-video shadow-2xl glow-cyan flex items-center justify-center">
+                <!-- Hidden video feed for MediaPipe -->
+                <video id="webcam" class="absolute inset-0 w-full h-full object-cover -scale-x-100 opacity-60" playsinline></video>
+                <!-- Canvas for skeleton rendering -->
+                <canvas id="output_canvas" class="absolute inset-0 w-full h-full object-cover -scale-x-100"></canvas>
+                
+                <!-- Overlay HUD Elements -->
+                <div class="absolute top-4 left-4 bg-slate-950/80 backdrop-blur border border-slate-800 rounded-lg p-2.5 flex items-center space-x-3 text-xs mono">
+                    <i data-lucide="video" class="w-4 h-4 text-cyan-400"></i>
+                    <span>FPS: <strong id="fps-counter" class="text-cyan-400">0</strong></span>
+                </div>
+
+                <div id="freeze-banner" class="absolute inset-x-0 top-0 bg-cyan-500 text-slate-950 font-bold py-1 text-center text-xs tracking-wider mono uppercase hidden">
+                    Prompt Frozen — Motion Tracking Paused
+                </div>
+            </div>
+
+            <!-- Controls Toolbar -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-2">
+                    <button id="btn-freeze" onclick="toggleFreeze()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium flex items-center space-x-2 transition">
+                        <i data-lucide="pause" class="w-4 h-4 text-cyan-400" id="freeze-icon"></i>
+                        <span id="freeze-text">Freeze Prompt</span>
+                    </button>
+                    <button onclick="resetCalibration()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium flex items-center space-x-2 transition">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4 text-emerald-400"></i>
+                        <span>Recalibrate</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs text-slate-400 mono">Target Engine:</span>
+                    <select id="engine-select" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-cyan-400 mono focus:outline-none focus:border-cyan-500">
+                        <option value="suno">Suno v3.5 / v4</option>
+                        <option value="udio">Udio 1.5</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Telemetry & Live Prompt Output -->
+        <div class="lg:col-span-5 flex flex-col space-y-6">
+            
+            <!-- Telemetry Gauges -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="font-semibold text-sm flex items-center space-x-2 text-slate-200">
+                        <i data-lucide="gauge" class="w-4 h-4 text-cyan-400"></i>
+                        <span>Kinematic Telemetry</span>
+                    </h2>
+                    <span class="text-xs mono text-emerald-400">Active Stream</span>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-xs mono mb-1">
+                            <span class="text-slate-400">Movement Energy (Velocity):</span>
+                            <span id="val-energy" class="text-cyan-400">0.00</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                            <div id="bar-energy" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-100"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mono mb-1">
+                            <span class="text-slate-400">Arm Wingspan (Spread):</span>
+                            <span id="val-spread" class="text-cyan-400">0.00</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                            <div id="bar-spread" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-100"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mono mb-1">
+                            <span class="text-slate-400">Hand Elevation (Height):</span>
+                            <span id="val-elevation" class="text-cyan-400">0.00</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                            <div id="bar-elevation" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-100"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Genre Selector Pills -->
+                <div class="pt-2">
+                    <label class="block text-xs mono text-slate-400 mb-2">Genre Foundation:</label>
+                    <div id="genre-pills" class="flex flex-wrap gap-2">
+                        <button onclick="setGenre('Cyberpunk Synthwave')" class="genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-cyan-500/50 bg-cyan-500/10 text-cyan-300 transition">Synthwave</button>
+                        <button onclick="setGenre('Lo-Fi Chillhop')" class="genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition">Lo-Fi</button>
+                        <button onclick="setGenre('Cinematic Orchestral Epic')" class="genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition">Orchestral</button>
+                        <button onclick="setGenre('Future Bass Drop')" class="genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition">Future Bass</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Generated Prompt Box -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col flex-1 justify-between shadow-xl glow-emerald">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-semibold text-sm flex items-center space-x-2 text-slate-200">
+                            <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
+                            <span>Generated AI Music Prompt</span>
+                        </h2>
+                        <span id="bpm-badge" class="text-xs mono px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">120 BPM</span>
+                    </div>
+                    
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 relative group">
+                        <p id="prompt-output" class="mono text-sm text-cyan-300 leading-relaxed min-h-[90px] select-all">
+                            Initializing gesture tracking to synthesize prompt parameters...
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex items-center justify-between">
+                    <p class="text-xs text-slate-500 mono">Updates in real-time as you move.</p>
+                    <button onclick="copyPrompt()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-400 text-slate-950 font-bold text-xs mono flex items-center space-x-2 hover:opacity-90 transition shadow-lg">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                        <span id="copy-btn-text">Copy Prompt</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-emerald-500 text-slate-950 px-4 py-3 rounded-xl font-bold text-xs mono shadow-2xl translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-2 z-50">
+        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+        <span>Prompt copied to clipboard!</span>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        let isFrozen = false;
+        let selectedGenre = 'Cyberpunk Synthwave';
+        let lastLandmarks = null;
+        let lastTime = performance.now();
+        let fpsFrames = 0;
+        let fpsLastTime = performance.now();
+
+        // Telemetry smoothing variables
+        let smoothEnergy = 0;
+        let smoothSpread = 0.5;
+        let smoothElevation = 0.5;
+
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('output_canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+
+        function setGenre(genre) {
+            selectedGenre = genre;
+            document.querySelectorAll('.genre-pill').forEach(btn => {
+                if (btn.textContent.includes(genre.split(' ')[0])) {
+                    btn.className = 'genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-cyan-500/50 bg-cyan-500/10 text-cyan-300 transition';
+                } else {
+                    btn.className = 'genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition';
+                }
+            });
+            updatePrompt();
+        }
+
+        function toggleFreeze() {
+            isFrozen = !isFrozen;
+            const btnText = document.getElementById('freeze-text');
+            const freezeIcon = document.getElementById('freeze-icon');
+            const freezeBanner = document.getElementById('freeze-banner');
+            
+            if (isFrozen) {
+                btnText.textContent = 'Resume Prompt';
+                freezeIcon.setAttribute('data-lucide', 'play');
+                freezeBanner.classList.remove('hidden');
+            } else {
+                btnText.textContent = 'Freeze Prompt';
+                freezeIcon.setAttribute('data-lucide', 'pause');
+                freezeBanner.classList.add('hidden');
+            }
+            lucide.createIcons();
+        }
+
+        function resetCalibration() {
+            smoothEnergy = 0;
+            smoothSpread = 0.5;
+            smoothElevation = 0.5;
+        }
+
+        function copyPrompt() {
+            const promptText = document.getElementById('prompt-output').textContent;
+            navigator.clipboard.writeText(promptText);
+            const toast = document.getElementById('toast');
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        function onResults(results) {
+            // FPS Calculation
+            const now = performance.now();
+            fpsFrames++;
+            if (now - fpsLastTime >= 1000) {
+                document.getElementById('fps-counter').textContent = Math.round((fpsFrames * 1000) / (now - fpsLastTime));
+                fpsFrames = 0;
+                fpsLastTime = now;
+            }
+
+            // Canvas Sizing
+            canvasElement.width = videoElement.videoWidth || 640;
+            canvasElement.height = videoElement.videoHeight || 480;
+
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            if (results.poseLandmarks && isEngineRunning) {
-                const landmarks = results.poseLandmarks;
-                const rWrist = landmarks[16];
-                const noteIndex = Math.floor((1.0 - rWrist.y) * leadScale.length);
-                const clampedIdx = Math.max(0, Math.min(leadScale.length - 1, noteIndex));
-                const activeNote = leadScale[clampedIdx];
+            if (results.poseLandmarks) {
+                document.getElementById('status-badge').className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium mono';
+                document.getElementById('status-text').textContent = 'Tracking Active';
 
-                if (activeNote !== lastNotePlayed) {
-                    leadSynth.triggerAttackRelease(activeNote, "8n");
-                    lastNotePlayed = activeNote;
+                // Draw skeleton connectors & landmarks with cyberpunk styling
+                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#06b6d4', lineWidth: 3});
+                drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#10b981', lineWidth: 1, radius: 4});
+
+                if (!isFrozen) {
+                    // Calculate Telemetry
+                    const landmarks = results.poseLandmarks;
+                    
+                    // Left and Right Wrists (15, 16), Shoulders (11, 12), Hips (23, 24)
+                    const lWrist = landmarks[15];
+                    const rWrist = landmarks[16];
+                    const lShoulder = landmarks[11];
+                    const rShoulder = landmarks[12];
+                    const lHip = landmarks[23];
+                    const rHip = landmarks[24];
+
+                    // 1. Arm Spread (Distance between left and right wrists normalized by shoulder width)
+                    const wristDist = Math.hypot(lWrist.x - rWrist.x, lWrist.y - rWrist.y);
+                    const shoulderDist = Math.hypot(lShoulder.x - rShoulder.x, lShoulder.y - rShoulder.y) || 0.1;
+                    const rawSpread = Math.min(Math.max((wristDist / shoulderDist) / 2.5, 0), 1);
+                    smoothSpread = smoothSpread * 0.8 + rawSpread * 0.2;
+
+                    // 2. Hand Elevation (Average wrist Y relative to shoulders and hips)
+                    const avgWristY = (lWrist.y + rWrist.y) / 2;
+                    const avgHipY = (lHip.y + rHip.y) / 2;
+                    const avgShoulderY = (lShoulder.y + rShoulder.y) / 2;
+                    const rawElevation = Math.min(Math.max((avgHipY - avgWristY) / (Math.abs(avgHipY - avgShoulderY) + 0.001), 0), 1.5) / 1.5;
+                    smoothElevation = smoothElevation * 0.8 + rawElevation * 0.2;
+
+                    // 3. Movement Energy (Velocity delta from last frame)
+                    if (lastLandmarks) {
+                        let movementSum = 0;
+                        // Sample key upper body joints
+                        const keyIndices = [11, 12, 15, 16, 23, 24];
+                        keyIndices.forEach(idx => {
+                            const dx = landmarks[idx].x - lastLandmarks[idx].x;
+                            const dy = landmarks[idx].y - lastLandmarks[idx].y;
+                            movementSum += Math.hypot(dx, dy);
+                        });
+                        const rawEnergy = Math.min(movementSum * 15, 1);
+                        smoothEnergy = smoothEnergy * 0.7 + rawEnergy * 0.3;
+                    }
+                    lastLandmarks = JSON.parse(JSON.stringify(landmarks));
+
+                    // Update UI Gauges
+                    document.getElementById('val-energy').textContent = smoothEnergy.toFixed(2);
+                    document.getElementById('bar-energy').style.width = `${Math.round(smoothEnergy * 100)}%`;
+
+                    document.getElementById('val-spread').textContent = smoothSpread.toFixed(2);
+                    document.getElementById('bar-spread').style.width = `${Math.round(smoothSpread * 100)}%`;
+
+                    document.getElementById('val-elevation').textContent = smoothElevation.toFixed(2);
+                    document.getElementById('bar-elevation').style.width = `${Math.round(smoothElevation * 100)}%`;
+
+                    updatePrompt();
                 }
+            } else {
+                document.getElementById('status-badge').className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium mono';
+                document.getElementById('status-text').textContent = 'Searching for Subject...';
             }
             canvasCtx.restore();
+        }
+
+        function updatePrompt() {
+            // Map telemetry to musical modifiers
+            let bpm = Math.round(90 + (smoothEnergy * 60) + (smoothElevation * 20));
+            bpm = Math.min(Math.max(bpm, 75), 175);
+
+            document.getElementById('bpm-badge').textContent = `${bpm} BPM`;
+
+            let energyDescriptor = smoothEnergy > 0.6 ? "high-energy drop, driving percussion, intense" :
+                                   smoothEnergy > 0.3 ? "grooving rhythm, rhythmic pulse, dynamic momentum" :
+                                   "ambient pads, relaxed tempo, smooth chill vibe";
+
+            let spatialDescriptor = smoothSpread > 0.7 ? "wide stereo field, expansive cinematic atmosphere" :
+                                    smoothSpread > 0.4 ? "balanced mix, warm analog warmth" :
+                                    "intimate, close-mic production, focused mono bass";
+
+            let moodDescriptor = smoothElevation > 0.7 ? "soaring uplifting melodies, bright shimmering synths" :
+                                 smoothElevation > 0.4 ? "neutral harmonic progression, steady cadence" :
+                                 "deep bassline, dark cinematic undertones, moody atmosphere";
+
+            let structureTag = smoothEnergy > 0.65 ? "[Verse] [Build-up] [Chorus Drop]" :
+                               smoothEnergy > 0.35 ? "[Intro] [Verse] [Chorus]" :
+                               "[Ambient Intro] [Main Theme] [Outro]";
+
+            const engine = document.getElementById('engine-select').value;
+            let finalPrompt = "";
+
+            if (engine === 'suno') {
+                finalPrompt = `${selectedGenre}, ${bpm} BPM. ${energyDescriptor}, ${spatialDescriptor}, ${moodDescriptor}. Mastered for commercial streaming. ${structureTag}`;
+            } else {
+                // Udio format
+                finalPrompt = `Genre: ${selectedGenre}. Tempo: ${bpm} BPM. Characteristics: ${energyDescriptor}, ${spatialDescriptor}. Mood: ${moodDescriptor}.`;
+            }
+
+            document.getElementById('prompt-output').textContent = finalPrompt;
+        }
+
+        // Initialize MediaPipe Pose
+        const pose = new Pose({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
         });
 
-        btn.addEventListener('click', async () => {
-            btn.style.display = 'none';
-            logStatus("Initializing audio and requesting camera permission...");
-            
-            await initMusicEngine();
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            enableSegmentation: false,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
 
-            try {
-                const camera = new Camera(videoElement, {
-                    onFrame: async () => {
-                        await pose.send({ image: videoElement });
-                    },
-                    width: 800,
-                    height: 600
-                });
-                await camera.start();
-                logStatus("Camera active! Step back and move your right hand.");
-            } catch (err) {
-                logStatus("Camera Error: " + err.message + ". Make sure you allowed webcam access and are running via a local server (http://localhost).", true);
-                console.error(err);
-            }
+        pose.onResults(onResults);
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await pose.send({image: videoElement});
+            },
+            width: 1280,
+            height: 720
+        });
+
+        camera.start().catch(err => {
+            console.error("Camera access error:", err);
+            document.getElementById('status-text').textContent = 'Camera Access Denied';
+            document.getElementById('status-badge').className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium mono';
         });
     </script>
 </body>
