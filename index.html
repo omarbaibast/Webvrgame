@@ -1,408 +1,302 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>QSSE-1 | Quaternion Space Encryption</title>
-<style>
-body {
-  font: 16px system-ui, sans-serif;
-  max-width: 850px;
-  margin: auto;
-  padding: 18px;
-  background: #101522;
-  color: #edf2ff;
-}
-h1 { color: #86d8ff; }
-textarea, input, button {
-  box-sizing: border-box;
-  width: 100%;
-  margin: 7px 0 14px;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #52627c;
-  font: inherit;
-}
-textarea, input {
-  background: #1c2639;
-  color: white;
-}
-textarea { min-height: 100px; }
-button {
-  background: #2269a8;
-  color: white;
-  font-weight: bold;
-}
-pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  background: #1c2639;
-  padding: 12px;
-  border-radius: 8px;
-}
-.panel {
-  border: 1px solid #52627c;
-  border-radius: 12px;
-  padding: 15px;
-  margin: 15px 0;
-}
-small { color: #b6c7df; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dance & Bend: AI Body Synths</title>
+    <style>
+        body {
+            margin: 0;
+            background: #090909;
+            color: #f1f1f1;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #container {
+            position: relative;
+            width: 80vw;
+            height: 60vh;
+            max-width: 960px;
+            max-height: 720px;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 4px solid #1a1a1a;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+        }
+        video, canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1); /* Mirror view for intuition */
+            object-fit: cover;
+        }
+        #ui {
+            margin-top: 20px;
+            text-align: center;
+            width: 80vw;
+            max-width: 960px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        button {
+            background: linear-gradient(135deg, #ec4899, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 18px;
+            border-radius: 100px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
+        }
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(236, 72, 153, 0.6);
+        }
+        #display-text {
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #888;
+            height: 1.5em;
+        }
+    </style>
+
+    <!-- MediaPipe Pose and Camera dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
-<h1>QSSE-1</h1>
-<p>Quaternion Space-to-Space Encryption</p>
+    <div id="container">
+        <video id="webcam" playsinline></video>
+        <canvas id="output_canvas"></canvas>
+    </div>
 
-<div class="panel">
-  <h2>1. Message and secret</h2>
-  <label>Message</label>
-  <textarea id="message">Hello from quaternion space!</textarea>
+    <div id="ui">
+        <button id="start-btn">Connect Body & Sound</button>
+        <div id="display-text">Status: Waiting to connect...</div>
+    </div>
 
-  <label>Secret password</label>
-  <input id="password" type="password"
-         autocomplete="new-password"
-         placeholder="Enter a strong password">
+    <script>
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('output_canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const startBtn = document.getElementById('start-btn');
+        const displayText = document.getElementById('display-text');
 
-  <button id="encrypt">Transform and encrypt</button>
-  <button id="decrypt">Decrypt and reconstruct</button>
-</div>
+        // Audio System State
+        let audioCtx = null;
+        let mainSynth = null;
+        let filter = null;
+        let gainNode = null;
+        let panner = null;
+        let distortion = null;
+        let isRunning = false;
+        
+        // Pose State for Movement Calc
+        let previousLandmarks = null;
+        let movementIntensity = 0;
 
-<div class="panel">
-  <h2>2. Encrypted package</h2>
-  <textarea id="package" placeholder="Ciphertext package appears here. Paste a package here to decrypt it."></textarea>
-  <button id="copy">Copy package</button>
-</div>
+        // --- 1. Audio Engine Setup (The "Bending" Machine) ---
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Oscillator: Source sound (the "clay" you are bending)
+            mainSynth = audioCtx.createOscillator();
+            mainSynth.type = 'sawtooth'; // Complex waveform good for filtering
+            mainSynth.frequency.setValueAtTime(110, audioCtx.currentTime); // Base note
 
-<div class="panel">
-  <h2>3. Quaternion-space observation</h2>
-  <p><small>Example blocks before and after spatial transformation:</small></p>
-  <pre id="visual">Waiting for encryption...</pre>
-</div>
+            // Filter: The primary "bending" effect (Low-pass with resonance)
+            filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(500, audioCtx.currentTime);
+            filter.Q.setValueAtTime(12, audioCtx.currentTime); // High resonance for "wah-wah" squelch
 
-<div class="panel">
-  <h2>4. Recovered message</h2>
-  <pre id="result">Nothing decrypted yet.</pre>
-</div>
+            // Distortion: Adds grit based on overall movement speed
+            distortion = audioCtx.createWaveShaper();
+            distortion.curve = makeDistortionCurve(0); // Start with clean sound
+            distortion.oversample = '4x';
 
-<div class="panel">
-  <h2>Status</h2>
-  <pre id="status">Ready.</pre>
-</div>
+            // Panner: Moves sound left/right
+            panner = audioCtx.createStereoPanner();
+            panner.pan.setValueAtTime(0, audioCtx.currentTime);
 
-<script>
-"use strict";
+            // Master Output/Volume
+            gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime); // Start silent
 
-const $ = id => document.getElementById(id);
-const encoder = new TextEncoder();
-const decoder = new TextDecoder("utf-8", {fatal:true});
-
-function say(message) {
-  $("status").textContent = message;
-}
-
-function b64(bytes) {
-  let s = "";
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s);
-}
-
-function unb64(text) {
-  const s = atob(text);
-  return Uint8Array.from(s, c => c.charCodeAt(0));
-}
-
-function concat(...arrays) {
-  const out = new Uint8Array(
-    arrays.reduce((n, a) => n + a.length, 0)
-  );
-  let offset = 0;
-  for (const a of arrays) {
-    out.set(a, offset);
-    offset += a.length;
-  }
-  return out;
-}
-
-function randomBytes(n) {
-  return crypto.getRandomValues(new Uint8Array(n));
-}
-
-// Quaternion represented as [w, x, y, z].
-function mul(a, b) {
-  const [w,x,y,z] = a;
-  const [v,i,j,k] = b;
-  return [
-    w*v - x*i - y*j - z*k,
-    w*i + x*v + y*k - z*j,
-    w*j - x*k + y*v + z*i,
-    w*k + x*j - y*i + z*v
-  ];
-}
-
-function conjugate(q) {
-  return [q[0], -q[1], -q[2], -q[3]];
-}
-
-// Derive a reproducible unit quaternion from the password.
-// This is a spatial encoding key, NOT a replacement for AES.
-async function rotationFor(password) {
-  const bytes = encoder.encode(
-    "QSSE-1 spatial encoding|" + password
-  );
-  const digest = new Uint8Array(
-    await crypto.subtle.digest("SHA-256", bytes)
-  );
-
-  const view = new DataView(
-    digest.buffer, digest.byteOffset, digest.byteLength
-  );
-
-  const q = [];
-  for (let i = 0; i < 4; i++) {
-    q.push(view.getUint32(i * 4, false) / 2147483648 - 1);
-  }
-
-  const norm = Math.hypot(...q);
-  if (norm < 1e-12) throw Error("Invalid rotation key.");
-  return q.map(x => x / norm);
-}
-
-// Each four input bytes become one quaternion.
-// Zero padding is removed using the stored original length.
-function spatialEncode(bytes, r) {
-  const blocks = Math.ceil(bytes.length / 4);
-  const output = new ArrayBuffer(blocks * 32);
-  const view = new DataView(output);
-  const samples = [];
-
-  for (let b = 0; b < blocks; b++) {
-    const offset = b * 4;
-    const q = [0, 0, 0, 0];
-
-    for (let j = 0; j < 4; j++) {
-      q[j] = offset + j < bytes.length
-        ? bytes[offset + j] : 0;
-    }
-
-    const transformed = mul(mul(r, q), conjugate(r));
-
-    for (let j = 0; j < 4; j++) {
-      view.setFloat64(b * 32 + j * 8,
-                      transformed[j], true);
-    }
-
-    if (b < 3) {
-      samples.push({
-        input: q.map(v => v.toFixed(3)),
-        output: transformed.map(v => v.toFixed(3))
-      });
-    }
-  }
-
-  return {
-    bytes: new Uint8Array(output),
-    samples
-  };
-}
-
-function spatialDecode(bytes, originalLength, r) {
-  if (bytes.length % 32 !== 0) {
-    throw Error("Invalid spatial data length.");
-  }
-
-  const blocks = bytes.length / 32;
-  if (originalLength > blocks * 4 ||
-      originalLength <= Math.max(0, (blocks - 1) * 4)) {
-    if (!(originalLength === 0 && blocks === 0)) {
-      throw Error("Invalid original length.");
-    }
-  }
-
-  const view = new DataView(
-    bytes.buffer, bytes.byteOffset, bytes.byteLength
-  );
-  const output = new Uint8Array(originalLength);
-  const inverse = conjugate(r);
-
-  for (let b = 0; b < blocks; b++) {
-    const transformed = [];
-
-    for (let j = 0; j < 4; j++) {
-      const value = view.getFloat64(b * 32 + j * 8, true);
-      if (!Number.isFinite(value) || Math.abs(value) > 1000) {
-        throw Error("Invalid quaternion component.");
-      }
-      transformed.push(value);
-    }
-
-    const original = mul(
-      mul(inverse, transformed), r
-    );
-
-    for (let j = 0; j < 4; j++) {
-      const index = b * 4 + j;
-      if (index < originalLength) {
-        const rounded = Math.round(original[j]);
-        if (Math.abs(original[j] - rounded) > 1e-6 ||
-            rounded < 0 || rounded > 255) {
-          throw Error("Spatial reconstruction failed.");
+            // Audio Graph Routing:
+            // Synth -> Filter -> Distortion -> Panner -> Gain -> Out
+            mainSynth.connect(filter);
+            filter.connect(distortion);
+            distortion.connect(panner);
+            panner.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            mainSynth.start();
         }
-        output[index] = rounded;
-      }
-    }
-  }
 
-  return output;
-}
+        // --- 2. MediaPipe Pose Setup ---
+        const pose = new Pose({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+        });
 
-async function deriveAESKey(password, salt) {
-  const material = await crypto.subtle.importKey(
-    "raw", encoder.encode(password),
-    "PBKDF2", false, ["deriveKey"]
-  );
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
+        });
 
-  return crypto.subtle.deriveKey({
-    name: "PBKDF2",
-    salt,
-    iterations: 310000,
-    hash: "SHA-256"
-  }, material, {
-    name: "AES-GCM",
-    length: 256
-  }, false, ["encrypt", "decrypt"]);
-}
+        pose.onResults(onPoseResults);
 
-function showSamples(samples) {
-  $("visual").textContent = samples.length
-    ? samples.map((s, i) =>
-        "Block " + i +
-        "\nOriginal quaternion: [" + s.input.join(", ") + "]" +
-        "\nRotated quaternion:  [" + s.output.join(", ") + "]"
-      ).join("\n\n")
-    : "Empty message: no quaternion blocks.";
-}
+        // --- 3. Body Landmarks Tracking Loop ---
+        function onPoseResults(results) {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-$("encrypt").addEventListener("click", async () => {
-  try {
-    if (!crypto.subtle) {
-      throw Error("Web Crypto unavailable. Use HTTPS or localhost.");
-    }
+            if (results.poseLandmarks) {
+                drawPoseSkeleton(results.poseLandmarks);
+                updateAudioFromPose(results.poseLandmarks);
+            } else {
+                // No body visible: mute audio slowly
+                if (gainNode && isRunning) gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2);
+                displayText.innerText = "Waiting for a dancer...";
+            }
+            canvasCtx.restore();
+        }
 
-    const password = $("password").value;
-    if (password.length < 12) {
-      throw Error("Use a password of at least 12 characters.");
-    }
+        // --- 4. Mapping Dance to Audio (The Mapping) ---
+        function updateAudioFromPose(landmarks) {
+            if (!isRunning) return;
 
-    const plain = encoder.encode($("message").value);
-    const salt = randomBytes(16);
-    const iv = randomBytes(12);
+            // Key landmarks (index values):
+            // Nose (0), L Wrist (15), R Wrist (16), L Hip (23), R Hip (24)
 
-    const r = await rotationFor(password);
-    const encoded = spatialEncode(plain, r);
-    const key = await deriveAESKey(password, salt);
+            // Right Wrist -> Pitch & Tone Bending
+            const rWrist = landmarks[16];
+            // Horizontal (X) controls Filter Cutoff (Squelch)
+            // Normalized range is 0 (left) to 1 (right). Video is mirrored, so invert X.
+            const filterX = 1.0 - rWrist.x;
+            const filterCutoff = 200 + (filterX * 4800); // 200Hz to 5kHz
+            
+            // Vertical (Y) controls Main Pitch (Octaves)
+            const pitchY = rWrist.y; // 0 is top of screen
+            const pitchBase = 55; // A1 note
+            const synthFreq = pitchBase + ((1.0 - pitchY) * 330); // 55Hz to 385Hz
 
-    const header = {
-      version: "QSSE-1",
-      encoding: "quaternion-f64-le",
-      originalLength: plain.length
-    };
-    const aad = encoder.encode(JSON.stringify(header));
+            // Left Wrist -> Volume & Panning
+            const lWrist = landmarks[15];
+            const volY = lWrist.y;
+            const masterVol = Math.max(0, Math.min(0.3, (1.0 - volY) * 0.3)); // Cap volume at 0.3
+            
+            // Pan left/right based on left hand position
+            const panX = (lWrist.x - 0.5) * 2; // -1 to 1 range (not inverted, matches mirrored canvas)
 
-    const encrypted = await crypto.subtle.encrypt({
-      name: "AES-GCM",
-      iv,
-      additionalData: aad,
-      tagLength: 128
-    }, key, encoded.bytes);
+            // --- Apply Smoothed Changes (Web Audio API) ---
+            mainSynth.frequency.setTargetAtTime(synthFreq, audioCtx.currentTime, 0.05);
+            filter.frequency.setTargetAtTime(filterCutoff, audioCtx.currentTime, 0.05);
+            gainNode.gain.setTargetAtTime(masterVol, audioCtx.currentTime, 0.05);
+            panner.pan.setTargetAtTime(panX, audioCtx.currentTime, 0.05);
 
-    const pkg = {
-      ...header,
-      salt: b64(salt),
-      iv: b64(iv),
-      ciphertext: b64(new Uint8Array(encrypted))
-    };
+            // --- Movement Intensity Calculation ---
+            calculateMovementIntensity(landmarks);
 
-    $("package").value = JSON.stringify(pkg);
-    $("result").textContent = "Encrypted successfully.";
-    showSamples(encoded.samples);
-    say("Success. Spatial encoding applied; AES-GCM authenticated the package.");
-  } catch (e) {
-    say("Encryption error: " + e.message);
-  }
-});
+            // Overdrive intensity from movement speed
+            const distCurveAmount = Math.max(0, Math.min(20, movementIntensity * 100)); // Map intensity to 0-20
+            distortion.curve = makeDistortionCurve(distCurveAmount);
 
-$("decrypt").addEventListener("click", async () => {
-  try {
-    if (!crypto.subtle) {
-      throw Error("Web Crypto unavailable. Use HTTPS or localhost.");
-    }
+            displayText.innerText = `Pitch: ${Math.round(synthFreq)}Hz | Filter: ${Math.round(filterCutoff)}Hz | Int: ${movementIntensity.toFixed(2)}`;
+        }
 
-    const password = $("password").value;
-    if (password.length < 12) {
-      throw Error("Enter the original password.");
-    }
+        // Helper to calculate body velocity between frames
+        function calculateMovementIntensity(currentLandmarks) {
+            if (previousLandmarks) {
+                let totalDiff = 0;
+                // Average speed of nose and wrists
+                const points = [0, 15, 16]; 
+                for (let i = 0; i < points.length; i++) {
+                    const idx = points[i];
+                    const diffX = Math.abs(currentLandmarks[idx].x - previousLandmarks[idx].x);
+                    const diffY = Math.abs(currentLandmarks[idx].y - previousLandmarks[idx].y);
+                    totalDiff += diffX + diffY;
+                }
+                // Low-pass smooth the intensity value
+                movementIntensity = (movementIntensity * 0.9) + (totalDiff * 0.1);
+            }
+            previousLandmarks = JSON.parse(JSON.stringify(currentLandmarks)); // Clone landmarks
+        }
 
-    const pkg = JSON.parse($("package").value);
+        // --- Utility: Distortion Curve generator ---
+        function makeDistortionCurve(amount) {
+            const k = typeof amount === 'number' ? amount : 50;
+            const n_samples = 44100;
+            const curve = new Float32Array(n_samples);
+            const deg = Math.PI / 180;
+            let i = 0, x;
+            for ( ; i < n_samples; ++i ) {
+                x = i * 2 / n_samples - 1;
+                curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
+            }
+            return curve;
+        };
 
-    if (pkg.version !== "QSSE-1" ||
-        pkg.encoding !== "quaternion-f64-le" ||
-        !Number.isSafeInteger(pkg.originalLength) ||
-        pkg.originalLength < 0 ||
-        pkg.originalLength > 10000000) {
-      throw Error("Unsupported or invalid QSSE package.");
-    }
+        // Utility: Visual skeleton drawing on canvas
+        function drawPoseSkeleton(landmarks) {
+            canvasCtx.lineWidth = 4;
+            canvasCtx.strokeStyle = '#8b5cf6'; // Violet
+            canvasCtx.fillStyle = '#ec4899';   // Pink
 
-    const salt = unb64(pkg.salt);
-    const iv = unb64(pkg.iv);
-    const ciphertext = unb64(pkg.ciphertext);
+            // Simple point drawing
+            for (let i = 0; i < landmarks.length; i++) {
+                const landmark = landmarks[i];
+                if (landmark.visibility < 0.6) continue;
+                const x = landmark.x * canvasElement.width;
+                const y = landmark.y * canvasElement.height;
+                canvasCtx.beginPath();
+                canvasCtx.arc(x, y, 6, 0, 2 * Math.PI);
+                canvasCtx.fill();
+            }
+            // (You could expand this to draw actual lines connecting the joints)
+        }
 
-    if (salt.length !== 16 || iv.length !== 12 ||
-        ciphertext.length < 16) {
-      throw Error("Invalid package fields.");
-    }
+        // --- 5. Initialisation & Button Handler ---
+        startBtn.addEventListener('click', async () => {
+            startBtn.style.display = 'none';
+            initAudio();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            isRunning = true;
 
-    const header = {
-      version: "QSSE-1",
-      encoding: "quaternion-f64-le",
-      originalLength: pkg.originalLength
-    };
-    const aad = encoder.encode(JSON.stringify(header));
-    const key = await deriveAESKey(password, salt);
+            const camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    await pose.send({ image: videoElement });
+                },
+                width: 960,
+                height: 720
+            });
+            camera.start();
+        });
 
-    // AES-GCM rejects an incorrect password or altered ciphertext.
-    const transformed = await crypto.subtle.decrypt({
-      name: "AES-GCM",
-      iv,
-      additionalData: aad,
-      tagLength: 128
-    }, key, ciphertext);
-
-    const r = await rotationFor(password);
-    const plainBytes = spatialDecode(
-      new Uint8Array(transformed),
-      pkg.originalLength,
-      r
-    );
-
-    $("result").textContent = decoder.decode(plainBytes);
-    say("Success. Authentication passed and the original message was reconstructed.");
-  } catch (e) {
-    $("result").textContent = "No message recovered.";
-    say("Decryption failed. Check the password and package. " +
-        "Details: " + e.message);
-  }
-});
-
-$("copy").addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText($("package").value);
-    say("Package copied.");
-  } catch {
-    say("Clipboard unavailable. Select and copy the package manually.");
-  }
-});
-</script>
+        // Ensure canvas size is locked to container aspect ratio
+        function resizeCanvas() {
+            canvasElement.width = videoElement.clientWidth || 960;
+            canvasElement.height = videoElement.clientHeight || 720;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        videoElement.addEventListener('loadedmetadata', resizeCanvas);
+    </script>
 </body>
 </html>
