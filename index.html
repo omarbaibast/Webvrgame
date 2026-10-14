@@ -2,12 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pro Interactive Dance Synth</title>
+    <title>AI Dance Song Producer</title>
     <style>
-        body { margin: 0; background: #0b0c10; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        #container { position: relative; width: 800px; height: 600px; border-radius: 16px; overflow: hidden; border: 2px solid #1f2833; }
+        body { margin: 0; background: #0a0a0c; color: #fff; font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        #container { position: relative; width: 800px; height: 600px; border-radius: 16px; overflow: hidden; border: 2px solid #27272a; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
         video, canvas { position: absolute; width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
-        #btn { margin-top: 15px; padding: 12px 28px; background: #66fcf1; color: #0b0c10; font-weight: bold; border: none; border-radius: 20px; cursor: pointer; font-size: 16px; }
+        #ui { margin-top: 15px; text-align: center; }
+        button { padding: 14px 32px; background: #ec4899; color: white; font-weight: bold; border: none; border-radius: 30px; cursor: pointer; font-size: 16px; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4); transition: transform 0.2s; }
+        button:hover { transform: scale(1.05); }
+        #info { margin-top: 8px; color: #a1a1aa; font-family: monospace; font-size: 14px; }
     </style>
 
     <!-- Tone.js, MediaPipe & Camera Libraries -->
@@ -21,103 +24,122 @@
         <video id="webcam" playsinline></video>
         <canvas id="canvas"></canvas>
     </div>
-    <button id="btn">Initialize High-Quality Audio Engine</button>
+    <div id="ui">
+        <button id="btn">Start Beat & Camera</button>
+        <div id="info">Status: Ready to play</div>
+    </div>
 
     <script>
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('canvas');
         const canvasCtx = canvasElement.getContext('2d');
         const btn = document.getElementById('btn');
+        const infoEl = document.getElementById('info');
 
-        let synth, subBass, filter, reverb, delay;
-        let isAudioReady = false;
-        let lastPlayedNote = "";
+        let isEngineRunning = false;
+        let kick, hihat, pianoChordSynth, leadSynth, reverb, delay;
+        let lastNotePlayed = "";
 
-        // --- 1. A Pentatonic Scale in MIDI Note Values ---
-        // A Minor Pentatonic across 2 octaves (A2 to E5)
-        const scaleMidi = [45, 48, 50, 52, 55, 57, 60, 62, 64, 67, 69, 72, 74, 76];
+        // A Minor scale notes for lead melodies
+        const leadScale = ["A4", "C5", "D5", "E5", "G5", "A5"];
 
-        // --- 2. Advanced Audio Graph Setup ---
-        async function setupAudioEngine() {
+        async function initMusicEngine() {
             await Tone.start();
+            Tone.Transport.bpm.value = 120; // Set song tempo (120 BPM dance groove)
 
-            // Reverb & Delay Effects Chain
-            reverb = new Tone.Reverb({ decay: 4, wet: 0.35 }).toDestination();
+            // Effects Chain
+            reverb = new Tone.Reverb({ decay: 3, wet: 0.4 }).toDestination();
             await reverb.generate();
 
-            delay = new Tone.FeedbackDelay({
-                delayTime: "8n.", // Dotted eighth-note delay
-                feedback: 0.3,
-                wet: 0.25
-            }).connect(reverb);
+            delay = new Tone.FeedbackDelay({ delayTime: "8n", feedback: 0.3, wet: 0.2 }).connect(reverb);
 
-            // Filter for brightness/squelch
-            filter = new Tone.Filter({
-                frequency: 800,
-                type: "lowpass",
-                rolloff: -24
-            }).connect(delay);
-
-            // Polyphonic Synth Patch (Warm Pad / Pluck)
-            synth = new Tone.PolySynth(Tone.Synth, {
-                oscillator: { type: "fatfat" }, // Thick dual-sawtooth
-                envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 1.2 }
-            }).connect(filter);
-
-            // Deep Sub-Bass Synth
-            subBass = new Tone.MonoSynth({
-                oscillator: { type: "triangle" },
-                envelope: { attack: 0.1, decay: 0.3, sustain: 0.8, release: 0.8 }
+            // 1. KICK DRUM (Punchy electronic kick)
+            kick = new Tone.MembraneSynth({
+                pitchDecay: 0.05,
+                octaves: 6,
+                oscillator: { type: "sine" },
+                envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 0.4 }
             }).toDestination();
 
-            isAudioReady = true;
+            // 2. HI-HAT (Crisp off-beat percussion)
+            hihat = new Tone.NoiseSynth({
+                filter: { type: "highpass", frequency: 5000 },
+                envelope: { attack: 0.001, decay: 0.08, sustain: 0 }
+            }).connect(reverb);
+
+            // 3. PIANO / CHORD PAD (Harmonic backing progression: Am -> F -> C -> G)
+            pianoChordSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "triangle" },
+                envelope: { attack: 0.05, decay: 1.5, sustain: 0.2, release: 1.5 }
+            }).connect(reverb);
+
+            const chordProgression = [
+                ["A3", "C4", "E4"], // Am
+                ["F3", "A3", "C4"], // F
+                ["C3", "E3", "G3"], // C
+                ["G3", "B3", "D4"]  // G
+            ];
+            let chordStep = 0;
+
+            // 4. LEAD SYNTH (Played live by your body movements)
+            leadSynth = new Tone.Synth({
+                oscillator: { type: "sawtooth" },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.5 }
+            }).connect(delay);
+
+            // --- TRANSPORT LOOPS (The Master Rhythm) ---
+            
+            // Kick on every beat (1, 2, 3, 4)
+            new Tone.Loop(time => {
+                kick.triggerAttackRelease("C1", "4n", time);
+            }, "4n").start(0);
+
+            // Hi-hats on the off-beats
+            new Tone.Loop(time => {
+                hihat.triggerAttackRelease("16n", time);
+            }, "8n").start("8n");
+
+            // Chords change every measure (1m)
+            new Tone.Loop(time => {
+                pianoChordSynth.triggerAttackRelease(chordProgression[chordStep], "1m", time);
+                chordStep = (chordStep + 1) % chordProgression.length;
+            }, "1m").start(0);
+
+            // Start the global clock
+            Tone.Transport.start();
+            isEngineRunning = true;
         }
 
-        // Quantize a 0.0 - 1.0 position to the nearest note in our scale
-        function mapPositionToNote(normalizedVal) {
-            const index = Math.floor((1.0 - normalizedVal) * scaleMidi.length);
-            const clampedIndex = Math.max(0, Math.min(scaleMidi.length - 1, index));
-            return Tone.Frequency(scaleMidi[clampedIndex], "midi").toNote();
-        }
-
-        // --- 3. Pose Tracking and Music Mapping ---
+        // --- CAMERA & POSE TRACKING ---
         const pose = new Pose({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
         pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.7 });
-        pose.onResults(onPoseResults);
-
-        function onPoseResults(results) {
+        pose.onResults(results => {
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            if (results.poseLandmarks && isAudioReady) {
+            if (results.poseLandmarks && isEngineRunning) {
                 const landmarks = results.poseLandmarks;
 
-                // Right Wrist (16): Plays melodic notes on height change
+                // Right Wrist (16): Controls Lead Melody over the beat
                 const rWrist = landmarks[16];
-                const currentNote = mapPositionToNote(rWrist.y);
+                const noteIndex = Math.floor((1.0 - rWrist.y) * leadScale.length);
+                const clampedIdx = Math.max(0, Math.min(leadScale.length - 1, noteIndex));
+                const activeNote = leadScale[clampedIdx];
 
-                if (currentNote !== lastPlayedNote) {
-                    synth.triggerAttackRelease(currentNote, "8n");
-                    lastPlayedNote = currentNote;
+                if (activeNote !== lastNotePlayed) {
+                    leadSynth.triggerAttackRelease(activeNote, "8n");
+                    lastNotePlayed = activeNote;
                 }
 
-                // Left Wrist (15): Controls Cutoff Filter (X) and Delay Wetness (Y)
-                const lWrist = landmarks[15];
-                const filterFreq = 200 + ((1.0 - lWrist.x) * 4000);
-                filter.frequency.setTargetAtTime(filterFreq, Tone.now(), 0.05);
-
-                // Nose / Head height controls Sub-Bass pitch
-                const nose = landmarks[0];
-                const bassNote = Tone.Frequency(scaleMidi[Math.floor((1.0 - nose.y) * 4)], "midi").toNote();
-                subBass.frequency.setTargetAtTime(bassNote, Tone.now(), 0.1);
+                infoEl.innerText = `Beat: Active (120 BPM) | Lead Note: ${activeNote}`;
             }
             canvasCtx.restore();
-        }
+        });
 
         btn.addEventListener('click', async () => {
             btn.style.display = 'none';
-            await setupAudioEngine();
+            await initMusicEngine();
             const camera = new Camera(videoElement, {
                 onFrame: async () => { await pose.send({ image: videoElement }); },
                 width: 800, height: 600
