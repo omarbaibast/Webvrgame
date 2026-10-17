@@ -1,428 +1,800 @@
+
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KineticBeat - Motion-Driven AI Music Prompter</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        cyber: {
-                            50: '#f0fdf4',
-                            500: '#10b981',
-                            900: '#064e3b',
-                            950: '#022c22'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- MediaPipe Pose & Camera Utils -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        .mono {
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .glow-cyan {
-            box-shadow: 0 0 25px rgba(6, 182, 212, 0.25);
-        }
-        .glow-emerald {
-            box-shadow: 0 0 25px rgba(16, 185, 129, 0.25);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PS4 Controller Tester & Visualizer</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    /* Custom Glow and Shadow Effects for Visualizer */
+    .controller-part {
+      transition: fill 0.05s ease, stroke 0.05s ease, opacity 0.05s ease, transform 0.05s ease;
+      transform-origin: center;
+    }
+    .active-btn {
+      fill: #3b82f6 !important; /* Tailwind blue-500 */
+      filter: drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.8));
+    }
+    .active-special-btn {
+      fill: #38bdf8 !important; /* Tailwind sky-400 */
+      filter: drop-shadow(0px 0px 6px rgba(56, 189, 248, 0.8));
+    }
+    .active-trigger {
+      fill: #a855f7 !important; /* Tailwind purple-500 */
+      filter: drop-shadow(0px 0px 10px rgba(168, 85, 247, 0.9));
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-cyan-500 selection:text-slate-950">
+<body class="h-full flex flex-col bg-slate-950 text-slate-100 overflow-x-hidden antialiased">
 
-    <!-- Header -->
-    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center glow-cyan">
-                    <i data-lucide="activity" class="w-6 h-6 text-slate-950"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg tracking-tight mono text-cyan-400">KINETIC<span class="text-emerald-400">BEAT</span></h1>
-                    <p class="text-xs text-slate-400">Real-time Kinematic AI Music Generator</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div id="status-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium mono">
-                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                    <span id="status-text">Initializing Camera...</span>
-                </div>
-            </div>
+  <!-- Header -->
+  <header class="w-full bg-slate-900/80 border-b border-slate-800 backdrop-blur px-4 py-3 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-500/30">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5zM5 14a2 2 0 00-2 2v1a2 2 0 002 2h14a2 2 0 002-2v-1a2 2 0 00-2-2H5z"/>
+          </svg>
         </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Left Column: Video & Skeleton Overlay -->
-        <div class="lg:col-span-7 flex flex-col space-y-4">
-            <div class="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 aspect-video shadow-2xl glow-cyan flex items-center justify-center">
-                <!-- Hidden video feed for MediaPipe -->
-                <video id="webcam" class="absolute inset-0 w-full h-full object-cover -scale-x-100 opacity-60" playsinline></video>
-                <!-- Canvas for skeleton rendering -->
-                <canvas id="output_canvas" class="absolute inset-0 w-full h-full object-cover -scale-x-100"></canvas>
-                
-                <!-- Overlay HUD Elements -->
-                <div class="absolute top-4 left-4 bg-slate-950/80 backdrop-blur border border-slate-800 rounded-lg p-2.5 flex items-center space-x-3 text-xs mono">
-                    <i data-lucide="video" class="w-4 h-4 text-cyan-400"></i>
-                    <span>FPS: <strong id="fps-counter" class="text-cyan-400">0</strong></span>
-                </div>
-
-                <div id="freeze-banner" class="absolute inset-x-0 top-0 bg-cyan-500 text-slate-950 font-bold py-1 text-center text-xs tracking-wider mono uppercase hidden">
-                    Prompt Frozen — Motion Tracking Paused
-                </div>
-            </div>
-
-            <!-- Controls Toolbar -->
-            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center space-x-2">
-                    <button id="btn-freeze" onclick="toggleFreeze()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium flex items-center space-x-2 transition">
-                        <i data-lucide="pause" class="w-4 h-4 text-cyan-400" id="freeze-icon"></i>
-                        <span id="freeze-text">Freeze Prompt</span>
-                    </button>
-                    <button onclick="resetCalibration()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium flex items-center space-x-2 transition">
-                        <i data-lucide="rotate-ccw" class="w-4 h-4 text-emerald-400"></i>
-                        <span>Recalibrate</span>
-                    </button>
-                </div>
-
-                <div class="flex items-center space-x-2">
-                    <span class="text-xs text-slate-400 mono">Target Engine:</span>
-                    <select id="engine-select" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-cyan-400 mono focus:outline-none focus:border-cyan-500">
-                        <option value="suno">Suno v3.5 / v4</option>
-                        <option value="udio">Udio 1.5</option>
-                    </select>
-                </div>
-            </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-wide text-white flex items-center gap-2">
+            DualShock 4 Visualizer
+            <span class="text-xs font-normal px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">Gamepad API</span>
+          </h1>
+          <p class="text-xs text-slate-400">Interactive PS4 Controller Input Tester</p>
         </div>
+      </div>
 
-        <!-- Right Column: Telemetry & Live Prompt Output -->
-        <div class="lg:col-span-5 flex flex-col space-y-6">
-            
-            <!-- Telemetry Gauges -->
-            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <h2 class="font-semibold text-sm flex items-center space-x-2 text-slate-200">
-                        <i data-lucide="gauge" class="w-4 h-4 text-cyan-400"></i>
-                        <span>Kinematic Telemetry</span>
-                    </h2>
-                    <span class="text-xs mono text-emerald-400">Active Stream</span>
-                </div>
-
-                <div class="space-y-3">
-                    <div>
-                        <div class="flex justify-between text-xs mono mb-1">
-                            <span class="text-slate-400">Movement Energy (Velocity):</span>
-                            <span id="val-energy" class="text-cyan-400">0.00</span>
-                        </div>
-                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                            <div id="bar-energy" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-100"></div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="flex justify-between text-xs mono mb-1">
-                            <span class="text-slate-400">Arm Wingspan (Spread):</span>
-                            <span id="val-spread" class="text-cyan-400">0.00</span>
-                        </div>
-                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                            <div id="bar-spread" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-100"></div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="flex justify-between text-xs mono mb-1">
-                            <span class="text-slate-400">Hand Elevation (Height):</span>
-                            <span id="val-elevation" class="text-cyan-400">0.00</span>
-                        </div>
-                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                            <div id="bar-elevation" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-100"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Genre Selector Pills -->
-                <div class="pt-2">
-                    <label class="block text-xs mono text-slate-400 mb-2">Genre Foundation:</label>
-                    <div id="genre-pills" class="flex flex-wrap gap-2">
-                        <button onclick="setGenre('Cyberpunk Synthwave')" class="genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-cyan-500/50 bg-cyan-500/10 text-cyan-300 transition">Synthwave</button>
-                        <button onclick="setGenre('Lo-Fi Chillhop')" class="genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition">Lo-Fi</button>
-                        <button onclick="setGenre('Cinematic Orchestral Epic')" class="genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition">Orchestral</button>
-                        <button onclick="setGenre('Future Bass Drop')" class="genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition">Future Bass</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Live Generated Prompt Box -->
-            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col flex-1 justify-between shadow-xl glow-emerald">
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-semibold text-sm flex items-center space-x-2 text-slate-200">
-                            <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
-                            <span>Generated AI Music Prompt</span>
-                        </h2>
-                        <span id="bpm-badge" class="text-xs mono px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">120 BPM</span>
-                    </div>
-                    
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 relative group">
-                        <p id="prompt-output" class="mono text-sm text-cyan-300 leading-relaxed min-h-[90px] select-all">
-                            Initializing gesture tracking to synthesize prompt parameters...
-                        </p>
-                    </div>
-                </div>
-
-                <div class="pt-4 flex items-center justify-between">
-                    <p class="text-xs text-slate-500 mono">Updates in real-time as you move.</p>
-                    <button onclick="copyPrompt()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-400 text-slate-950 font-bold text-xs mono flex items-center space-x-2 hover:opacity-90 transition shadow-lg">
-                        <i data-lucide="copy" class="w-4 h-4"></i>
-                        <span id="copy-btn-text">Copy Prompt</span>
-                    </button>
-                </div>
-            </div>
-
-        </div>
-
-    </main>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-emerald-500 text-slate-950 px-4 py-3 rounded-xl font-bold text-xs mono shadow-2xl translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-2 z-50">
-        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-        <span>Prompt copied to clipboard!</span>
+      <!-- Connection Status Bar -->
+      <div id="connection-badge" class="flex items-center px-3 py-1.5 rounded-full bg-red-950/60 border border-red-500/40 text-red-400 text-xs font-medium transition-all duration-300">
+        <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse mr-2"></span>
+        <span id="connection-status-text">Disconnected — Press any button</span>
+      </div>
     </div>
+  </header>
 
-    <!-- Application Script -->
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        let isFrozen = false;
-        let selectedGenre = 'Cyberpunk Synthwave';
-        let lastLandmarks = null;
-        let lastTime = performance.now();
-        let fpsFrames = 0;
-        let fpsLastTime = performance.now();
+    <!-- Left / Top Column: Visual Controller Representation & Controls (7 cols) -->
+    <section class="lg:col-span-7 flex flex-col gap-6">
 
-        // Telemetry smoothing variables
-        let smoothEnergy = 0;
-        let smoothSpread = 0.5;
-        let smoothElevation = 0.5;
+      <!-- Controller Interactive Visualizer Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col items-center justify-center min-h-[380px]">
+        <!-- Subtle Grid Background -->
+        <div class="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px] opacity-20 pointer-events-none"></div>
 
-        const videoElement = document.getElementById('webcam');
-        const canvasElement = document.getElementById('output_canvas');
-        const canvasCtx = canvasElement.getContext('2d');
+        <!-- Onboarding / Disconnected Overlay -->
+        <div id="visualizer-overlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 text-center transition-opacity duration-300">
+          <div class="w-16 h-16 bg-blue-600/10 text-blue-400 rounded-full flex items-center justify-center mb-4 border border-blue-500/30 animate-bounce">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h2 class="text-xl font-bold text-white mb-2">Connect Your PS4 Controller</h2>
+          <p class="text-slate-400 text-sm max-w-md mb-4">
+            Connect your DualShock 4 via USB or Bluetooth, then <span class="text-blue-400 font-semibold">press any button</span> to activate the Web Gamepad API.
+          </p>
+          <div class="text-xs text-slate-500 bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg">
+            Supports Chrome, Edge, Firefox, and Safari
+          </div>
+        </div>
 
-        function setGenre(genre) {
-            selectedGenre = genre;
-            document.querySelectorAll('.genre-pill').forEach(btn => {
-                if (btn.textContent.includes(genre.split(' ')[0])) {
-                    btn.className = 'genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-cyan-500/50 bg-cyan-500/10 text-cyan-300 transition';
-                } else {
-                    btn.className = 'genre-pill px-3 py-1.5 rounded-xl text-xs mono border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition';
-                }
-            });
-            updatePrompt();
+        <!-- Dynamic Lightbar Indicator Header -->
+        <div class="w-full flex items-center justify-between mb-2 z-10 px-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Interactive Graphic</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">LED Lightbar:</span>
+            <div id="lightbar-preview" class="w-12 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] transition-all duration-200"></div>
+          </div>
+        </div>
+
+        <!-- SVG Visual DualShock 4 Controller -->
+        <div class="w-full max-w-2xl relative z-10 my-auto">
+          <svg viewBox="0 0 800 520" class="w-full h-auto drop-shadow-2xl select-none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#1e293b"/>
+                <stop offset="100%" stop-color="#0f172a"/>
+              </linearGradient>
+              <linearGradient id="gripGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#334155"/>
+                <stop offset="100%" stop-color="#0f172a"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Main Body Contour -->
+            <path d="M 230 110 C 300 100, 500 100, 570 110 C 620 115, 680 150, 710 220 C 740 290, 755 420, 715 470 C 685 505, 635 480, 580 390 C 530 310, 480 310, 400 310 C 320 310, 270 310, 220 390 C 165 480, 115 505, 85 470 C 45 420, 60 290, 90 220 C 120 150, 180 115, 230 110 Z" fill="url(#bodyGrad)" stroke="#334155" stroke-width="4"/>
+
+            <!-- Side Grips -->
+            <path d="M 85 470 C 45 420, 60 290, 90 220 C 105 185, 135 155, 170 135 C 150 220, 150 360, 220 390 C 165 480, 115 505, 85 470 Z" fill="#090d16" opacity="0.4"/>
+            <path d="M 715 470 C 755 420, 740 290, 710 220 C 695 185, 665 155, 630 135 C 650 220, 650 360, 580 390 C 635 480, 685 505, 715 470 Z" fill="#090d16" opacity="0.4"/>
+
+            <!-- L1 / L2 Bumpers & Triggers -->
+            <g id="svg-l2" class="controller-part">
+              <path d="M 180 65 L 260 65 L 250 100 L 190 100 Z" fill="#1e293b" stroke="#475569" stroke-width="2" rx="4"/>
+              <text x="220" y="87" fill="#94a3b8" font-size="14" font-weight="bold" text-anchor="middle">L2</text>
+            </g>
+            <g id="svg-l1" class="controller-part">
+              <path d="M 180 102 L 260 102 L 255 122 L 185 122 Z" fill="#334155" stroke="#475569" stroke-width="2" rx="3"/>
+              <text x="220" y="116" fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle">L1</text>
+            </g>
+
+            <!-- R1 / R2 Bumpers & Triggers -->
+            <g id="svg-r2" class="controller-part">
+              <path d="M 540 65 L 620 65 L 610 100 L 550 100 Z" fill="#1e293b" stroke="#475569" stroke-width="2" rx="4"/>
+              <text x="580" y="87" fill="#94a3b8" font-size="14" font-weight="bold" text-anchor="middle">R2</text>
+            </g>
+            <g id="svg-r1" class="controller-part">
+              <path d="M 540 102 L 620 102 L 615 122 L 545 122 Z" fill="#334155" stroke="#475569" stroke-width="2" rx="3"/>
+              <text x="580" y="116" fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle">R1</text>
+            </g>
+
+            <!-- Touchpad Area -->
+            <g id="svg-touchpad" class="controller-part">
+              <rect x="290" y="115" width="220" height="125" rx="12" fill="#0f172a" stroke="#334155" stroke-width="3"/>
+              <!-- Lightbar Overlay on Touchpad Top -->
+              <rect id="svg-lightbar" x="350" y="118" width="100" height="6" rx="3" fill="#3b82f6" class="transition-colors duration-200"/>
+              <text x="400" y="185" fill="#475569" font-size="12" letter-spacing="2" font-weight="bold" text-anchor="middle">TOUCHPAD</text>
+            </g>
+
+            <!-- Share & Options Buttons -->
+            <g id="svg-share" class="controller-part">
+              <rect x="245" y="135" width="28" height="14" rx="7" fill="#334155" stroke="#475569"/>
+              <text x="259" y="128" fill="#64748b" font-size="10" font-weight="bold" text-anchor="middle">SHARE</text>
+            </g>
+            <g id="svg-options" class="controller-part">
+              <rect x="527" y="135" width="28" height="14" rx="7" fill="#334155" stroke="#475569"/>
+              <text x="541" y="128" fill="#64748b" font-size="10" font-weight="bold" text-anchor="middle">OPTIONS</text>
+            </g>
+
+            <!-- D-PAD Area -->
+            <g id="svg-dpad" transform="translate(145, 185)">
+              <circle cx="60" cy="60" r="55" fill="#0f172a" stroke="#1e293b" stroke-width="2"/>
+              <!-- Up -->
+              <path id="svg-dpad-up" class="controller-part" d="M 45 10 L 75 10 L 75 45 L 45 45 Z" fill="#334155" rx="3"/>
+              <!-- Down -->
+              <path id="svg-dpad-down" class="controller-part" d="M 45 75 L 75 75 L 75 110 L 45 110 Z" fill="#334155" rx="3"/>
+              <!-- Left -->
+              <path id="svg-dpad-left" class="controller-part" d="M 10 45 L 45 45 L 45 75 L 10 75 Z" fill="#334155" rx="3"/>
+              <!-- Right -->
+              <path id="svg-dpad-right" class="controller-part" d="M 75 45 L 110 45 L 110 75 L 75 75 Z" fill="#334155" rx="3"/>
+              <!-- Center Hub -->
+              <circle cx="60" cy="60" r="14" fill="#1e293b"/>
+            </g>
+
+            <!-- Action Buttons Area (Triangle, Circle, Cross, Square) -->
+            <g id="svg-action-buttons" transform="translate(535, 185)">
+              <circle cx="60" cy="60" r="55" fill="#0f172a" stroke="#1e293b" stroke-width="2"/>
+              
+              <!-- Triangle (Top / B3) -->
+              <g id="svg-btn-triangle" class="controller-part">
+                <circle cx="60" cy="22" r="16" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+                <polygon points="60,13 52,27 68,27" fill="none" stroke="#22c55e" stroke-width="3" stroke-linejoin="round"/>
+              </g>
+
+              <!-- Circle (Right / B1) -->
+              <g id="svg-btn-circle" class="controller-part">
+                <circle cx="98" cy="60" r="16" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+                <circle cx="98" cy="60" r="7" fill="none" stroke="#ef4444" stroke-width="3"/>
+              </g>
+
+              <!-- Cross / X (Bottom / B0) -->
+              <g id="svg-btn-cross" class="controller-part">
+                <circle cx="60" cy="98" r="16" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+                <path d="M 53 91 L 67 105 M 67 91 L 53 105" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"/>
+              </g>
+
+              <!-- Square (Left / B2) -->
+              <g id="svg-btn-square" class="controller-part">
+                <circle cx="22" cy="60" r="16" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+                <rect x="15" y="53" width="14" height="14" fill="none" stroke="#ec4899" stroke-width="3" rx="1"/>
+              </g>
+            </g>
+
+            <!-- PS Center Button -->
+            <g id="svg-ps-btn" class="controller-part">
+              <circle cx="400" cy="300" r="22" fill="#0f172a" stroke="#334155" stroke-width="3"/>
+              <!-- PS Logo Symbol simplified -->
+              <path d="M 395 290 L 403 290 C 407 290 409 293 407 296 L 395 308 L 405 308" stroke="#94a3b8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            </g>
+
+            <!-- Analog Stick - Left (L3) -->
+            <g id="svg-stick-left-base" transform="translate(285, 340)">
+              <circle cx="0" cy="0" r="50" fill="#0f172a" stroke="#334155" stroke-width="4"/>
+              <circle cx="0" cy="0" r="42" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+              <!-- Movable Thumbstick Cap -->
+              <g id="svg-stick-left-cap" class="controller-part">
+                <circle cx="0" cy="0" r="32" fill="#334155" stroke="#475569" stroke-width="3"/>
+                <circle cx="0" cy="0" r="24" fill="#1e293b" stroke="#0f172a" stroke-width="1" stroke-dasharray="4 2"/>
+                <circle cx="0" cy="0" r="5" fill="#64748b"/>
+              </g>
+            </g>
+
+            <!-- Analog Stick - Right (R3) -->
+            <g id="svg-stick-right-base" transform="translate(515, 340)">
+              <circle cx="0" cy="0" r="50" fill="#0f172a" stroke="#334155" stroke-width="4"/>
+              <circle cx="0" cy="0" r="42" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+              <!-- Movable Thumbstick Cap -->
+              <g id="svg-stick-right-cap" class="controller-part">
+                <circle cx="0" cy="0" r="32" fill="#334155" stroke="#475569" stroke-width="3"/>
+                <circle cx="0" cy="0" r="24" fill="#1e293b" stroke="#0f172a" stroke-width="1" stroke-dasharray="4 2"/>
+                <circle cx="0" cy="0" r="5" fill="#64748b"/>
+              </g>
+            </g>
+
+            <!-- Speaker Grille Holes -->
+            <g fill="#0f172a" transform="translate(385, 235)">
+              <circle cx="0" cy="0" r="2.5"/><circle cx="15" cy="0" r="2.5"/><circle cx="30" cy="0" r="2.5"/>
+              <circle cx="7.5" cy="8" r="2.5"/><circle cx="22.5" cy="8" r="2.5"/>
+              <circle cx="0" cy="16" r="2.5"/><circle cx="15" cy="16" r="2.5"/><circle cx="30" cy="16" r="2.5"/>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Triggers Dynamic Pressure Gauges -->
+        <div class="w-full grid grid-cols-2 gap-4 mt-4 z-10">
+          <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400 font-semibold">L2 Trigger Pressure</span>
+              <span id="l2-val-text" class="font-mono text-purple-400 font-bold">0.00</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+              <div id="l2-progress" class="h-full bg-purple-500 rounded-full transition-all duration-75 w-0"></div>
+            </div>
+          </div>
+
+          <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400 font-semibold">R2 Trigger Pressure</span>
+              <span id="r2-val-text" class="font-mono text-purple-400 font-bold">0.00</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+              <div id="r2-progress" class="h-full bg-purple-500 rounded-full transition-all duration-75 w-0"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Toolset & Features Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl grid grid-cols-1 md:grid-cols-3 gap-5">
+        
+        <!-- Feature 1: Rumble Test -->
+        <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Vibration Test</h3>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">Test DualShock 4 dual-motor haptic rumble.</p>
+          </div>
+          <button id="btn-vibrate" class="w-full py-2 px-3 bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-lg font-medium text-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>
+            Trigger Rumble
+          </button>
+        </div>
+
+        <!-- Feature 2: Deadzone Slider -->
+        <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                </svg>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Stick Deadzone</h3>
+              </div>
+              <span id="deadzone-value" class="text-xs font-mono text-blue-400 font-bold">0.08</span>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">Filter stick noise and slight drift.</p>
+          </div>
+          <input id="deadzone-slider" type="range" min="0" max="0.30" step="0.01" value="0.08" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+        </div>
+
+        <!-- Feature 3: Lightbar LED Selector -->
+        <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 73"/>
+              </svg>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">LED Color Preset</h3>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">Preview lightbar custom colors.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button data-color="#3b82f6" class="color-preset-btn w-6 h-6 rounded-full bg-blue-500 ring-2 ring-offset-2 ring-offset-slate-900 ring-blue-500 hover:scale-110 transition-transform"></button>
+            <button data-color="#ef4444" class="color-preset-btn w-6 h-6 rounded-full bg-red-500 hover:scale-110 transition-transform"></button>
+            <button data-color="#22c55e" class="color-preset-btn w-6 h-6 rounded-full bg-green-500 hover:scale-110 transition-transform"></button>
+            <button data-color="#a855f7" class="color-preset-btn w-6 h-6 rounded-full bg-purple-500 hover:scale-110 transition-transform"></button>
+            <button data-color="#ec4899" class="color-preset-btn w-6 h-6 rounded-full bg-pink-500 hover:scale-110 transition-transform"></button>
+            <input id="color-picker" type="color" value="#3b82f6" class="w-7 h-7 rounded bg-transparent cursor-pointer border-0">
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Right / Bottom Column: Comprehensive Data & Inputs Panel (5 cols) -->
+    <section class="lg:col-span-5 flex flex-col gap-6">
+
+      <!-- Controller Details & Diagnostics -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-3 flex items-center justify-between">
+          <span>Device Info</span>
+          <span id="gamepad-index-tag" class="normal-case text-xs font-mono bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Index: -</span>
+        </h2>
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between py-1.5 border-b border-slate-800/60">
+            <span class="text-slate-400">Gamepad Name:</span>
+            <span id="gamepad-id" class="font-mono text-slate-200 font-semibold truncate max-w-[220px]">None Detected</span>
+          </div>
+          <div class="flex justify-between py-1.5 border-b border-slate-800/60">
+            <span class="text-slate-400">Mapping Standard:</span>
+            <span id="gamepad-mapping" class="font-mono text-slate-200">N/A</span>
+          </div>
+          <div class="flex justify-between py-1.5 border-b border-slate-800/60">
+            <span class="text-slate-400">Total Buttons / Axes:</span>
+            <span id="gamepad-counts" class="font-mono text-slate-200">0 Buttons / 0 Axes</span>
+          </div>
+          <div class="flex justify-between py-1.5">
+            <span class="text-slate-400">Haptic Actuators (Rumble):</span>
+            <span id="gamepad-haptic-status" class="font-mono text-amber-400">Unknown</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analog Stick Coordinates Box -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl grid grid-cols-2 gap-4">
+        
+        <!-- Left Stick Data -->
+        <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-300">Left Stick (L3)</span>
+              <span id="l3-pressed-badge" class="text-[10px] uppercase font-bold px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded">UP</span>
+            </div>
+            <div class="space-y-1 font-mono text-xs">
+              <div class="flex justify-between">
+                <span class="text-slate-500">Axis 0 (X):</span>
+                <span id="axis-0-val" class="text-blue-400 font-semibold">0.00</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500">Axis 1 (Y):</span>
+                <span id="axis-1-val" class="text-blue-400 font-semibold">0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Stick Data -->
+        <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-300">Right Stick (R3)</span>
+              <span id="r3-pressed-badge" class="text-[10px] uppercase font-bold px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded">UP</span>
+            </div>
+            <div class="space-y-1 font-mono text-xs">
+              <div class="flex justify-between">
+                <span class="text-slate-500">Axis 2 (X):</span>
+                <span id="axis-2-val" class="text-blue-400 font-semibold">0.00</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500">Axis 3 (Y):</span>
+                <span id="axis-3-val" class="text-blue-400 font-semibold">0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Real-time Buttons Table / Matrix -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex-1 flex flex-col">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-3 flex items-center justify-between">
+          <span>Button Input Matrix</span>
+          <span class="text-xs font-normal text-slate-400">18 Standard Buttons</span>
+        </h2>
+        
+        <div id="buttons-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs flex-1 overflow-y-auto max-h-[320px] pr-1">
+          <!-- Dynamically Generated Buttons will render here -->
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full bg-slate-900/50 border-t border-slate-800/80 py-3 text-center text-xs text-slate-500 mt-auto">
+    PS4 Controller HTML5 Gamepad API Test Environment &bull; Standard DualShock 4 Layout
+  </footer>
+
+  <!-- JavaScript Controller Engine -->
+  <script>
+    /**
+     * DualShock 4 Standard Gamepad Button Mapping Index
+     */
+    const BUTTON_NAMES = [
+      { id: 0, label: 'Cross (X)', svgId: 'svg-btn-cross' },
+      { id: 1, label: 'Circle (O)', svgId: 'svg-btn-circle' },
+      { id: 2, label: 'Square (□)', svgId: 'svg-btn-square' },
+      { id: 3, label: 'Triangle (Δ)', svgId: 'svg-btn-triangle' },
+      { id: 4, label: 'L1 Bumper', svgId: 'svg-l1' },
+      { id: 5, label: 'R1 Bumper', svgId: 'svg-r1' },
+      { id: 6, label: 'L2 Trigger', svgId: 'svg-l2' },
+      { id: 7, label: 'R2 Trigger', svgId: 'svg-r2' },
+      { id: 8, label: 'Share', svgId: 'svg-share' },
+      { id: 9, label: 'Options', svgId: 'svg-options' },
+      { id: 10, label: 'L3 Thumb Stick', svgId: null },
+      { id: 11, label: 'R3 Thumb Stick', svgId: null },
+      { id: 12, label: 'D-Pad Up', svgId: 'svg-dpad-up' },
+      { id: 13, label: 'D-Pad Down', svgId: 'svg-dpad-down' },
+      { id: 14, label: 'D-Pad Left', svgId: 'svg-dpad-left' },
+      { id: 15, label: 'D-Pad Right', svgId: 'svg-dpad-right' },
+      { id: 16, label: 'PS Button', svgId: 'svg-ps-btn' },
+      { id: 17, label: 'Touchpad Click', svgId: 'svg-touchpad' }
+    ];
+
+    // State Variables
+    let activeGamepadIndex = null;
+    let deadzone = 0.08;
+    let animFrameId = null;
+
+    // DOM Elements
+    const connectionBadge = document.getElementById('connection-badge');
+    const connectionStatusText = document.getElementById('connection-status-text');
+    const visualizerOverlay = document.getElementById('visualizer-overlay');
+    const buttonsGrid = document.getElementById('buttons-grid');
+    
+    const gamepadIdEl = document.getElementById('gamepad-id');
+    const gamepadMappingEl = document.getElementById('gamepad-mapping');
+    const gamepadCountsEl = document.getElementById('gamepad-counts');
+    const gamepadIndexTagEl = document.getElementById('gamepad-index-tag');
+    const gamepadHapticStatusEl = document.getElementById('gamepad-haptic-status');
+
+    const axis0ValEl = document.getElementById('axis-0-val');
+    const axis1ValEl = document.getElementById('axis-1-val');
+    const axis2ValEl = document.getElementById('axis-2-val');
+    const axis3ValEl = document.getElementById('axis-3-val');
+
+    const l2ValText = document.getElementById('l2-val-text');
+    const r2ValText = document.getElementById('r2-val-text');
+    const l2Progress = document.getElementById('l2-progress');
+    const r2Progress = document.getElementById('r2-progress');
+
+    const l3PressedBadge = document.getElementById('l3-pressed-badge');
+    const r3PressedBadge = document.getElementById('r3-pressed-badge');
+
+    const deadzoneSlider = document.getElementById('deadzone-slider');
+    const deadzoneValueText = document.getElementById('deadzone-value');
+
+    const btnVibrate = document.getElementById('btn-vibrate');
+    const lightbarPreview = document.getElementById('lightbar-preview');
+    const svgLightbar = document.getElementById('svg-lightbar');
+    const colorPicker = document.getElementById('color-picker');
+
+    // Build the Real-Time Button Matrix Grid UI
+    function initButtonsGrid() {
+      buttonsGrid.innerHTML = '';
+      BUTTON_NAMES.forEach(btn => {
+        const item = document.createElement('div');
+        item.id = `btn-card-${btn.id}`;
+        item.className = 'bg-slate-950/60 border border-slate-800 rounded-lg p-2 flex items-center justify-between transition-colors duration-100';
+        item.innerHTML = `
+          <div class="flex items-center space-x-2 truncate">
+            <span class="w-5 h-5 flex items-center justify-center rounded bg-slate-800 text-[10px] font-mono font-bold text-slate-400">${btn.id}</span>
+            <span class="truncate font-medium text-slate-300 text-[11px]">${btn.label}</span>
+          </div>
+          <span id="btn-val-${btn.id}" class="font-mono text-[11px] text-slate-500 font-bold ml-1">0.00</span>
+        `;
+        buttonsGrid.appendChild(item);
+      });
+    }
+
+    // Apply Deadzone logic to raw analog values
+    function applyDeadzone(value, threshold) {
+      if (Math.abs(value) < threshold) return 0;
+      // Rescale value smoothly from threshold to 1.0
+      const sign = Math.sign(value);
+      return sign * ((Math.abs(value) - threshold) / (1 - threshold));
+    }
+
+    // Handle Gamepad Connection Event
+    window.addEventListener('gamepadconnected', (e) => {
+      console.log('Gamepad connected at index %d: %s. %d buttons, %d axes.',
+        e.gamepad.index, e.gamepad.id, e.gamepad.buttons.length, e.gamepad.axes.length);
+      
+      activeGamepadIndex = e.gamepad.index;
+      updateConnectionUI(true, e.gamepad);
+      startPolling();
+    });
+
+    // Handle Gamepad Disconnection Event
+    window.addEventListener('gamepaddisconnected', (e) => {
+      if (activeGamepadIndex === e.gamepad.index) {
+        activeGamepadIndex = null;
+        updateConnectionUI(false, null);
+        stopPolling();
+      }
+    });
+
+    // Update Connection Badges & Metadata
+    function updateConnectionUI(isConnected, gamepad) {
+      if (isConnected && gamepad) {
+        connectionBadge.className = 'flex items-center px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 text-xs font-medium transition-all duration-300';
+        connectionStatusText.textContent = `Connected: ${gamepad.id.split('(')[0]}`;
+        visualizerOverlay.classList.add('opacity-0', 'pointer-events-none');
+
+        gamepadIdEl.textContent = gamepad.id;
+        gamepadMappingEl.textContent = gamepad.mapping || 'non-standard';
+        gamepadCountsEl.textContent = `${gamepad.buttons.length} Buttons / ${gamepad.axes.length} Axes`;
+        gamepadIndexTagEl.textContent = `Index: ${gamepad.index}`;
+
+        const hasVibration = !!(gamepad.vibrationActuator || (gamepad.hapticActuators && gamepad.hapticActuators.length));
+        gamepadHapticStatusEl.textContent = hasVibration ? 'Supported' : 'Not Detected / Browser Blocked';
+        gamepadHapticStatusEl.className = hasVibration ? 'font-mono text-emerald-400 font-semibold' : 'font-mono text-slate-500';
+        btnVibrate.disabled = !hasVibration;
+      } else {
+        connectionBadge.className = 'flex items-center px-3 py-1.5 rounded-full bg-red-950/60 border border-red-500/40 text-red-400 text-xs font-medium transition-all duration-300';
+        connectionStatusText.textContent = 'Disconnected — Press any button';
+        visualizerOverlay.classList.remove('opacity-0', 'pointer-events-none');
+
+        gamepadIdEl.textContent = 'None Detected';
+        gamepadMappingEl.textContent = 'N/A';
+        gamepadCountsEl.textContent = '0 Buttons / 0 Axes';
+        gamepadIndexTagEl.textContent = 'Index: -';
+        gamepadHapticStatusEl.textContent = 'Unknown';
+        btnVibrate.disabled = true;
+
+        // Reset visual stick positions
+        resetVisualizer();
+      }
+    }
+
+    // Reset Visual SVG Elements
+    function resetVisualizer() {
+      document.querySelectorAll('.active-btn, .active-special-btn, .active-trigger').forEach(el => {
+        el.classList.remove('active-btn', 'active-special-btn', 'active-trigger');
+      });
+      const stickLeftCap = document.getElementById('svg-stick-left-cap');
+      const stickRightCap = document.getElementById('svg-stick-right-cap');
+      if (stickLeftCap) stickLeftCap.setAttribute('transform', 'translate(0, 0)');
+      if (stickRightCap) stickRightCap.setAttribute('transform', 'translate(0, 0)');
+      
+      l2Progress.style.width = '0%';
+      r2Progress.style.width = '0%';
+      l2ValText.textContent = '0.00';
+      r2ValText.textContent = '0.00';
+    }
+
+    // Main 60FPS Input Polling Loop
+    function startPolling() {
+      if (!animFrameId) {
+        pollGamepad();
+      }
+    }
+
+    function stopPolling() {
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+    }
+
+    function pollGamepad() {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gamepad = activeGamepadIndex !== null ? gamepads[activeGamepadIndex] : null;
+
+      if (gamepad) {
+        renderInputData(gamepad);
+        animFrameId = requestAnimationFrame(pollGamepad);
+      } else {
+        // Search for any active gamepad if index lost
+        for (let i = 0; i < gamepads.length; i++) {
+          if (gamepads[i]) {
+            activeGamepadIndex = i;
+            updateConnectionUI(true, gamepads[i]);
+            animFrameId = requestAnimationFrame(pollGamepad);
+            return;
+          }
+        }
+      }
+    }
+
+    // Render Input Data to UI & SVG
+    function renderInputData(gamepad) {
+      // --- 1. Process Buttons ---
+      gamepad.buttons.forEach((btn, idx) => {
+        const val = btn.value;
+        const pressed = btn.pressed;
+
+        // Update Matrix Table
+        const valSpan = document.getElementById(`btn-val-${idx}`);
+        const cardDiv = document.getElementById(`btn-card-${idx}`);
+        
+        if (valSpan && cardDiv) {
+          valSpan.textContent = val.toFixed(2);
+          if (pressed || val > 0.1) {
+            cardDiv.className = 'bg-blue-950/60 border border-blue-500/50 rounded-lg p-2 flex items-center justify-between transition-colors duration-100';
+            valSpan.className = 'font-mono text-[11px] text-blue-400 font-bold ml-1';
+          } else {
+            cardDiv.className = 'bg-slate-950/60 border border-slate-800 rounded-lg p-2 flex items-center justify-between transition-colors duration-100';
+            valSpan.className = 'font-mono text-[11px] text-slate-500 font-bold ml-1';
+          }
         }
 
-        function toggleFreeze() {
-            isFrozen = !isFrozen;
-            const btnText = document.getElementById('freeze-text');
-            const freezeIcon = document.getElementById('freeze-icon');
-            const freezeBanner = document.getElementById('freeze-banner');
-            
-            if (isFrozen) {
-                btnText.textContent = 'Resume Prompt';
-                freezeIcon.setAttribute('data-lucide', 'play');
-                freezeBanner.classList.remove('hidden');
+        // SVG Visual Highlighting
+        const btnMeta = BUTTON_NAMES[idx];
+        if (btnMeta && btnMeta.svgId) {
+          const svgEl = document.getElementById(btnMeta.svgId);
+          if (svgEl) {
+            if (pressed) {
+              if (idx === 6 || idx === 7) {
+                svgEl.classList.add('active-trigger');
+              } else if (idx === 8 || idx === 9 || idx === 16 || idx === 17) {
+                svgEl.classList.add('active-special-btn');
+              } else {
+                svgEl.classList.add('active-btn');
+              }
             } else {
-                btnText.textContent = 'Freeze Prompt';
-                freezeIcon.setAttribute('data-lucide', 'pause');
-                freezeBanner.classList.add('hidden');
+              svgEl.classList.remove('active-btn', 'active-special-btn', 'active-trigger');
             }
-            lucide.createIcons();
+          }
         }
+      });
 
-        function resetCalibration() {
-            smoothEnergy = 0;
-            smoothSpread = 0.5;
-            smoothElevation = 0.5;
+      // Special Trigger Gauges (L2 / R2 Buttons 6 & 7)
+      const l2Val = gamepad.buttons[6] ? gamepad.buttons[6].value : 0;
+      const r2Val = gamepad.buttons[7] ? gamepad.buttons[7].value : 0;
+
+      l2ValText.textContent = l2Val.toFixed(2);
+      r2ValText.textContent = r2Val.toFixed(2);
+      l2Progress.style.width = `${l2Val * 100}%`;
+      r2Progress.style.width = `${r2Val * 100}%`;
+
+      // Thumbstick Click Badges (L3 / R3 Buttons 10 & 11)
+      const l3Pressed = gamepad.buttons[10] ? gamepad.buttons[10].pressed : false;
+      const r3Pressed = gamepad.buttons[11] ? gamepad.buttons[11].pressed : false;
+
+      if (l3Pressed) {
+        l3PressedBadge.textContent = 'DOWN';
+        l3PressedBadge.className = 'text-[10px] uppercase font-bold px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded border border-blue-500/30';
+      } else {
+        l3PressedBadge.textContent = 'UP';
+        l3PressedBadge.className = 'text-[10px] uppercase font-bold px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded';
+      }
+
+      if (r3Pressed) {
+        r3PressedBadge.textContent = 'DOWN';
+        r3PressedBadge.className = 'text-[10px] uppercase font-bold px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded border border-blue-500/30';
+      } else {
+        r3PressedBadge.textContent = 'UP';
+        r3PressedBadge.className = 'text-[10px] uppercase font-bold px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded';
+      }
+
+      // --- 2. Process Axes ---
+      const rawAxis0 = gamepad.axes[0] || 0; // Left Stick X
+      const rawAxis1 = gamepad.axes[1] || 0; // Left Stick Y
+      const rawAxis2 = gamepad.axes[2] || 0; // Right Stick X
+      const rawAxis3 = gamepad.axes[3] || 0; // Right Stick Y
+
+      const axis0 = applyDeadzone(rawAxis0, deadzone);
+      const axis1 = applyDeadzone(rawAxis1, deadzone);
+      const axis2 = applyDeadzone(rawAxis2, deadzone);
+      const axis3 = applyDeadzone(rawAxis3, deadzone);
+
+      // Display Numerical Coordinate Values
+      axis0ValEl.textContent = axis0.toFixed(2);
+      axis1ValEl.textContent = axis1.toFixed(2);
+      axis2ValEl.textContent = axis2.toFixed(2);
+      axis3ValEl.textContent = axis3.toFixed(2);
+
+      // Translate Analog Thumbstick Caps in SVG
+      const maxTranslate = 22; // Maximum pixel displacement in SVG space
+      const stickLeftCap = document.getElementById('svg-stick-left-cap');
+      const stickRightCap = document.getElementById('svg-stick-right-cap');
+
+      if (stickLeftCap) {
+        const lx = axis0 * maxTranslate;
+        const ly = axis1 * maxTranslate;
+        stickLeftCap.setAttribute('transform', `translate(${lx}, ${ly})`);
+      }
+
+      if (stickRightCap) {
+        const rx = axis2 * maxTranslate;
+        const ry = axis3 * maxTranslate;
+        stickRightCap.setAttribute('transform', `translate(${rx}, ${ry})`);
+      }
+    }
+
+    // Deadzone Control Slider Handler
+    deadzoneSlider.addEventListener('input', (e) => {
+      deadzone = parseFloat(e.target.value);
+      deadzoneValueText.textContent = deadzone.toFixed(2);
+    });
+
+    // Vibration / Haptic Rumble Trigger Test
+    btnVibrate.addEventListener('click', () => {
+      if (activeGamepadIndex === null) return;
+      const gamepads = navigator.getGamepads();
+      const gamepad = gamepads[activeGamepadIndex];
+
+      if (gamepad) {
+        if (gamepad.vibrationActuator && gamepad.vibrationActuator.playEffect) {
+          gamepad.vibrationActuator.playEffect('dual-rumble', {
+            startDelay: 0,
+            duration: 600,
+            weakMagnitude: 0.8,
+            strongMagnitude: 1.0
+          }).catch(err => console.warn('Vibration failed:', err));
+        } else if (gamepad.hapticActuators && gamepad.hapticActuators.length > 0) {
+          gamepad.hapticActuators[0].pulse(1.0, 600).catch(err => console.warn('Pulse failed:', err));
         }
+      }
+    });
 
-        function copyPrompt() {
-            const promptText = document.getElementById('prompt-output').textContent;
-            navigator.clipboard.writeText(promptText);
-            const toast = document.getElementById('toast');
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 2500);
+    // Lightbar LED Color Customization & Presets
+    function setLightbarColor(hexColor) {
+      lightbarPreview.style.backgroundColor = hexColor;
+      lightbarPreview.style.boxShadow = `0 0 12px ${hexColor}`;
+      svgLightbar.setAttribute('fill', hexColor);
+    }
+
+    document.querySelectorAll('.color-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const color = btn.getAttribute('data-color');
+        colorPicker.value = color;
+        setLightbarColor(color);
+      });
+    });
+
+    colorPicker.addEventListener('input', (e) => {
+      setLightbarColor(e.target.value);
+    });
+
+    // Initialize Page Component State
+    initButtonsGrid();
+
+    // Fallback: Check for connected gamepads on initial script load
+    window.addEventListener('load', () => {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i]) {
+          activeGamepadIndex = i;
+          updateConnectionUI(true, gamepads[i]);
+          startPolling();
+          break;
         }
-
-        function onResults(results) {
-            // FPS Calculation
-            const now = performance.now();
-            fpsFrames++;
-            if (now - fpsLastTime >= 1000) {
-                document.getElementById('fps-counter').textContent = Math.round((fpsFrames * 1000) / (now - fpsLastTime));
-                fpsFrames = 0;
-                fpsLastTime = now;
-            }
-
-            // Canvas Sizing
-            canvasElement.width = videoElement.videoWidth || 640;
-            canvasElement.height = videoElement.videoHeight || 480;
-
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-            if (results.poseLandmarks) {
-                document.getElementById('status-badge').className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium mono';
-                document.getElementById('status-text').textContent = 'Tracking Active';
-
-                // Draw skeleton connectors & landmarks with cyberpunk styling
-                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#06b6d4', lineWidth: 3});
-                drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#10b981', lineWidth: 1, radius: 4});
-
-                if (!isFrozen) {
-                    // Calculate Telemetry
-                    const landmarks = results.poseLandmarks;
-                    
-                    // Left and Right Wrists (15, 16), Shoulders (11, 12), Hips (23, 24)
-                    const lWrist = landmarks[15];
-                    const rWrist = landmarks[16];
-                    const lShoulder = landmarks[11];
-                    const rShoulder = landmarks[12];
-                    const lHip = landmarks[23];
-                    const rHip = landmarks[24];
-
-                    // 1. Arm Spread (Distance between left and right wrists normalized by shoulder width)
-                    const wristDist = Math.hypot(lWrist.x - rWrist.x, lWrist.y - rWrist.y);
-                    const shoulderDist = Math.hypot(lShoulder.x - rShoulder.x, lShoulder.y - rShoulder.y) || 0.1;
-                    const rawSpread = Math.min(Math.max((wristDist / shoulderDist) / 2.5, 0), 1);
-                    smoothSpread = smoothSpread * 0.8 + rawSpread * 0.2;
-
-                    // 2. Hand Elevation (Average wrist Y relative to shoulders and hips)
-                    const avgWristY = (lWrist.y + rWrist.y) / 2;
-                    const avgHipY = (lHip.y + rHip.y) / 2;
-                    const avgShoulderY = (lShoulder.y + rShoulder.y) / 2;
-                    const rawElevation = Math.min(Math.max((avgHipY - avgWristY) / (Math.abs(avgHipY - avgShoulderY) + 0.001), 0), 1.5) / 1.5;
-                    smoothElevation = smoothElevation * 0.8 + rawElevation * 0.2;
-
-                    // 3. Movement Energy (Velocity delta from last frame)
-                    if (lastLandmarks) {
-                        let movementSum = 0;
-                        // Sample key upper body joints
-                        const keyIndices = [11, 12, 15, 16, 23, 24];
-                        keyIndices.forEach(idx => {
-                            const dx = landmarks[idx].x - lastLandmarks[idx].x;
-                            const dy = landmarks[idx].y - lastLandmarks[idx].y;
-                            movementSum += Math.hypot(dx, dy);
-                        });
-                        const rawEnergy = Math.min(movementSum * 15, 1);
-                        smoothEnergy = smoothEnergy * 0.7 + rawEnergy * 0.3;
-                    }
-                    lastLandmarks = JSON.parse(JSON.stringify(landmarks));
-
-                    // Update UI Gauges
-                    document.getElementById('val-energy').textContent = smoothEnergy.toFixed(2);
-                    document.getElementById('bar-energy').style.width = `${Math.round(smoothEnergy * 100)}%`;
-
-                    document.getElementById('val-spread').textContent = smoothSpread.toFixed(2);
-                    document.getElementById('bar-spread').style.width = `${Math.round(smoothSpread * 100)}%`;
-
-                    document.getElementById('val-elevation').textContent = smoothElevation.toFixed(2);
-                    document.getElementById('bar-elevation').style.width = `${Math.round(smoothElevation * 100)}%`;
-
-                    updatePrompt();
-                }
-            } else {
-                document.getElementById('status-badge').className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium mono';
-                document.getElementById('status-text').textContent = 'Searching for Subject...';
-            }
-            canvasCtx.restore();
-        }
-
-        function updatePrompt() {
-            // Map telemetry to musical modifiers
-            let bpm = Math.round(90 + (smoothEnergy * 60) + (smoothElevation * 20));
-            bpm = Math.min(Math.max(bpm, 75), 175);
-
-            document.getElementById('bpm-badge').textContent = `${bpm} BPM`;
-
-            let energyDescriptor = smoothEnergy > 0.6 ? "high-energy drop, driving percussion, intense" :
-                                   smoothEnergy > 0.3 ? "grooving rhythm, rhythmic pulse, dynamic momentum" :
-                                   "ambient pads, relaxed tempo, smooth chill vibe";
-
-            let spatialDescriptor = smoothSpread > 0.7 ? "wide stereo field, expansive cinematic atmosphere" :
-                                    smoothSpread > 0.4 ? "balanced mix, warm analog warmth" :
-                                    "intimate, close-mic production, focused mono bass";
-
-            let moodDescriptor = smoothElevation > 0.7 ? "soaring uplifting melodies, bright shimmering synths" :
-                                 smoothElevation > 0.4 ? "neutral harmonic progression, steady cadence" :
-                                 "deep bassline, dark cinematic undertones, moody atmosphere";
-
-            let structureTag = smoothEnergy > 0.65 ? "[Verse] [Build-up] [Chorus Drop]" :
-                               smoothEnergy > 0.35 ? "[Intro] [Verse] [Chorus]" :
-                               "[Ambient Intro] [Main Theme] [Outro]";
-
-            const engine = document.getElementById('engine-select').value;
-            let finalPrompt = "";
-
-            if (engine === 'suno') {
-                finalPrompt = `${selectedGenre}, ${bpm} BPM. ${energyDescriptor}, ${spatialDescriptor}, ${moodDescriptor}. Mastered for commercial streaming. ${structureTag}`;
-            } else {
-                // Udio format
-                finalPrompt = `Genre: ${selectedGenre}. Tempo: ${bpm} BPM. Characteristics: ${energyDescriptor}, ${spatialDescriptor}. Mood: ${moodDescriptor}.`;
-            }
-
-            document.getElementById('prompt-output').textContent = finalPrompt;
-        }
-
-        // Initialize MediaPipe Pose
-        const pose = new Pose({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-        });
-
-        pose.setOptions({
-            modelComplexity: 1,
-            smoothLandmarks: true,
-            enableSegmentation: false,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
-        pose.onResults(onResults);
-
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await pose.send({image: videoElement});
-            },
-            width: 1280,
-            height: 720
-        });
-
-        camera.start().catch(err => {
-            console.error("Camera access error:", err);
-            document.getElementById('status-text').textContent = 'Camera Access Denied';
-            document.getElementById('status-badge').className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium mono';
-        });
-    </script>
+      }
+    });
+  </script>
 </body>
 </html>
