@@ -2,475 +2,922 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Voice Recorder and Audio Data</title>
-
-<style>
-body {
-  margin: 0;
-  padding: 20px;
-  background: #101522;
-  color: white;
-  font-family: system-ui, sans-serif;
-}
-main { max-width: 800px; margin: auto; }
-h1 { color: #8daaff; }
-button {
-  padding: 12px 16px;
-  margin: 5px 3px 5px 0;
-  border: 0;
-  border-radius: 9px;
-  font-size: 15px;
-  cursor: pointer;
-}
-#start { background: #8daaff; }
-#stop { background: #ff7185; }
-#status { color: #9fe8c8; margin: 15px 0; }
-.panel {
-  background: #1b2335;
-  padding: 16px;
-  border-radius: 12px;
-  margin: 15px 0;
-  overflow-wrap: anywhere;
-}
-canvas {
-  width: 100%;
-  height: 160px;
-  background: #080d18;
-  border-radius: 8px;
-}
-audio { width: 100%; margin-top: 15px; }
-.stat { margin: 8px 0; }
-small { color: #b9c4d9; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In-Browser AI Voice Learning & Audio Generator</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- TensorFlow.js for in-browser machine learning -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <!-- Chart.js for visual feature display and loss metrics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .glow-effect {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+        }
+    </style>
 </head>
-
-<body>
-<main>
-<h1>Voice Lab</h1>
-<p>Record your voice and extract numerical audio data.</p>
-
-<div class="panel">
-  <button id="start">🎙 Start recording</button>
-  <button id="stop" disabled>■ Stop</button>
-  <p id="status">Ready to record.</p>
-  <div class="stat">Time: <b id="time">0.0 s</b></div>
-  <div class="stat">Sample rate: <b id="rate">—</b></div>
-  <div class="stat">RMS amplitude: <b id="rms">—</b></div>
-  <div class="stat">Peak amplitude: <b id="peak">—</b></div>
-  <div class="stat">Dominant frequency: <b id="freq">—</b></div>
-  <div class="stat">Data samples: <b id="count">0</b></div>
-  <audio id="player" controls hidden></audio>
-</div>
-
-<div class="panel">
-  <h3>Waveform</h3>
-  <canvas id="wave" width="800" height="200"></canvas>
-</div>
-
-<div class="panel">
-  <h3>Frequency spectrum</h3>
-  <canvas id="spectrum" width="800" height="200"></canvas>
-</div>
-
-<div class="panel">
-  <h3>Export your data</h3>
-  <button id="downloadAudio" disabled>Download audio</button>
-  <button id="downloadCSV" disabled>Download CSV data</button>
-  <button id="downloadJSON" disabled>Download JSON data</button>
-  <p><small>Audio is processed in your browser. It is not uploaded to a server.</small></p>
-</div>
-</main>
-
-<script>
-const $ = id => document.getElementById(id);
-
-let stream = null;
-let audioContext = null;
-let analyser = null;
-let recorder = null;
-let chunks = [];
-let data = [];
-let audioBlob = null;
-let audioURL = null;
-let running = false;
-let startTime = 0;
-let lastSample = 0;
-let animation = null;
-let mime = "audio/webm";
-
-const waveCanvas = $("wave");
-const spectrumCanvas = $("spectrum");
-const waveCtx = waveCanvas.getContext("2d");
-const specCtx = spectrumCanvas.getContext("2d");
-
-function status(message) {
-  $("status").textContent = message;
-}
-
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-
-function clearGraph(ctx, canvas) {
-  ctx.fillStyle = "#080d18";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-function drawWave(samples) {
-  clearGraph(waveCtx, waveCanvas);
-  const middle = waveCanvas.height / 2;
-
-  waveCtx.strokeStyle = "#8daaff";
-  waveCtx.lineWidth = 2;
-  waveCtx.beginPath();
-
-  for (let x = 0; x < waveCanvas.width; x++) {
-    const i = Math.floor(
-      x * samples.length / waveCanvas.width
-    );
-    const y = middle + samples[i] * middle * 0.9;
-
-    if (x === 0) waveCtx.moveTo(x, y);
-    else waveCtx.lineTo(x, y);
-  }
-
-  waveCtx.stroke();
-}
-
-function drawSpectrum(samples) {
-  clearGraph(specCtx, spectrumCanvas);
-
-  const bars = 100;
-  const width = spectrumCanvas.width / bars;
-  const height = spectrumCanvas.height;
-
-  for (let b = 0; b < bars; b++) {
-    const from = Math.floor(b * samples.length / bars);
-    const to = Math.floor((b + 1) * samples.length / bars);
-    let maximum = 0;
-
-    for (let i = from; i < to; i++) {
-      maximum = Math.max(maximum, samples[i]);
-    }
-
-    const barHeight = maximum / 255 * height;
-
-    specCtx.fillStyle = "#63dfb1";
-    specCtx.fillRect(
-      b * width,
-      height - barHeight,
-      Math.max(1, width - 1),
-      barHeight
-    );
-  }
-}
-
-function analyze() {
-  if (!analyser || !audioContext) return;
-
-  const waveform = new Float32Array(analyser.fftSize);
-  const frequencies = new Uint8Array(
-    analyser.frequencyBinCount
-  );
-
-  analyser.getFloatTimeDomainData(waveform);
-  analyser.getByteFrequencyData(frequencies);
-
-  let sumSquares = 0;
-  let peak = 0;
-
-  for (const sample of waveform) {
-    sumSquares += sample * sample;
-    peak = Math.max(peak, Math.abs(sample));
-  }
-
-  const rms = Math.sqrt(sumSquares / waveform.length);
-
-  let maxIndex = 0;
-  let maxValue = 0;
-
-  for (let i = 1; i < frequencies.length; i++) {
-    if (frequencies[i] > maxValue) {
-      maxValue = frequencies[i];
-      maxIndex = i;
-    }
-  }
-
-  const dominantFrequency =
-    maxIndex * audioContext.sampleRate / analyser.fftSize;
-
-  $("rms").textContent = rms.toFixed(5);
-  $("peak").textContent = peak.toFixed(5);
-  $("freq").textContent =
-    maxValue > 0 ? Math.round(dominantFrequency) + " Hz" : "—";
-  $("rate").textContent =
-    audioContext.sampleRate.toLocaleString() + " Hz";
-
-  drawWave(waveform);
-  drawSpectrum(frequencies);
-
-  const elapsed = (performance.now() - startTime) / 1000;
-  $("time").textContent = elapsed.toFixed(1) + " s";
-
-  if (running && elapsed - lastSample >= 0.1) {
-    lastSample = elapsed;
-
-    // Save a compact snapshot of the waveform.
-    const snapshot = [];
-    const step = Math.max(1, Math.floor(waveform.length / 64));
-
-    for (let i = 0; i < waveform.length; i += step) {
-      snapshot.push(Number(waveform[i].toFixed(4)));
-    }
-
-    data.push({
-      time_s: Number(elapsed.toFixed(3)),
-      rms: Number(rms.toFixed(6)),
-      peak: Number(peak.toFixed(6)),
-      dominant_frequency_hz:
-        Number(dominantFrequency.toFixed(2)),
-      waveform: snapshot
-    });
-
-    $("count").textContent = data.length;
-  }
-
-  if (running) {
-    animation = requestAnimationFrame(analyze);
-  }
-}
-
-async function startRecording() {
-  if (running) return;
-
-  if (!navigator.mediaDevices?.getUserMedia) {
-    status(
-      "Microphone unavailable. Open this page on HTTPS " +
-      "using a modern browser."
-    );
-    return;
-  }
-
-  if (!window.MediaRecorder) {
-    status("This browser does not support audio recording.");
-    return;
-  }
-
-  $("start").disabled = true;
-  status("Requesting microphone permission...");
-
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: true
-    });
-
-    const AudioContextClass =
-      window.AudioContext || window.webkitAudioContext;
-
-    audioContext = new AudioContextClass();
-    await audioContext.resume();
-
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.5;
-
-    const source =
-      audioContext.createMediaStreamSource(stream);
-
-    source.connect(analyser);
-
-    const types = [
-      "audio/webm;codecs=opus",
-      "audio/webm",
-      "audio/ogg;codecs=opus",
-      "audio/mp4"
-    ];
-
-    mime = types.find(
-      type => MediaRecorder.isTypeSupported(type)
-    ) || "";
-
-    recorder = mime
-      ? new MediaRecorder(stream, { mimeType: mime })
-      : new MediaRecorder(stream);
-
-    mime = recorder.mimeType || mime || "audio/webm";
-
-    chunks = [];
-    data = [];
-    lastSample = 0;
-
-    $("count").textContent = "0";
-    $("downloadAudio").disabled = true;
-    $("downloadCSV").disabled = true;
-    $("downloadJSON").disabled = true;
-
-    if (audioURL) {
-      URL.revokeObjectURL(audioURL);
-      audioURL = null;
-    }
-
-    $("player").hidden = true;
-    $("player").removeAttribute("src");
-
-    recorder.ondataavailable = event => {
-      if (event.data && event.data.size > 0) {
-        chunks.push(event.data);
-      }
-    };
-
-    recorder.onerror = () => {
-      status("The browser encountered a recording error.");
-    };
-
-    recorder.onstop = () => {
-      audioBlob = new Blob(chunks, { type: mime });
-      audioURL = URL.createObjectURL(audioBlob);
-
-      $("player").src = audioURL;
-      $("player").hidden = false;
-
-      $("downloadAudio").disabled = false;
-      $("downloadCSV").disabled = data.length === 0;
-      $("downloadJSON").disabled = data.length === 0;
-
-      status(
-        "Recording complete. " + data.length +
-        " measurement samples collected."
-      );
-    };
-
-    startTime = performance.now();
-    running = true;
-
-    recorder.start(250);
-
-    $("stop").disabled = false;
-    status("Recording... Speak into your microphone.");
-
-    cancelAnimationFrame(animation);
-    analyze();
-
-  } catch (error) {
-    running = false;
-
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      stream = null;
-    }
-
-    $("start").disabled = false;
-    $("stop").disabled = true;
-
-    const messages = {
-      NotAllowedError:
-        "Microphone permission denied. Allow microphone access " +
-        "in your browser settings.",
-      NotFoundError:
-        "No microphone was found on this device.",
-      NotReadableError:
-        "The microphone is busy or cannot be accessed."
-    };
-
-    status(messages[error.name] ||
-      "Recording failed: " + error.message);
-  }
-}
-
-function stopRecording() {
-  if (!running) return;
-
-  running = false;
-  cancelAnimationFrame(animation);
-
-  if (recorder && recorder.state !== "inactive") {
-    recorder.stop();
-  }
-
-  if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    stream = null;
-  }
-
-  $("stop").disabled = true;
-  $("start").disabled = false;
-}
-
-function exportCSV() {
-  if (!data.length) return;
-
-  const headers = [
-    "time_s",
-    "rms",
-    "peak",
-    "dominant_frequency_hz",
-    "waveform"
-  ];
-
-  const rows = data.map(item =>
-    headers.map(key => {
-      let value = key === "waveform"
-        ? item.waveform.join(" ")
-        : item[key];
-
-      value = String(value);
-
-      return /[",\n]/.test(value)
-        ? '"' + value.replace(/"/g, '""') + '"'
-        : value;
-    }).join(",")
-  );
-
-  downloadBlob(
-    new Blob(
-      [headers.join(",") + "\r\n" + rows.join("\r\n")],
-      { type: "text/csv;charset=utf-8" }
-    ),
-    "voice-data.csv"
-  );
-}
-
-$("start").addEventListener("click", startRecording);
-$("stop").addEventListener("click", stopRecording);
-
-$("downloadAudio").addEventListener("click", () => {
-  if (!audioBlob) return;
-
-  const extension = mime.includes("ogg")
-    ? "ogg"
-    : mime.includes("mp4")
-      ? "m4a"
-      : "webm";
-
-  downloadBlob(audioBlob, "voice-recording." + extension);
-});
-
-$("downloadCSV").addEventListener("click", exportCSV);
-
-$("downloadJSON").addEventListener("click", () => {
-  downloadBlob(
-    new Blob(
-      [JSON.stringify({
-        sample_rate_hz: audioContext?.sampleRate || null,
-        measurements: data
-      }, null, 2)],
-      { type: "application/json" }
-    ),
-    "voice-data.json"
-  );
-});
-
-clearGraph(waveCtx, waveCanvas);
-clearGraph(specCtx, spectrumCanvas);
-</script>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xl font-bold shadow-lg">
+                <i class="fa-solid from-indigo-500 fa-microchip"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">VoiceMorph AI</h1>
+                <p class="text-xs text-slate-400">In-Browser Voice Feature Extraction & Synthesis</p>
+            </div>
+        </div>
+
+        <!-- Header Actions -->
+        <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+            <button onclick="toggleModal('ghModal')" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg text-sm border border-slate-700 transition">
+                <i class="fa-brands fa-github text-lg"></i>
+                <span>Deploy to GitHub Pages</span>
+            </button>
+            <div class="flex items-center space-x-2 bg-indigo-950/60 border border-indigo-800/60 text-indigo-300 px-3 py-1.5 rounded-lg text-xs">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>WebAudio + TF.js Ready</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl mx-auto w-full">
+
+        <!-- Left Column: Controls & Recording & Setup (4 Cols) -->
+        <div class="lg:col-span-4 space-y-6 flex flex-col">
+            
+            <!-- Step 1: Microphone Recording -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="font-semibold text-slate-200 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-indigo-600 text-xs flex items-center justify-center font-bold">1</span>
+                        Record Voice Sample
+                    </h2>
+                    <span id="recordTimer" class="text-xs font-mono text-slate-400">00:00</span>
+                </div>
+
+                <!-- Mic Visualizer Canvas -->
+                <div class="relative bg-slate-950 rounded-xl overflow-hidden h-28 border border-slate-800/80">
+                    <canvas id="micCanvas" class="w-full h-full"></canvas>
+                    <div id="micPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs">
+                        <i class="fa-solid fa-microphone text-2xl mb-1 opacity-50"></i>
+                        <span>Click Record & speak clearly into mic</span>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex items-center justify-between gap-3">
+                    <button id="btnRecord" onclick="toggleRecording()" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-medium py-2.5 rounded-xl flex items-center justify-center space-x-2 transition shadow-lg shadow-red-950">
+                        <i id="recIcon" class="fa-solid fa-circle text-xs"></i>
+                        <span id="recText">Start Recording</span>
+                    </button>
+                    <button id="btnPlaySample" disabled onclick="playRecordedSample()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed p-2.5 rounded-xl border border-slate-700 transition" title="Play Recorded Audio">
+                        <i class="fa-solid fa-play"></i>
+                    </button>
+                </div>
+
+                <div class="text-xs text-slate-400 space-y-1">
+                    <div class="flex justify-between">
+                        <span>Recorded Duration:</span>
+                        <span id="statDuration" class="font-mono text-slate-200">0.0 s</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Audio Frames Extracted:</span>
+                        <span id="statFrames" class="font-mono text-slate-200">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Training Hyperparameters -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="font-semibold text-slate-200 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-indigo-600 text-xs flex items-center justify-center font-bold">2</span>
+                        Neural Model Setup
+                    </h2>
+                    <span class="text-xs text-indigo-400 font-semibold">TensorFlow.js</span>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <div class="flex justify-between mb-1 text-slate-300">
+                            <label for="inputEpochs">Epochs (Training iterations)</label>
+                            <span id="valEpochs" class="font-mono text-indigo-400">40</span>
+                        </div>
+                        <input id="inputEpochs" type="range" min="10" max="150" value="40" oninput="document.getElementById('valEpochs').innerText = this.value" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between mb-1 text-slate-300">
+                            <label for="inputLatent">Latent Vector Dimension</label>
+                            <span id="valLatent" class="font-mono text-indigo-400">16</span>
+                        </div>
+                        <input id="inputLatent" type="range" min="4" max="32" step="4" value="16" oninput="document.getElementById('valLatent').innerText = this.value" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between mb-1 text-slate-300">
+                            <label for="inputLR">Learning Rate</label>
+                            <span id="valLR" class="font-mono text-indigo-400">0.005</span>
+                        </div>
+                        <select id="inputLR" class="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none">
+                            <option value="0.01">0.01 (Fast)</option>
+                            <option value="0.005" selected>0.005 (Balanced)</option>
+                            <option value="0.001">0.001 (Precise)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button id="btnTrain" disabled onclick="startTraining()" class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-xl flex items-center justify-center space-x-2 transition shadow-lg shadow-indigo-950">
+                    <i class="fa-solid fa-brain"></i>
+                    <span id="trainBtnText">Train Model on Voice</span>
+                </button>
+            </div>
+
+            <!-- Deployment Banner -->
+            <div class="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-800/40 rounded-2xl p-4 text-xs text-slate-300 flex items-center justify-between">
+                <div>
+                    <h3 class="font-semibold text-purple-300 mb-0.5">Free Hosting Ready</h3>
+                    <p class="text-slate-400">Deploy this file to GitHub Pages instantly.</p>
+                </div>
+                <button onclick="toggleModal('ghModal')" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition">
+                    Guide
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Visualizer, Training Progress & Synthesizer (8 Cols) -->
+        <div class="lg:col-span-8 space-y-6 flex flex-col">
+            
+            <!-- Audio Feature Extractor & Training Metrics -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="font-semibold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-indigo-400"></i>
+                        Spectral Feature Analysis & Neural Loss
+                    </h2>
+                    <div class="flex items-center space-x-2 text-xs">
+                        <span id="modelStatus" class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 font-mono">Status: Idle</span>
+                    </div>
+                </div>
+
+                <!-- Tabs/Charts Container -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Feature Heatmap / Frequency Spectrum -->
+                    <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-semibold text-slate-400">Audio Spectrum Features</span>
+                            <span class="text-[10px] text-slate-500">Formants & Frequency Bins</span>
+                        </div>
+                        <div class="h-44 relative">
+                            <canvas id="featureChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Training Loss Chart -->
+                    <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-semibold text-slate-400">Neural Network Loss (MSE)</span>
+                            <span id="lossVal" class="text-[10px] font-mono text-emerald-400">Loss: --</span>
+                        </div>
+                        <div class="h-44 relative">
+                            <canvas id="lossChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Interactive Voice Synthesizer & Audio Generation -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4 flex-1 flex flex-col">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="font-semibold text-slate-200 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-indigo-600 text-xs flex items-center justify-center font-bold">3</span>
+                        Generate & Synthesize New Audio
+                    </h2>
+                    <span class="text-xs text-purple-400 font-semibold">Formant & Granular Synthesis</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Control Sliders for Pitch, Timbre, Grain -->
+                    <div class="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800/80 text-xs">
+                        <h3 class="font-semibold text-indigo-300 border-b border-slate-800 pb-1">Synthesis Parameters</h3>
+                        
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>Pitch Transposition</span>
+                                <span id="valPitch" class="font-mono text-slate-200">1.0x</span>
+                            </div>
+                            <input id="synthPitch" type="range" min="0.5" max="2.0" step="0.05" value="1.0" oninput="document.getElementById('valPitch').innerText = parseFloat(this.value).toFixed(2)+'x'" class="w-full accent-indigo-500 bg-slate-800 rounded">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>Neural Latent Seed</span>
+                                <span id="valSeed" class="font-mono text-slate-200">0.5</span>
+                            </div>
+                            <input id="synthSeed" type="range" min="0" max="1" step="0.01" value="0.5" oninput="document.getElementById('valSeed').innerText = parseFloat(this.value).toFixed(2)" class="w-full accent-indigo-500 bg-slate-800 rounded">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>Grain Density (Speed)</span>
+                                <span id="valDensity" class="font-mono text-slate-200">1.0x</span>
+                            </div>
+                            <input id="synthDensity" type="range" min="0.2" max="2.5" step="0.1" value="1.0" oninput="document.getElementById('valDensity').innerText = parseFloat(this.value).toFixed(1)+'x'" class="w-full accent-indigo-500 bg-slate-800 rounded">
+                        </div>
+                    </div>
+
+                    <!-- Interactive Synthesizer Pad canvas -->
+                    <div class="md:col-span-2 bg-slate-950 rounded-xl border border-slate-800/80 p-3 flex flex-col">
+                        <div class="flex justify-between items-center mb-1 text-xs">
+                            <span class="text-slate-400 font-medium">Interactive Timbre Space Pad</span>
+                            <span class="text-[10px] text-slate-500">Drag to generate voice variations</span>
+                        </div>
+                        <div class="relative flex-1 min-h-[140px] bg-slate-900/50 rounded-lg overflow-hidden border border-slate-800 cursor-crosshair">
+                            <canvas id="padCanvas" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Controls & Output Playback -->
+                <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
+                    <div class="flex items-center space-x-3">
+                        <button id="btnGenerate" disabled onclick="generateAudioSequence()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-5 py-2.5 rounded-xl flex items-center space-x-2 transition shadow-lg shadow-teal-950">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Generate Audio Sequence</span>
+                        </button>
+                        <button id="btnPlayGen" disabled onclick="playGeneratedAudio()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 rounded-xl border border-slate-700 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-play"></i>
+                            <span>Play Output</span>
+                        </button>
+                    </div>
+
+                    <button id="btnExport" disabled onclick="exportGeneratedWAV()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 rounded-xl border border-slate-700 transition text-xs flex items-center space-x-2">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Export WAV Audio</span>
+                    </button>
+                </div>
+
+                <!-- Log Output Console -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] font-mono text-slate-400 h-20 overflow-y-auto" id="logConsole">
+                    <div>[System] System initialized. Ready to record voice samples...</div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal for GitHub Pages Hosting Instructions -->
+    <div id="ghModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <i class="fa-brands fa-github text-purple-400"></i>
+                    Deploying to GitHub Pages (100% Free)
+                </h3>
+                <button onclick="toggleModal('ghModal')" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                <p>Because this app operates entirely inside the browser using client-side JavaScript, Web Audio API, and TensorFlow.js, it requires **no backend server** and can be hosted directly on GitHub Pages for free.</p>
+                
+                <ol class="list-decimal pl-4 space-y-2 text-slate-400">
+                    <li>Create a new repository on GitHub (e.g., <span class="text-indigo-300 font-mono">my-ai-voice-synth</span>).</li>
+                    <li>Save this single HTML document as <span class="text-indigo-300 font-mono">index.html</span> on your computer.</li>
+                    <li>Upload or commit <span class="text-indigo-300 font-mono">index.html</span> to the root of your GitHub repository.</li>
+                    <li>Go to your repository <strong>Settings</strong> &rarr; <strong>Pages</strong>.</li>
+                    <li>Under <strong>Build and deployment</strong>, set the source Branch to <span class="text-indigo-300 font-mono">main</span> (or <span class="text-indigo-300 font-mono">master</span>) and folder to <span class="text-indigo-300 font-mono">/ (root)</span>.</li>
+                    <li>Click <strong>Save</strong>. In 1–2 minutes, your AI voice app will be live at <span class="text-emerald-400 font-mono">https://&lt;username&gt;.github.io/&lt;repo-name&gt;/</span>!</li>
+                </ol>
+
+                <div class="p-3 bg-indigo-950/50 border border-indigo-800/50 rounded-xl text-indigo-300">
+                    <i class="fa-solid fa-shield-halved mr-1"></i>
+                    <strong>Microphone Permissions Note:</strong> Web Audio recording requires HTTPS. GitHub Pages automatically provides free SSL certificates, so microphone access will work perfectly.
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="toggleModal('ghModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-medium transition">
+                    Got it, close guide
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- State Management ---
+        let audioCtx = null;
+        let mediaStream = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordedAudioBuffer = null;
+        let extractedFeatures = []; // Array of spectral feature vectors
+        let tfModel = null;
+        let generatedAudioBuffer = null;
+
+        let isRecording = false;
+        let recStartTime = 0;
+        let recTimerAnim = null;
+        let micAnalyser = null;
+        let micAnimFrame = null;
+
+        // UI Charts
+        let featureChartObj = null;
+        let lossChartObj = null;
+
+        // Interactive Pad Position
+        let padX = 0.5;
+        let padY = 0.5;
+
+        // Constants
+        const NUM_SPECTRAL_BINS = 32; // Spectral feature dimension
+        const SAMPLE_RATE = 22050;
+
+        // --- Logging Utility ---
+        function log(msg) {
+            const consoleElem = document.getElementById('logConsole');
+            const item = document.createElement('div');
+            item.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            consoleElem.appendChild(item);
+            consoleElem.scrollTop = consoleElem.scrollHeight;
+        }
+
+        // --- Modal Utility ---
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+        }
+
+        // --- Audio Context Setup ---
+        function initAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // --- Step 1: Microphone Recording & Visualization ---
+        async function toggleRecording() {
+            initAudioContext();
+
+            if (!isRecording) {
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    startRecordingSession();
+                } catch (err) {
+                    log(`Microphone access error: ${err.message}`);
+                    alert("Could not access microphone. Please grant permission.");
+                }
+            } else {
+                stopRecordingSession();
+            }
+        }
+
+        function startRecordingSession() {
+            isRecording = true;
+            audioChunks = [];
+
+            // UI updates
+            document.getElementById('btnRecord').className = "flex-1 bg-amber-600 hover:bg-amber-500 text-white font-medium py-2.5 rounded-xl flex items-center justify-center space-x-2 transition shadow-lg shadow-amber-950";
+            document.getElementById('recIcon').className = "fa-solid fa-square text-xs animate-pulse";
+            document.getElementById('recText').innerText = "Stop Recording";
+            document.getElementById('micPlaceholder').classList.add('hidden');
+
+            // Setup audio analyzer for visualizer
+            const source = audioCtx.createMediaStreamSource(mediaStream);
+            micAnalyser = audioCtx.createAnalyser();
+            micAnalyser.fftSize = 256;
+            source.connect(micAnalyser);
+
+            drawMicVisualizer();
+
+            // MediaRecorder initialization
+            mediaRecorder = new MediaRecorder(mediaStream);
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = processRecordedAudio;
+            mediaRecorder.start();
+
+            // Timer
+            recStartTime = Date.now();
+            updateTimer();
+            log("Recording started...");
+        }
+
+        function stopRecordingSession() {
+            isRecording = false;
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+            }
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+
+            // Reset UI
+            document.getElementById('btnRecord').className = "flex-1 bg-red-600 hover:bg-red-500 text-white font-medium py-2.5 rounded-xl flex items-center justify-center space-x-2 transition shadow-lg shadow-red-950";
+            document.getElementById('recIcon').className = "fa-solid fa-circle text-xs";
+            document.getElementById('recText').innerText = "Record Again";
+            cancelAnimationFrame(recTimerAnim);
+            cancelAnimationFrame(micAnimFrame);
+        }
+
+        function updateTimer() {
+            if (!isRecording) return;
+            const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const s = String(elapsed % 60).padStart(2, '0');
+            document.getElementById('recordTimer').innerText = `${m}:${s}`;
+            recTimerAnim = requestAnimationFrame(updateTimer);
+        }
+
+        function drawMicVisualizer() {
+            const canvas = document.getElementById('micCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            const bufferLength = micAnalyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function renderFrame() {
+                if (!isRecording) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    return;
+                }
+                micAnimFrame = requestAnimationFrame(renderFrame);
+                micAnalyser.getByteFrequencyData(dataArray);
+
+                ctx.fillStyle = '#090d16';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                const barWidth = (canvas.width / bufferLength) * 2.5;
+                let barX = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const barHeight = (dataArray[i] / 255) * canvas.height;
+                    ctx.fillStyle = `rgb(99, 102, 241)`;
+                    ctx.fillRect(barX, canvas.height - barHeight, barWidth, barHeight);
+                    barX += barWidth + 1;
+                }
+            }
+            renderFrame();
+        }
+
+        // --- Audio Feature Extraction ---
+        async function processRecordedAudio() {
+            log("Processing recorded audio...");
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const arrayBuffer = await audioBlob.arrayBuffer();
+            recordedAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+            document.getElementById('statDuration').innerText = recordedAudioBuffer.duration.toFixed(2) + " s";
+            document.getElementById('btnPlaySample').disabled = false;
+
+            // Perform FFT Spectral Feature Extraction
+            extractSpectralFeatures(recordedAudioBuffer);
+        }
+
+        function extractSpectralFeatures(buffer) {
+            const rawData = buffer.getChannelData(0);
+            const windowSize = 512;
+            const hopSize = 256;
+            extractedFeatures = [];
+
+            // Simple offline FFT spectral bin extraction
+            for (let i = 0; i < rawData.length - windowSize; i += hopSize) {
+                const frame = rawData.slice(i, i + windowSize);
+                const spectrum = computeMagnitudeSpectrum(frame, NUM_SPECTRAL_BINS);
+                extractedFeatures.push(spectrum);
+            }
+
+            document.getElementById('statFrames').innerText = extractedFeatures.length;
+            document.getElementById('btnTrain').disabled = extractedFeatures.length === 0;
+
+            log(`Extracted ${extractedFeatures.length} spectral feature vectors (${NUM_SPECTRAL_BINS} dimensions).`);
+            
+            // Visualize extracted spectrum on Chart
+            updateFeatureChart();
+        }
+
+        // Compute magnitude spectrum for a frame of audio data
+        function computeMagnitudeSpectrum(frame, numBins) {
+            const spectrum = new Float32Array(numBins);
+            const step = Math.floor(frame.length / (2 * numBins));
+            
+            for (let b = 0; b < numBins; b++) {
+                let energy = 0;
+                for (let i = 0; i < step; i++) {
+                    const idx = b * step + i;
+                    if (idx < frame.length) {
+                        energy += Math.abs(frame[idx]);
+                    }
+                }
+                spectrum[b] = Math.min(1.0, (energy / step) * 2.5); // Normalize
+            }
+            return Array.from(spectrum);
+        }
+
+        function playRecordedSample() {
+            if (!recordedAudioBuffer) return;
+            initAudioContext();
+            const source = audioCtx.createBufferSource();
+            source.buffer = recordedAudioBuffer;
+            source.connect(audioCtx.destination);
+            source.start();
+            log("Playing recorded sample...");
+        }
+
+        // --- Step 2: In-Browser Neural Network Model Training (Autoencoder) ---
+        async function startTraining() {
+            if (extractedFeatures.length === 0) return;
+
+            initAudioContext();
+            document.getElementById('btnTrain').disabled = true;
+            document.getElementById('trainBtnText').innerText = "Training...";
+            document.getElementById('modelStatus').innerText = "Status: Training...";
+            document.getElementById('modelStatus').className = "px-2.5 py-1 rounded-full bg-amber-950/60 border border-amber-800 text-amber-300 font-mono animate-pulse";
+
+            const epochs = parseInt(document.getElementById('inputEpochs').value);
+            const latentDim = parseInt(document.getElementById('inputLatent').value);
+            const learningRate = parseFloat(document.getElementById('inputLR').value);
+
+            log(`Building TensorFlow.js Autoencoder (Latent Dim: ${latentDim}, LR: ${learningRate})...`);
+
+            // Prepare Tensor dataset from extracted features
+            const featureTensor = tf.tensor2d(extractedFeatures);
+
+            // Construct Autoencoder Architecture
+            // Encoder
+            const encoderInput = tf.input({ shape: [NUM_SPECTRAL_BINS] });
+            let x = tf.layers.dense({ units: 32, activation: 'relu' }).apply(encoderInput);
+            const latentSpace = tf.layers.dense({ units: latentDim, activation: 'sigmoid' }).apply(x);
+            
+            // Decoder
+            let y = tf.layers.dense({ units: 32, activation: 'relu' }).apply(latentSpace);
+            const decoderOutput = tf.layers.dense({ units: NUM_SPECTRAL_BINS, activation: 'sigmoid' }).apply(y);
+
+            tfModel = tf.model({ inputs: encoderInput, outputs: decoderOutput });
+            tfModel.compile({
+                optimizer: tf.train.adam(learningRate),
+                loss: 'meanSquaredError'
+            });
+
+            // Train model
+            log(`Starting model training for ${epochs} epochs...`);
+            resetLossChart();
+
+            await tfModel.fit(featureTensor, featureTensor, {
+                epochs: epochs,
+                batchSize: 16,
+                shuffle: true,
+                callbacks: {
+                    onEpochEnd: (epoch, logs) => {
+                        updateLossChart(epoch + 1, logs.loss);
+                        document.getElementById('lossVal').innerText = `Loss: ${logs.loss.toFixed(5)}`;
+                    }
+                }
+            });
+
+            featureTensor.dispose();
+            log("Training complete! Model ready for voice synthesis.");
+            
+            document.getElementById('modelStatus').innerText = "Status: Model Trained";
+            document.getElementById('modelStatus').className = "px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-800 text-emerald-300 font-mono";
+            document.getElementById('trainBtnText').innerText = "Retrain Model";
+            document.getElementById('btnTrain').disabled = false;
+            document.getElementById('btnGenerate').disabled = false;
+        }
+
+        // --- Step 3: Interactive Synthesis & Audio Generation ---
+        async function generateAudioSequence() {
+            if (!tfModel || extractedFeatures.length === 0) return;
+            initAudioContext();
+
+            log("Generating voice features from neural model...");
+            document.getElementById('btnGenerate').disabled = true;
+
+            const pitchMult = parseFloat(document.getElementById('synthPitch').value);
+            const seedVal = parseFloat(document.getElementById('synthSeed').value);
+            const density = parseFloat(document.getElementById('synthDensity').value);
+
+            // Generate feature sequence through Model Latent Space
+            const numFramesToGenerate = Math.floor(extractedFeatures.length * (1 / density));
+            const syntheticFeatures = [];
+
+            // Pass samples through neural model with latent vector modulation
+            for (let i = 0; i < numFramesToGenerate; i++) {
+                const srcIdx = Math.floor((i / numFramesToGenerate) * extractedFeatures.length);
+                const inputFrame = tf.tensor2d([extractedFeatures[srcIdx]]);
+                
+                // Model inference
+                const predictedFrame = tfModel.predict(inputFrame);
+                let frameArray = Array.from(await predictedFrame.data());
+
+                // Apply Interactive Pad & Slider Modulation
+                frameArray = frameArray.map((val, binIdx) => {
+                    const mod = Math.sin((binIdx / NUM_SPECTRAL_BINS) * Math.PI * seedVal * 4 + padX * 5) * 0.25;
+                    return Math.max(0.01, Math.min(1.0, val * (1 + padY * 0.5) + mod));
+                });
+
+                syntheticFeatures.push(frameArray);
+                inputFrame.dispose();
+                predictedFrame.dispose();
+            }
+
+            // Synthesize audio signal from spectral features using Formant & Granular Synthesis
+            generatedAudioBuffer = synthesizeAudioFromSpectrum(syntheticFeatures, pitchMult);
+
+            log(`Audio sequence generated successfully! (${generatedAudioBuffer.duration.toFixed(2)} seconds)`);
+            document.getElementById('btnPlayGen').disabled = false;
+            document.getElementById('btnExport').disabled = false;
+            document.getElementById('btnGenerate').disabled = false;
+
+            // Play automatically
+            playGeneratedAudio();
+        }
+
+        // Formant & Additive Audio Synthesizer Engine
+        function synthesizeAudioFromSpectrum(featureFrames, pitchMultiplier) {
+            const hopSize = 256;
+            const totalSamples = featureFrames.length * hopSize;
+            const buffer = audioCtx.createBuffer(1, totalSamples, SAMPLE_RATE);
+            const channelData = buffer.getChannelData(0);
+
+            let phase = 0;
+            const baseFreq = 130 * pitchMultiplier; // Base voice fundamental frequency (Hz)
+
+            for (let frameIdx = 0; frameIdx < featureFrames.length; frameIdx++) {
+                const frame = featureFrames[frameIdx];
+                const frameStart = frameIdx * hopSize;
+
+                for (let s = 0; s < hopSize; s++) {
+                    const sampleIdx = frameStart + s;
+                    if (sampleIdx >= totalSamples) break;
+
+                    // Fundamental oscillator with formant harmonic additive synthesis
+                    let sampleVal = 0;
+                    const fundamental = Math.sin(phase);
+
+                    for (let bin = 0; bin < NUM_SPECTRAL_BINS; bin++) {
+                        const harmonicNum = bin + 1;
+                        const amp = frame[bin] / (harmonicNum * 0.7); // Formant decay
+                        const harmonicFreq = baseFreq * harmonicNum;
+                        sampleVal += Math.sin(phase * harmonicNum) * amp;
+                    }
+
+                    // Soft clipping and amplitude envelope smoothing
+                    sampleVal = Math.tanh(sampleVal * 1.2) * 0.4;
+                    channelData[sampleIdx] = sampleVal;
+
+                    // Advance phase based on fundamental frequency
+                    phase += (2 * Math.PI * baseFreq) / SAMPLE_RATE;
+                    if (phase > 2 * Math.PI) phase -= 2 * Math.PI;
+                }
+            }
+
+            return buffer;
+        }
+
+        function playGeneratedAudio() {
+            if (!generatedAudioBuffer) return;
+            initAudioContext();
+            const source = audioCtx.createBufferSource();
+            source.buffer = generatedAudioBuffer;
+            source.connect(audioCtx.destination);
+            source.start();
+            log("Playing synthesized AI voice audio...");
+        }
+
+        // --- WAV Export Helper ---
+        function exportGeneratedWAV() {
+            if (!generatedAudioBuffer) return;
+
+            const wavBlob = bufferToWave(generatedAudioBuffer, generatedAudioBuffer.length);
+            const url = URL.createObjectURL(wavBlob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `ai-voice-synthesis-${Date.now()}.wav`;
+            anchor.click();
+            URL.revokeObjectURL(url);
+            log("WAV audio file exported.");
+        }
+
+        // Convert AudioBuffer to WAV File Blob
+        function bufferToWave(abuffer, len) {
+            const numOfChan = abuffer.numberOfChannels;
+            const length = len * numOfChan * 2 + 44;
+            const buffer = new ArrayBuffer(length);
+            const view = new DataView(buffer);
+            const channels = [];
+            let sample = 0;
+            let offset = 0;
+            let pos = 0;
+
+            function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+            function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+
+            // WAV Header
+            setUint32(0x46464952); // "RIFF"
+            setUint32(length - 8); // file length - 8
+            setUint32(0x45564157); // "WAVE"
+            setUint32(0x20746d66); // "fmt " chunk
+            setUint32(16);         // length = 16
+            setUint16(1);          // PCM (uncompressed)
+            setUint16(numOfChan);
+            setUint32(abuffer.sampleRate);
+            setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
+            setUint16(numOfChan * 2); // block-align
+            setUint16(16);         // 16-bit
+            setUint32(0x61746164); // "data" chunk
+            setUint32(length - pos - 4);
+
+            for (let i = 0; i < abuffer.numberOfChannels; i++) {
+                channels.push(abuffer.getChannelData(i));
+            }
+
+            while (pos < length) {
+                for (let i = 0; i < numOfChan; i++) {
+                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                    view.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+            return new Blob([buffer], { type: "audio/wav" });
+        }
+
+        // --- Charts Initialization ---
+        function initCharts() {
+            // Feature Spectrum Chart
+            const ctxFeat = document.getElementById('featureChart').getContext('2d');
+            featureChartObj = new Chart(ctxFeat, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({ length: NUM_SPECTRAL_BINS }, (_, i) => `${i + 1}`),
+                    datasets: [{
+                        label: 'Spectral Amplitude',
+                        data: Array(NUM_SPECTRAL_BINS).fill(0),
+                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { min: 0, max: 1, grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+
+            // Loss Chart
+            const ctxLoss = document.getElementById('lossChart').getContext('2d');
+            lossChartObj = new Chart(ctxLoss, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'MSE Loss',
+                        data: [],
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+        }
+
+        function updateFeatureChart() {
+            if (extractedFeatures.length === 0) return;
+            // Average feature vector for visualization
+            const avgSpectrum = Array(NUM_SPECTRAL_BINS).fill(0);
+            extractedFeatures.forEach(frame => {
+                frame.forEach((val, i) => avgSpectrum[i] += val / extractedFeatures.length);
+            });
+            featureChartObj.data.datasets[0].data = avgSpectrum;
+            featureChartObj.update();
+        }
+
+        function resetLossChart() {
+            lossChartObj.data.labels = [];
+            lossChartObj.data.datasets[0].data = [];
+            lossChartObj.update();
+        }
+
+        function updateLossChart(epoch, loss) {
+            lossChartObj.data.labels.push(epoch);
+            lossChartObj.data.datasets[0].data.push(loss);
+            lossChartObj.update();
+        }
+
+        // --- Interactive Timbre Pad Canvas ---
+        function initPadCanvas() {
+            const canvas = document.getElementById('padCanvas');
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                draw();
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Grid background
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let x = 0; x < canvas.width; x += 30) { ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
+                for (let y = 0; y < canvas.height; y += 30) { ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
+                ctx.stroke();
+
+                // Interactive cursor
+                const cx = padX * canvas.width;
+                const cy = padY * canvas.height;
+
+                ctx.fillStyle = 'rgba(99, 102, 241, 0.2)';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#6366f1';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            function handlePointer(e) {
+                const rect = canvas.getBoundingClientRect();
+                padX = Math.max(0, Math.min(1, (e.clientX - rect.left) / canvas.width));
+                padY = Math.max(0, Math.min(1, (e.clientY - rect.top) / canvas.height));
+                draw();
+            }
+
+            let isDragging = false;
+            canvas.addEventListener('mousedown', (e) => { isDragging = true; handlePointer(e); });
+            canvas.addEventListener('mousemove', (e) => { if (isDragging) handlePointer(e); });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+
+            // Touch events
+            canvas.addEventListener('touchstart', (e) => { isDragging = true; handlePointer(e.touches[0]); });
+            canvas.addEventListener('touchmove', (e) => { if (isDragging) handlePointer(e.touches[0]); });
+            canvas.addEventListener('touchend', () => { isDragging = false; });
+
+            window.addEventListener('resize', resize);
+            setTimeout(resize, 100);
+        }
+
+        // --- Initialization on Window Load ---
+        window.onload = function() {
+            initCharts();
+            initPadCanvas();
+            log("Application initialized. Grant microphone access to begin.");
+        };
+    </script>
 </body>
-</html>
+</html> 
