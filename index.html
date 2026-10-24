@@ -1,12 +1,18 @@
-
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pure WebGL 3D Engine Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pure WebGL 3D World Explorer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
         body, html {
             margin: 0;
             padding: 0;
@@ -14,8 +20,8 @@
             height: 100%;
             overflow: hidden;
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #0d0f17;
-            color: #e2e8f0;
+            background-color: #030712;
+            color: #f3f4f6;
         }
 
         canvas {
@@ -27,16 +33,16 @@
 
         /* Glassmorphism panel styling */
         .glass-panel {
-            background: rgba(18, 22, 34, 0.75);
+            background: rgba(15, 23, 42, 0.75);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
         }
 
-        /* Custom scrollbar for control panel */
+        /* Custom scrollbar */
         .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
+            width: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.2);
@@ -50,7 +56,7 @@
             background: rgba(255, 255, 255, 0.4);
         }
 
-        /* Custom range slider styling */
+        /* Custom range sliders */
         input[type=range] {
             -webkit-appearance: none;
             background: rgba(255, 255, 255, 0.1);
@@ -65,14 +71,37 @@
             background: #3b82f6;
             cursor: pointer;
             box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-            transition: transform 0.1s ease;
+            transition: transform 0.1s ease, background-color 0.2s;
         }
         input[type=range]::-webkit-slider-thumb:hover {
             transform: scale(1.2);
             background: #60a5fa;
         }
 
-        /* Radio option pills */
+        /* Crosshair in Pointer Lock */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 1px;
+        }
+        #crosshair::before { width: 12px; height: 2px; }
+        #crosshair::after { width: 2px; height: 12px; }
+
         .pill-btn {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -85,141 +114,165 @@
 </head>
 <body>
 
-    <!-- WebGL Fullscreen Canvas -->
+    <!-- WebGL Canvas -->
     <canvas id="webgl-canvas"></canvas>
 
-    <!-- Top Left Title Badge -->
-    <div class="absolute top-4 left-4 z-10 pointer-events-none">
+    <!-- Crosshair -->
+    <div id="crosshair"></div>
+
+    <!-- HUD Overlay - Top Left Info -->
+    <div class="absolute top-4 left-4 z-10 pointer-events-none flex flex-col gap-2">
         <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center space-x-3 border border-white/10">
-            <div class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></div>
             <div>
-                <h1 class="text-sm font-bold tracking-wide text-white">Pure WebGL Engine</h1>
-                <p class="text-xs text-slate-400 font-mono">100% Vanilla JS & GLSL Shaders</p>
+                <h1 class="text-xs font-bold tracking-wider text-white uppercase">Pure WebGL 3D World</h1>
+                <p class="text-[10px] text-slate-400 font-mono">100% Custom Shaders & Math</p>
+            </div>
+        </div>
+
+        <div class="glass-panel px-3.5 py-2.5 rounded-xl text-xs font-mono text-slate-300 space-y-1 w-52">
+            <div class="flex justify-between">
+                <span class="text-slate-500">FPS:</span>
+                <span id="hud-fps" class="text-emerald-400 font-bold">60</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-500">POS X/Y/Z:</span>
+                <span id="hud-pos" class="text-blue-400">0.0, 2.0, 10.0</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-500">YAW / PITCH:</span>
+                <span id="hud-rot" class="text-indigo-400">0°, 0°</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-500">OBJECTS:</span>
+                <span id="hud-objs" class="text-purple-400">142</span>
             </div>
         </div>
     </div>
 
-    <!-- UI Controls Overlay -->
-    <div class="absolute top-4 right-4 z-10 w-80 max-h-[calc(100vh-2rem)] flex flex-col">
-        <div class="glass-panel rounded-2xl p-5 overflow-y-auto custom-scrollbar flex flex-col gap-5 border border-white/10">
+    <!-- Control Panel Toggle Button -->
+    <button id="toggle-menu-btn" class="absolute top-4 right-4 z-20 glass-panel p-2.5 rounded-xl text-slate-300 hover:text-white transition flex items-center gap-2 text-xs font-medium border border-white/10">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        </svg>
+        <span>World Settings</span>
+    </button>
+
+    <!-- Side Control Drawer -->
+    <div id="control-panel" class="absolute top-16 right-4 z-20 w-80 max-h-[calc(100vh-5rem)] flex flex-col transition-all duration-300 transform">
+        <div class="glass-panel rounded-2xl p-5 overflow-y-auto custom-scrollbar flex flex-col gap-4 border border-white/10 text-xs">
             
-            <!-- Shape Selection -->
+            <!-- Teleport Presets -->
             <div>
-                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Geometry</label>
-                <div class="grid grid-cols-2 gap-2" id="shape-selector">
-                    <button data-shape="cube" class="pill-btn active px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 rounded-xl text-slate-300 text-center">Cube</button>
-                    <button data-shape="pyramid" class="pill-btn px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 rounded-xl text-slate-300 text-center">Pyramid</button>
-                    <button data-shape="sphere" class="pill-btn px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 rounded-xl text-slate-300 text-center">Sphere</button>
-                    <button data-shape="cylinder" class="pill-btn px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 rounded-xl text-slate-300 text-center">Cylinder</button>
+                <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-2">Teleport Presets</label>
+                <div class="grid grid-cols-2 gap-1.5" id="teleport-btns">
+                    <button data-loc="center" class="pill-btn px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">Center Plaza</button>
+                    <button data-loc="sanctuary" class="pill-btn px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">Crystal Core</button>
+                    <button data-loc="overview" class="pill-btn px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">High Altitude</button>
+                    <button data-loc="pillars" class="pill-btn px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">Pillar Array</button>
                 </div>
             </div>
 
-            <!-- Render Mode Selection -->
+            <!-- Atmosphere & Time of Day -->
             <div>
-                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Render Mode</label>
-                <div class="grid grid-cols-2 gap-2" id="mode-selector">
-                    <button data-mode="phong" class="pill-btn active px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 rounded-xl text-slate-300 text-center">Phong Lighting</button>
-                    <button data-mode="wireframe" class="pill-btn px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 rounded-xl text-slate-300 text-center">Wireframe</button>
-                    <button data-mode="normals" class="pill-btn px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 rounded-xl text-slate-300 text-center">Normal Map</button>
-                    <button data-mode="vertex" class="pill-btn px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 rounded-xl text-slate-300 text-center">Vertex Colors</button>
+                <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-2">Atmosphere Theme</label>
+                <div class="grid grid-cols-2 gap-1.5" id="theme-selector">
+                    <button data-theme="cyber" class="pill-btn active px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">Cyber Cyan</button>
+                    <button data-theme="synth" class="pill-btn px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">Synth Sunset</button>
+                    <button data-theme="matrix" class="pill-btn px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">Matrix Green</button>
+                    <button data-theme="deepspace" class="pill-btn px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">Deep Void</button>
                 </div>
             </div>
 
-            <!-- Shading Model selection (if phong active) -->
-            <div id="shading-container">
-                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Shading Model</label>
-                <div class="grid grid-cols-2 gap-2" id="shading-selector">
-                    <button data-shading="phong" class="pill-btn active px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 rounded-xl text-slate-300 text-center">Phong (Pixel)</button>
-                    <button data-shading="gouraud" class="pill-btn px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 rounded-xl text-slate-300 text-center">Gouraud (Vertex)</button>
+            <!-- Render Options -->
+            <div>
+                <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-2">Render Mode</label>
+                <div class="grid grid-cols-3 gap-1.5" id="rendermode-selector">
+                    <button data-mode="shaded" class="pill-btn active px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">Shaded</button>
+                    <button data-mode="wireframe" class="pill-btn px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">Wireframe</button>
+                    <button data-mode="normals" class="pill-btn px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-slate-300 text-center">Normals</button>
                 </div>
             </div>
 
-            <!-- Material Color Picker -->
-            <div class="flex items-center justify-between bg-slate-800/40 p-3 rounded-xl border border-white/5">
-                <span class="text-xs font-medium text-slate-300">Material Color</span>
-                <div class="flex items-center gap-2">
-                    <input type="color" id="color-picker" value="#3b82f6" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 outline-none">
-                </div>
-            </div>
-
-            <!-- Light & Material Adjustments -->
-            <div class="space-y-3">
+            <!-- Environment Sliders -->
+            <div class="space-y-3 pt-1 border-t border-white/10">
                 <div class="flex justify-between items-center">
-                    <label class="text-xs font-medium text-slate-300">Shininess</label>
-                    <span id="shininess-val" class="text-xs font-mono text-blue-400">32</span>
+                    <span class="text-slate-300">Fog Density</span>
+                    <span id="fog-val" class="font-mono text-blue-400">0.035</span>
                 </div>
-                <input type="range" id="shininess-slider" min="1" max="128" value="32" class="w-full">
-
-                <div class="flex justify-between items-center pt-2">
-                    <label class="text-xs font-medium text-slate-300">Light Intensity</label>
-                    <span id="light-val" class="text-xs font-mono text-blue-400">1.0</span>
-                </div>
-                <input type="range" id="light-slider" min="0" max="2" step="0.1" value="1.0" class="w-full">
-            </div>
-
-            <!-- Animation Controls -->
-            <div class="pt-2 border-t border-white/10 space-y-3">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-medium text-slate-300">Auto Rotation</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="auto-rotate-toggle" checked class="sr-only peer">
-                        <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                </div>
+                <input type="range" id="fog-slider" min="0.005" max="0.09" step="0.005" value="0.035" class="w-full">
 
                 <div class="flex justify-between items-center">
-                    <label class="text-xs font-medium text-slate-300">Rotation Speed</label>
-                    <span id="speed-val" class="text-xs font-mono text-blue-400">1.0x</span>
+                    <span class="text-slate-300">Move Speed</span>
+                    <span id="speed-val" class="font-mono text-blue-400">12.0</span>
                 </div>
-                <input type="range" id="speed-slider" min="0.1" max="3.0" step="0.1" value="1.0" class="w-full">
+                <input type="range" id="speed-slider" min="4.0" max="30.0" step="1.0" value="12.0" class="w-full">
+
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-300">Field of View (FOV)</span>
+                    <span id="fov-val" class="font-mono text-blue-400">65°</span>
+                </div>
+                <input type="range" id="fov-slider" min="45" max="100" step="1" value="65" class="w-full">
             </div>
 
-            <!-- Camera Controls -->
-            <div class="pt-2 border-t border-white/10 space-y-3">
-                <div class="flex justify-between items-center">
-                    <label class="text-xs font-medium text-slate-300">Camera Zoom</label>
-                    <span id="zoom-val" class="text-xs font-mono text-blue-400">5.0</span>
-                </div>
-                <input type="range" id="zoom-slider" min="2.0" max="12.0" step="0.1" value="5.0" class="w-full">
-
-                <button id="reset-cam-btn" class="w-full py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 border border-white/10 rounded-xl text-slate-300 transition">Reset View</button>
+            <!-- Sun Orbit Speed Toggle -->
+            <div class="pt-2 border-t border-white/10 flex items-center justify-between">
+                <span class="text-slate-300">Orbit Sun / Moon</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="orbit-sun-toggle" checked class="sr-only peer">
+                    <div class="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
             </div>
 
         </div>
     </div>
 
-    <!-- Bottom Center Instructions Badge -->
-    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-        <div class="glass-panel px-4 py-2 rounded-full border border-white/10 flex items-center gap-3 text-xs text-slate-300">
-            <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-slate-800 rounded border border-white/10 font-mono text-[10px]">Drag</kbd> Rotate</span>
-            <span class="text-slate-600">•</span>
-            <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-slate-800 rounded border border-white/10 font-mono text-[10px]">Scroll</kbd> Zoom</span>
+    <!-- Bottom Center Navigation Legend / Pointer Lock Trigger -->
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+        <button id="lock-btn" class="glass-panel px-5 py-2.5 rounded-full border border-white/15 hover:border-blue-500/50 flex items-center gap-3 text-xs text-slate-200 hover:text-white transition group shadow-lg">
+            <span class="w-2 h-2 rounded-full bg-blue-500 group-hover:scale-125 transition-transform"></span>
+            <span class="font-medium">Click Screen to Enter 3D Mouse Look</span>
+            <span class="text-slate-500 text-[10px] hidden md:inline">| WASD Move • Shift Sprint • Space/E Up • Q Down</span>
+        </button>
+    </div>
+
+    <!-- On-screen Touch Controls for Mobile/Touch Devices -->
+    <div id="touch-controls" class="absolute bottom-6 left-6 z-10 flex gap-3 md:hidden">
+        <div class="grid grid-cols-3 gap-1.5 glass-panel p-2 rounded-2xl border border-white/10">
+            <div></div>
+            <button id="btn-fwd" class="w-10 h-10 bg-slate-800/80 rounded-xl flex items-center justify-center active:bg-blue-600 font-bold">W</button>
+            <div></div>
+            <button id="btn-left" class="w-10 h-10 bg-slate-800/80 rounded-xl flex items-center justify-center active:bg-blue-600 font-bold">A</button>
+            <button id="btn-back" class="w-10 h-10 bg-slate-800/80 rounded-xl flex items-center justify-center active:bg-blue-600 font-bold">S</button>
+            <button id="btn-right" class="w-10 h-10 bg-slate-800/80 rounded-xl flex items-center justify-center active:bg-blue-600 font-bold">D</button>
+        </div>
+        <div class="flex flex-col gap-1.5 glass-panel p-2 rounded-2xl border border-white/10">
+            <button id="btn-up" class="w-10 h-10 bg-slate-800/80 rounded-xl flex items-center justify-center active:bg-blue-600 font-bold text-xs">▲</button>
+            <button id="btn-down" class="w-10 h-10 bg-slate-800/80 rounded-xl flex items-center justify-center active:bg-blue-600 font-bold text-xs">▼</button>
         </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- WebGL Shaders & Implementation JavaScript  -->
+    <!-- WebGL Engine & Shader Implementation       -->
     <!-- ========================================== -->
     <script>
-        // --- 1. Pure JavaScript Matrix & Vector Math Library ---
+        // --- 1. Custom Matrix Math Library (100% Pure JS) ---
         const Mat4 = {
-            create: function() {
-                return new Float32Array([
-                    1, 0, 0, 0,
-                    0, 1, 0, 0,
-                    0, 0, 1, 0,
-                    0, 0, 0, 1
-                ]);
-            },
-            identity: function(out) {
-                out[0] = 1; out[1] = 0; out[2] = 0; out[3] = 0;
-                out[4] = 0; out[5] = 1; out[6] = 0; out[7] = 0;
-                out[8] = 0; out[9] = 0; out[10] = 1; out[11] = 0;
-                out[12] = 0; out[13] = 0; out[14] = 0; out[15] = 1;
+            create: () => new Float32Array([
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            ]),
+            identity: (out) => {
+                out[0]=1; out[1]=0; out[2]=0; out[3]=0;
+                out[4]=0; out[5]=1; out[6]=0; out[7]=0;
+                out[8]=0; out[9]=0; out[10]=1; out[11]=0;
+                out[12]=0; out[13]=0; out[14]=0; out[15]=1;
                 return out;
             },
-            perspective: function(out, fovInRad, aspect, near, far) {
-                const f = 1.0 / Math.tan(fovInRad / 2);
+            perspective: (out, fovRad, aspect, near, far) => {
+                const f = 1.0 / Math.tan(fovRad / 2);
                 const rangeInv = 1.0 / (near - far);
                 out[0] = f / aspect; out[1] = 0; out[2] = 0; out[3] = 0;
                 out[4] = 0; out[5] = f; out[6] = 0; out[7] = 0;
@@ -227,247 +280,255 @@
                 out[12] = 0; out[13] = 0; out[14] = (2 * near * far) * rangeInv; out[15] = 0;
                 return out;
             },
-            multiply: function(out, a, b) {
-                const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
-                const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
-                const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
-                const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+            lookAt: (out, eye, target, up) => {
+                let z0 = eye[0] - target[0], z1 = eye[1] - target[1], z2 = eye[2] - target[2];
+                let len = 1 / (Math.hypot(z0, z1, z2) || 1);
+                z0 *= len; z1 *= len; z2 *= len;
 
-                let b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+                let x0 = up[1] * z2 - up[2] * z1, x1 = up[2] * z0 - up[0] * z2, x2 = up[0] * z1 - up[1] * z0;
+                len = 1 / (Math.hypot(x0, x1, x2) || 1);
+                x0 *= len; x1 *= len; x2 *= len;
+
+                let y0 = z1 * x2 - z2 * x1, y1 = z2 * x0 - z0 * x2, y2 = z0 * x1 - z1 * x0;
+
+                out[0] = x0; out[1] = y0; out[2] = z0; out[3] = 0;
+                out[4] = x1; out[5] = y1; out[6] = z1; out[7] = 0;
+                out[8] = x2; out[9] = y2; out[10] = z2; out[11] = 0;
+                out[12] = -(x0 * eye[0] + x1 * eye[1] + x2 * eye[2]);
+                out[13] = -(y0 * eye[0] + y1 * eye[1] + y2 * eye[2]);
+                out[14] = -(z0 * eye[0] + z1 * eye[1] + z2 * eye[2]);
+                out[15] = 1;
+                return out;
+            },
+            multiply: (out, a, b) => {
+                const a00=a[0], a01=a[1], a02=a[2], a03=a[3];
+                const a10=a[4], a11=a[5], a12=a[6], a13=a[7];
+                const a20=a[8], a21=a[9], a22=a[10], a23=a[11];
+                const a30=a[12], a31=a[13], a32=a[14], a33=a[15];
+
+                let b0=b[0], b1=b[1], b2=b[2], b3=b[3];
                 out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
                 out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
                 out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
                 out[3] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
 
-                b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7];
+                b0=b[4]; b1=b[5]; b2=b[6]; b3=b[7];
                 out[4] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
                 out[5] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
                 out[6] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
                 out[7] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
 
-                b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11];
+                b0=b[8]; b1=b[9]; b2=b[10]; b3=b[11];
                 out[8] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
                 out[9] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
                 out[10] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
                 out[11] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
 
-                b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15];
+                b0=b[12]; b1=b[13]; b2=b[14]; b3=b[15];
                 out[12] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
                 out[13] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
                 out[14] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
                 out[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
                 return out;
             },
-            translate: function(out, a, v) {
+            translate: (out, a, v) => {
                 const x = v[0], y = v[1], z = v[2];
-                if (a === out) {
-                    out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
-                    out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
-                    out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
-                    out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
-                } else {
-                    this.identity(out);
-                    out[12] = x; out[13] = y; out[14] = z;
-                    this.multiply(out, a, out);
-                }
+                out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
+                out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
+                out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
+                out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
                 return out;
             },
-            rotateX: function(out, a, rad) {
-                const s = Math.sin(rad), c = Math.cos(rad);
-                const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
-                const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
-                if (a !== out) {
-                    out[0] = a[0]; out[1] = a[1]; out[2] = a[2]; out[3] = a[3];
-                    out[12] = a[12]; out[13] = a[13]; out[14] = a[14]; out[15] = a[15];
-                }
-                out[4] = a10 * c + a20 * s; out[5] = a11 * c + a21 * s;
-                out[6] = a12 * c + a22 * s; out[7] = a13 * c + a23 * s;
-                out[8] = a20 * c - a10 * s; out[9] = a21 * c - a11 * s;
-                out[10] = a22 * c - a12 * s; out[11] = a23 * c - a13 * s;
-                return out;
-            },
-            rotateY: function(out, a, rad) {
+            rotateY: (out, a, rad) => {
                 const s = Math.sin(rad), c = Math.cos(rad);
                 const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
                 const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
-                if (a !== out) {
-                    out[4] = a[4]; out[5] = a[5]; out[6] = a[6]; out[7] = a[7];
-                    out[12] = a[12]; out[13] = a[13]; out[14] = a[14]; out[15] = a[15];
-                }
                 out[0] = a00 * c - a20 * s; out[1] = a01 * c - a21 * s;
                 out[2] = a02 * c - a22 * s; out[3] = a03 * c - a23 * s;
                 out[8] = a00 * s + a20 * c; out[9] = a01 * s + a21 * c;
                 out[10] = a02 * s + a22 * c; out[11] = a03 * s + a23 * c;
                 return out;
             },
-            transpose: function(out, a) {
-                if (out === a) {
-                    let a01 = a[1], a02 = a[2], a03 = a[3];
-                    let a12 = a[6], a13 = a[7];
-                    let a23 = a[11];
-                    out[1] = a[4]; out[2] = a[8]; out[3] = a[12];
-                    out[4] = a01; out[6] = a[9]; out[7] = a[13];
-                    out[8] = a02; out[9] = a12; out[11] = a[14];
-                    out[12] = a03; out[13] = a13; out[14] = a23;
-                } else {
-                    out[0] = a[0]; out[1] = a[4]; out[2] = a[8]; out[3] = a[12];
-                    out[4] = a[1]; out[5] = a[5]; out[6] = a[9]; out[7] = a[13];
-                    out[8] = a[2]; out[9] = a[6]; out[10] = a[10]; out[11] = a[14];
-                    out[12] = a[3]; out[13] = a[7]; out[14] = a[11]; out[15] = a[15];
-                }
-                return out;
-            },
-            invert: function(out, a) {
-                const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+            rotateX: (out, a, rad) => {
+                const s = Math.sin(rad), c = Math.cos(rad);
                 const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
                 const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
-                const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
-
-                const b00 = a00 * a11 - a01 * a10;
-                const b01 = a00 * a12 - a02 * a10;
-                const b02 = a00 * a13 - a03 * a10;
-                const b03 = a01 * a12 - a02 * a11;
-                const b04 = a01 * a13 - a03 * a11;
-                const b05 = a02 * a13 - a03 * a12;
-                const b06 = a20 * a31 - a21 * a30;
-                const b07 = a20 * a32 - a22 * a30;
-                const b08 = a20 * a33 - a23 * a30;
-                const b09 = a21 * a32 - a22 * a31;
-                const b10 = a21 * a33 - a23 * a31;
-                const b11 = a22 * a33 - a23 * a32;
-
-                let det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
-                if (!det) return null;
-                det = 1.0 / det;
-
-                out[0] = (a11 * b11 - a12 * b10 + a13 * b09) * det;
-                out[1] = (a02 * b10 - a01 * b11 - a03 * b09) * det;
-                out[2] = (a31 * b05 - a32 * b04 + a33 * b03) * det;
-                out[3] = (a22 * b04 - a21 * b05 - a23 * b03) * det;
-                out[4] = (a12 * b08 - a10 * b11 - a13 * b07) * det;
-                out[5] = (a00 * b11 - a02 * b08 + a03 * b07) * det;
-                out[6] = (a32 * b02 - a30 * b05 - a33 * b01) * det;
-                out[7] = (a20 * b05 - a22 * b02 + a23 * b01) * det;
-                out[8] = (a10 * b10 - a11 * b08 + a13 * b06) * det;
-                out[9] = (a01 * b08 - a00 * b10 - a03 * b06) * det;
-                out[10] = (a30 * b04 - a31 * b02 + a33 * b00) * det;
-                out[11] = (a21 * b02 - a20 * b04 - a23 * b00) * det;
-                out[12] = (a11 * b07 - a10 * b09 - a12 * b06) * det;
-                out[13] = (a00 * b09 - a01 * b07 + a02 * b06) * det;
-                out[14] = (a31 * b01 - a30 * b03 - a32 * b00) * det;
-                out[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
+                out[4] = a10 * c + a20 * s; out[5] = a11 * c + a21 * s;
+                out[6] = a12 * c + a22 * s; out[7] = a13 * c + a23 * s;
+                out[8] = a20 * c - a10 * s; out[9] = a21 * c - a11 * s;
+                out[10] = a22 * c - a12 * s; out[11] = a23 * c - a13 * s;
+                return out;
+            },
+            scale: (out, a, v) => {
+                const x = v[0], y = v[1], z = v[2];
+                out[0] = a[0] * x; out[1] = a[1] * x; out[2] = a[2] * x; out[3] = a[3] * x;
+                out[4] = a[4] * y; out[5] = a[5] * y; out[6] = a[6] * y; out[7] = a[7] * y;
+                out[8] = a[8] * z; out[9] = a[9] * z; out[10] = a[10] * z; out[11] = a[11] * z;
                 return out;
             }
         };
 
-        // Convert Hex Color to RGB Array
+        // Helper to convert hex strings to normalized float arrays
         function hexToRgb(hex) {
-            const num = parseInt(hex.replace('#', ''), 16);
-            return [(num >> 16 & 255) / 255, (num >> 8 & 255) / 255, (num & 255) / 255];
+            const n = parseInt(hex.replace('#', ''), 16);
+            return [(n >> 16 & 255)/255, (n >> 8 & 255)/255, (n & 255)/255];
         }
 
-        // --- 2. 3D Procedural Mesh Generators ---
-        
-        // Cube Data
-        function createCube() {
-            const positions = [
-                // Front
-                -1, -1,  1,   1, -1,  1,   1,  1,  1,  -1,  1,  1,
-                // Back
-                -1, -1, -1,  -1,  1, -1,   1,  1, -1,   1, -1, -1,
-                // Top
-                -1,  1, -1,  -1,  1,  1,   1,  1,  1,   1,  1, -1,
-                // Bottom
-                -1, -1, -1,   1, -1, -1,   1, -1,  1,  -1, -1,  1,
-                // Right
-                 1, -1, -1,   1,  1, -1,   1,  1,  1,   1, -1,  1,
-                // Left
-                -1, -1, -1,  -1, -1,  1,  -1,  1,  1,  -1,  1, -1
-            ];
+        // --- 2. Procedural 3D Mesh Generators ---
 
-            const normals = [
-                 0,  0,  1,   0,  0,  1,   0,  0,  1,   0,  0,  1,
-                 0,  0, -1,   0,  0, -1,   0,  0, -1,   0,  0, -1,
-                 0,  1,  0,   0,  1,  0,   0,  1,  0,   0,  1,  0,
-                 0, -1,  0,   0, -1,  0,   0, -1,  0,   0, -1,  0,
-                 1,  0,  0,   1,  0,  0,   1,  0,  0,   1,  0,  0,
-                -1,  0,  0,  -1,  0,  0,  -1,  0,  0,  -1,  0,  0
-            ];
-
+        // Grid Terrain Mesh
+        function createTerrainGrid(size = 300, divisions = 150) {
+            const positions = [];
+            const normals = [];
             const colors = [];
-            const faceColors = [
-                [0.9, 0.2, 0.3], [0.2, 0.8, 0.3], [0.2, 0.4, 0.9],
-                [0.9, 0.8, 0.2], [0.8, 0.3, 0.9], [0.2, 0.8, 0.8]
-            ];
-            for (let c of faceColors) {
-                for (let i = 0; i < 4; i++) colors.push(...c);
+            const indices = [];
+
+            const step = size / divisions;
+            const halfSize = size / 2;
+
+            for (let i = 0; i <= divisions; i++) {
+                const z = -halfSize + i * step;
+                for (let j = 0; j <= divisions; j++) {
+                    const x = -halfSize + j * step;
+                    
+                    // Subtle terrain height variation using sine waves
+                    const height = (Math.sin(x * 0.05) + Math.cos(z * 0.05)) * 1.2;
+
+                    positions.push(x, height, z);
+                    normals.push(0, 1, 0);
+
+                    // Alternating checker grid pattern
+                    const isEven = (i + j) % 2 === 0;
+                    if (isEven) {
+                        colors.push(0.12, 0.18, 0.28);
+                    } else {
+                        colors.push(0.08, 0.12, 0.20);
+                    }
+                }
             }
 
-            const indices = [];
-            for (let i = 0; i < 6; i++) {
-                indices.push(i * 4, i * 4 + 1, i * 4 + 2);
-                indices.push(i * 4, i * 4 + 2, i * 4 + 3);
+            for (let i = 0; i < divisions; i++) {
+                for (let j = 0; j < divisions; j++) {
+                    const row1 = i * (divisions + 1);
+                    const row2 = (i + 1) * (divisions + 1);
+
+                    indices.push(row1 + j, row2 + j, row1 + j + 1);
+                    indices.push(row1 + j + 1, row2 + j, row2 + j + 1);
+                }
             }
 
             return { positions, normals, colors, indices };
         }
 
-        // Pyramid (Square Base)
-        function createPyramid() {
+        // Box Geometry Generator
+        function createCube(sx = 1, sy = 1, sz = 1, color = [0.4, 0.6, 0.9]) {
+            const hx = sx/2, hy = sy/2, hz = sz/2;
+            const positions = [
+                // Front
+                -hx, -hy,  hz,   hx, -hy,  hz,   hx,  hy,  hz,  -hx,  hy,  hz,
+                // Back
+                -hx, -hy, -hz,  -hx,  hy, -hz,   hx,  hy, -hz,   hx, -hy, -hz,
+                // Top
+                -hx,  hy, -hz,  -hx,  hy,  hz,   hx,  hy,  hz,   hx,  hy, -hz,
+                // Bottom
+                -hx, -hy, -hz,   hx, -hy, -hz,   hx, -hy,  hz,  -hx, -hy,  hz,
+                // Right
+                 hx, -hy, -hz,   hx,  hy, -hz,   hx,  hy,  hz,   hx, -hy,  hz,
+                // Left
+                -hx, -hy, -hz,  -hx, -hy,  hz,  -hx,  hy,  hz,  -hx,  hy, -hz
+            ];
+
+            const normals = [
+                 0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,
+                 0, 0,-1,  0, 0,-1,  0, 0,-1,  0, 0,-1,
+                 0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,
+                 0,-1, 0,  0,-1, 0,  0,-1, 0,  0,-1, 0,
+                 1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,
+                -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0
+            ];
+
+            const colors = [];
+            for (let i = 0; i < 24; i++) colors.push(...color);
+
+            const indices = [];
+            for (let i = 0; i < 6; i++) {
+                indices.push(i*4, i*4+1, i*4+2, i*4, i*4+2, i*4+3);
+            }
+
+            return { positions, normals, colors, indices };
+        }
+
+        // Pyramid Generator
+        function createPyramid(radius = 1.5, height = 3.0, color = [0.9, 0.3, 0.5]) {
             const positions = [
                 // Base
-                -1, -1, -1,   1, -1, -1,   1, -1,  1,  -1, -1,  1,
-                // Front
-                -1, -1,  1,   1, -1,  1,   0,  1,  0,
-                // Right
-                 1, -1,  1,   1, -1, -1,   0,  1,  0,
-                // Back
-                 1, -1, -1,  -1, -1, -1,   0,  1,  0,
-                // Left
-                -1, -1, -1,  -1, -1,  1,   0,  1,  0
+                -radius, 0, -radius,  radius, 0, -radius,  radius, 0, radius,  -radius, 0, radius,
+                // Sides
+                -radius, 0,  radius,  radius, 0,  radius,  0, height, 0,
+                 radius, 0,  radius,  radius, 0, -radius,  0, height, 0,
+                 radius, 0, -radius, -radius, 0, -radius,  0, height, 0,
+                -radius, 0, -radius, -radius, 0,  radius,  0, height, 0
             ];
 
-            // Calculate face normals for sloped sides
-            const nSide = 1 / Math.sqrt(5); // approx derived from slope
+            const nS = 1 / Math.sqrt(5);
             const normals = [
-                // Base
-                0, -1, 0,  0, -1, 0,  0, -1, 0,  0, -1, 0,
-                // Front
-                0, nSide, nSide*2,  0, nSide, nSide*2,  0, nSide, nSide*2,
-                // Right
-                nSide*2, nSide, 0,  nSide*2, nSide, 0,  nSide*2, nSide, 0,
-                // Back
-                0, nSide, -nSide*2, 0, nSide, -nSide*2, 0, nSide, -nSide*2,
-                // Left
-                -nSide*2, nSide, 0, -nSide*2, nSide, 0, -nSide*2, nSide, 0
+                0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0,
+                0, nS, nS*2, 0, nS, nS*2, 0, nS, nS*2,
+                nS*2, nS, 0, nS*2, nS, 0, nS*2, nS, 0,
+                0, nS, -nS*2, 0, nS, -nS*2, 0, nS, -nS*2,
+                -nS*2, nS, 0, -nS*2, nS, 0, -nS*2, nS, 0
             ];
 
-            const colors = [
-                // Base
-                0.3, 0.3, 0.4,  0.3, 0.3, 0.4,  0.3, 0.3, 0.4,  0.3, 0.3, 0.4,
-                // Front
-                0.9, 0.3, 0.3,  0.9, 0.3, 0.3,  0.9, 0.3, 0.3,
-                // Right
-                0.3, 0.8, 0.4,  0.3, 0.8, 0.4,  0.3, 0.8, 0.4,
-                // Back
-                0.3, 0.4, 0.9,  0.3, 0.4, 0.9,  0.3, 0.4, 0.9,
-                // Left
-                0.9, 0.8, 0.3,  0.9, 0.8, 0.3,  0.9, 0.8, 0.3
-            ];
+            const colors = [];
+            for (let i = 0; i < positions.length / 3; i++) colors.push(...color);
 
             const indices = [
-                0, 1, 2,  0, 2, 3, // Base
-                4, 5, 6,           // Front
-                7, 8, 9,           // Right
-                10, 11, 12,        // Back
-                13, 14, 15         // Left
+                0, 1, 2, 0, 2, 3,
+                4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
             ];
+
+            return { positions, normals, colors, indices };
+        }
+
+        // Torus Generator
+        function createTorus(rOuter = 2.0, rInner = 0.4, radialSegs = 32, tubularSegs = 16, color = [0.2, 0.8, 0.9]) {
+            const positions = [];
+            const normals = [];
+            const colors = [];
+            const indices = [];
+
+            for (let i = 0; i <= radialSegs; i++) {
+                const u = (i / radialSegs) * Math.PI * 2;
+                const cosU = Math.cos(u), sinU = Math.sin(u);
+
+                for (let j = 0; j <= tubularSegs; j++) {
+                    const v = (j / tubularSegs) * Math.PI * 2;
+                    const cosV = Math.cos(v), sinV = Math.sin(v);
+
+                    const x = (rOuter + rInner * cosV) * cosU;
+                    const y = rInner * sinV;
+                    const z = (rOuter + rInner * cosV) * sinU;
+
+                    positions.push(x, y, z);
+                    normals.push(cosV * cosU, sinV, cosV * sinU);
+                    colors.push(...color);
+                }
+            }
+
+            for (let i = 0; i < radialSegs; i++) {
+                for (let j = 0; j < tubularSegs; j++) {
+                    const first = i * (tubularSegs + 1) + j;
+                    const second = first + tubularSegs + 1;
+                    indices.push(first, second, first + 1);
+                    indices.push(second, second + 1, first + 1);
+                }
+            }
 
             return { positions, normals, colors, indices };
         }
 
         // UV Sphere Generator
-        function createSphere(radius = 1.2, bands = 24) {
+        function createSphere(radius = 1.0, bands = 24, color = [1.0, 0.8, 0.2]) {
             const positions = [];
             const normals = [];
             const colors = [];
@@ -489,13 +550,7 @@
 
                     positions.push(radius * x, radius * y, radius * z);
                     normals.push(x, y, z);
-
-                    // Procedural vertex color spectrum
-                    colors.push(
-                        0.5 + 0.5 * x,
-                        0.5 + 0.5 * y,
-                        0.5 + 0.5 * z
-                    );
+                    colors.push(...color);
                 }
             }
 
@@ -511,93 +566,19 @@
             return { positions, normals, colors, indices };
         }
 
-        // Cylinder Generator
-        function createCylinder(radius = 1.0, height = 2.0, segments = 24) {
-            const positions = [];
-            const normals = [];
-            const colors = [];
-            const indices = [];
-
-            const hHalf = height / 2;
-
-            // Side Vertices
-            for (let i = 0; i <= segments; i++) {
-                const angle = (i / segments) * Math.PI * 2;
-                const x = Math.cos(angle);
-                const z = Math.sin(angle);
-
-                // Top side vertex
-                positions.push(x * radius, hHalf, z * radius);
-                normals.push(x, 0, z);
-                colors.push(0.2 + 0.8 * (i / segments), 0.5, 0.8);
-
-                // Bottom side vertex
-                positions.push(x * radius, -hHalf, z * radius);
-                normals.push(x, 0, z);
-                colors.push(0.2 + 0.8 * (i / segments), 0.5, 0.8);
-            }
-
-            for (let i = 0; i < segments; i++) {
-                const idx = i * 2;
-                indices.push(idx, idx + 1, idx + 2);
-                indices.push(idx + 1, idx + 3, idx + 2);
-            }
-
-            // Cap generation helper
-            const baseIdx = positions.length / 3;
-            // Top Cap Center
-            positions.push(0, hHalf, 0);
-            normals.push(0, 1, 0);
-            colors.push(0.9, 0.9, 0.9);
-
-            // Bottom Cap Center
-            positions.push(0, -hHalf, 0);
-            normals.push(0, -1, 0);
-            colors.push(0.2, 0.2, 0.2);
-
-            for (let i = 0; i < segments; i++) {
-                const angle = (i / segments) * Math.PI * 2;
-                const x = Math.cos(angle);
-                const z = Math.sin(angle);
-
-                // Top Cap Rim
-                positions.push(x * radius, hHalf, z * radius);
-                normals.push(0, 1, 0);
-                colors.push(0.8, 0.8, 0.9);
-
-                // Bottom Cap Rim
-                positions.push(x * radius, -hHalf, z * radius);
-                normals.push(0, -1, 0);
-                colors.push(0.3, 0.3, 0.4);
-
-                const currentCapRim = baseIdx + 2 + i * 2;
-
-                // Top triangle
-                if (i < segments - 1) {
-                    indices.push(baseIdx, currentCapRim, currentCapRim + 2);
-                    indices.push(baseIdx + 1, currentCapRim + 3, currentCapRim + 1);
-                } else {
-                    indices.push(baseIdx, currentCapRim, baseIdx + 2);
-                    indices.push(baseIdx + 1, baseIdx + 3, currentCapRim + 1);
-                }
-            }
-
-            return { positions, normals, colors, indices };
-        }
-
-        // Generate Wireframe Edge Indices from Triangle Indices
+        // Helper to convert triangle indices to wireframe line indices
         function generateWireframeIndices(triangleIndices) {
-            const lineIndices = [];
+            const lines = [];
             for (let i = 0; i < triangleIndices.length; i += 3) {
                 const a = triangleIndices[i];
                 const b = triangleIndices[i+1];
                 const c = triangleIndices[i+2];
-                lineIndices.push(a, b, b, c, c, a);
+                lines.push(a, b, b, c, c, a);
             }
-            return lineIndices;
+            return lines;
         }
 
-        // --- 3. GLSL Shader Sources ---
+        // --- 3. GLSL Shaders with Atmospheric Fog & Specular Lighting ---
 
         const vertexShaderSource = `
             attribute vec3 aPosition;
@@ -607,169 +588,169 @@
             uniform mat4 uModelMatrix;
             uniform mat4 uViewMatrix;
             uniform mat4 uProjectionMatrix;
-            uniform mat3 uNormalMatrix;
 
-            uniform vec3 uLightPosition;
-            uniform vec3 uLightColor;
-            uniform vec3 uMaterialColor;
-            uniform float uShininess;
-            uniform float uLightIntensity;
-            uniform int uShadingModel; // 0 = Phong (fragment), 1 = Gouraud (vertex)
-            uniform int uRenderMode;   // 0 = Phong/Gouraud, 1 = Wireframe, 2 = Normals, 3 = Vertex Colors
-
-            varying vec3 vNormal;
             varying vec3 vFragPos;
+            varying vec3 vNormal;
             varying vec3 vColor;
-            varying vec3 vGouraudColor;
+            varying float vDistance;
 
             void main() {
                 vec4 worldPos = uModelMatrix * vec4(aPosition, 1.0);
                 vFragPos = worldPos.xyz;
-                vNormal = normalize(uNormalMatrix * aNormal);
+
+                // Transform normals by model orientation
+                vNormal = mat3(uModelMatrix) * aNormal;
                 vColor = aColor;
 
-                // Gouraud Shading calculation in Vertex Shader if enabled
-                if (uRenderMode == 0 && uShadingModel == 1) {
-                    vec3 N = vNormal;
-                    vec3 L = normalize(uLightPosition - vFragPos);
-                    vec3 V = normalize(-vFragPos); // Camera at origin in view/world space relative setup
-                    vec3 R = reflect(-L, N);
+                vec4 viewPos = uViewMatrix * worldPos;
+                vDistance = length(viewPos.xyz);
 
-                    // Ambient
-                    vec3 ambient = 0.2 * uMaterialColor;
-
-                    // Diffuse
-                    float diff = max(dot(N, L), 0.0);
-                    vec3 diffuse = diff * uMaterialColor * uLightColor * uLightIntensity;
-
-                    // Specular
-                    float spec = pow(max(dot(V, R), 0.0), uShininess);
-                    vec3 specular = spec * uLightColor * uLightIntensity;
-
-                    vGouraudColor = ambient + diffuse + specular;
-                }
-
-                gl_Position = uProjectionMatrix * uViewMatrix * worldPos;
+                gl_Position = uProjectionMatrix * viewPos;
             }
         `;
 
         const fragmentShaderSource = `
             precision mediump float;
 
-            varying vec3 vNormal;
             varying vec3 vFragPos;
+            varying vec3 vNormal;
             varying vec3 vColor;
-            varying vec3 vGouraudColor;
+            varying float vDistance;
 
             uniform vec3 uLightPosition;
             uniform vec3 uLightColor;
-            uniform vec3 uMaterialColor;
-            uniform float uShininess;
-            uniform float uLightIntensity;
-
-            uniform int uRenderMode;   // 0 = Phong/Gouraud, 1 = Wireframe, 2 = Normals, 3 = Vertex Colors
-            uniform int uShadingModel; // 0 = Phong, 1 = Gouraud
+            uniform vec3 uFogColor;
+            uniform float uFogDensity;
+            uniform vec3 uViewPos;
+            uniform int uRenderMode; // 0: Shaded, 1: Wireframe, 2: Normals
 
             void main() {
                 if (uRenderMode == 1) {
-                    // Wireframe color
-                    gl_FragColor = vec4(0.2, 0.8, 1.0, 1.0);
-                } 
-                else if (uRenderMode == 2) {
-                    // Rainbow Normals
-                    vec3 nColor = normalize(vNormal) * 0.5 + 0.5;
-                    gl_FragColor = vec4(nColor, 1.0);
-                } 
-                else if (uRenderMode == 3) {
-                    // Vertex Colors
-                    gl_FragColor = vec4(vColor, 1.0);
-                } 
-                else {
-                    // Standard Lit Mode
-                    if (uShadingModel == 1) {
-                        // Use Gouraud color computed in vertex shader
-                        gl_FragColor = vec4(vGouraudColor, 1.0);
-                    } else {
-                        // Per-pixel Phong Shading
-                        vec3 N = normalize(vNormal);
-                        vec3 L = normalize(uLightPosition - vFragPos);
-                        vec3 V = normalize(-vFragPos);
-                        vec3 R = reflect(-L, N);
-
-                        // Ambient Component
-                        vec3 ambient = 0.2 * uMaterialColor;
-
-                        // Diffuse Component
-                        float diff = max(dot(N, L), 0.0);
-                        vec3 diffuse = diff * uMaterialColor * uLightColor * uLightIntensity;
-
-                        // Specular Component
-                        float spec = pow(max(dot(V, R), 0.0), uShininess);
-                        vec3 specular = spec * vec3(1.0) * uLightIntensity;
-
-                        vec3 finalColor = ambient + diffuse + specular;
-                        gl_FragColor = vec4(finalColor, 1.0);
-                    }
-                }
-            }
-        `;
-
-        // --- 4. Core WebGL Engine Class ---
-        class WebGLEngine {
-            constructor(canvasId) {
-                this.canvas = document.getElementById(canvasId);
-                this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
-
-                if (!this.gl) {
-                    alert('WebGL is not supported in your browser.');
+                    // Wireframe mode
+                    gl_FragColor = vec4(vColor * 1.5, 1.0);
                     return;
                 }
 
-                // WebGL Settings
+                if (uRenderMode == 2) {
+                    // Normal map mode
+                    vec3 normColor = normalize(vNormal) * 0.5 + 0.5;
+                    gl_FragColor = vec4(normColor, 1.0);
+                    return;
+                }
+
+                // Phong Lighting
+                vec3 N = normalize(vNormal);
+                vec3 L = normalize(uLightPosition - vFragPos);
+                vec3 V = normalize(uViewPos - vFragPos);
+                vec3 R = reflect(-L, N);
+
+                // Ambient
+                vec3 ambient = 0.22 * vColor;
+
+                // Diffuse
+                float diff = max(dot(N, L), 0.0);
+                vec3 diffuse = diff * vColor * uLightColor;
+
+                // Specular
+                float spec = pow(max(dot(V, R), 0.0), 32.0);
+                vec3 specular = spec * uLightColor * 0.4;
+
+                vec3 finalColor = ambient + diffuse + specular;
+
+                // Distance Fog Calculation (Exponential Squared)
+                float fogFactor = 1.0 - exp(-pow(vDistance * uFogDensity, 2.0));
+                fogFactor = clamp(fogFactor, 0.0, 1.0);
+
+                vec3 colorWithFog = mix(finalColor, uFogColor, fogFactor);
+
+                gl_FragColor = vec4(colorWithFog, 1.0);
+            }
+        `;
+
+        // --- 4. Main 3D World WebGL Application Engine ---
+        class WebGL3DWorld {
+            constructor() {
+                this.canvas = document.getElementById('webgl-canvas');
+                this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
+
+                if (!this.gl) {
+                    alert('WebGL is not supported on this browser.');
+                    return;
+                }
+
                 this.gl.enable(this.gl.DEPTH_TEST);
                 this.gl.depthFunc(this.gl.LEQUAL);
-                this.gl.enable(this.gl.CULL_FACE);
-                this.gl.cullFace(this.gl.BACK);
 
-                // Initialize Shaders & Buffers
-                this.initShaders();
-                this.initGeometries();
+                // Camera & First-Person Controller State
+                this.camera = {
+                    pos: [0.0, 2.5, 12.0],
+                    yaw: -Math.PI / 2,
+                    pitch: 0,
+                    fov: 65 * Math.PI / 180,
+                    moveSpeed: 12.0,
+                    sens: 0.0022
+                };
 
-                // State & Settings
-                this.currentShape = 'cube';
-                this.renderMode = 0;     // 0: lit, 1: wireframe, 2: normals, 3: vertex
-                this.shadingModel = 0;   // 0: phong, 1: gouraud
-                this.materialColor = [0.23, 0.51, 0.96]; // #3b82f6
-                this.shininess = 32.0;
-                this.lightIntensity = 1.0;
+                // Controls State
+                this.keys = {};
+                this.isPointerLocked = false;
 
-                // Camera & Scene Transformation State
-                this.rotationX = 0.4;
-                this.rotationY = 0.6;
-                this.zoomDistance = 5.0;
-                this.autoRotate = true;
-                this.rotateSpeed = 1.0;
+                // Atmosphere / Lighting Themes
+                this.themes = {
+                    cyber: {
+                        fog: [0.03, 0.07, 0.14],
+                        light: [0.4, 0.8, 1.0],
+                        bg: [0.02, 0.04, 0.08]
+                    },
+                    synth: {
+                        fog: [0.15, 0.04, 0.12],
+                        light: [1.0, 0.5, 0.2],
+                        bg: [0.08, 0.02, 0.06]
+                    },
+                    matrix: {
+                        fog: [0.02, 0.10, 0.04],
+                        light: [0.3, 1.0, 0.4],
+                        bg: [0.01, 0.05, 0.02]
+                    },
+                    deepspace: {
+                        fog: [0.02, 0.02, 0.04],
+                        light: [0.9, 0.9, 1.0],
+                        bg: [0.01, 0.01, 0.02]
+                    }
+                };
+
+                this.currentTheme = this.themes.cyber;
+                this.fogDensity = 0.035;
+                this.renderMode = 0; // 0: Shaded, 1: Wireframe, 2: Normals
+                this.orbitSun = true;
+
+                // World Dynamic Light Source
+                this.lightPos = [20.0, 40.0, 20.0];
 
                 // Matrices
-                this.modelMatrix = Mat4.create();
+                this.projMatrix = Mat4.create();
                 this.viewMatrix = Mat4.create();
-                this.projectionMatrix = Mat4.create();
-                this.normalMatrix = new Float32Array(9);
+                this.modelMatrix = Mat4.create();
 
-                // Interactions Setup
-                this.initInteractions();
+                this.initShaders();
+                this.initMeshes();
+                this.buildWorldScene();
+                this.initEvents();
                 this.resizeCanvas();
 
-                window.addEventListener('resize', () => this.resizeCanvas());
+                // Performance Counter
+                this.frameCount = 0;
+                this.lastFpsUpdate = performance.now();
+                this.fps = 60;
+                this.lastTime = performance.now();
             }
 
             compileShader(source, type) {
                 const shader = this.gl.createShader(type);
                 this.gl.shaderSource(shader, source);
                 this.gl.compileShader(shader);
-
                 if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-                    console.error('Shader compile failed: ', this.gl.getShaderInfoLog(shader));
+                    console.error('Shader compilation error:', this.gl.getShaderInfoLog(shader));
                     this.gl.deleteShader(shader);
                     return null;
                 }
@@ -777,88 +758,306 @@
             }
 
             initShaders() {
-                const vertexShader = this.compileShader(vertexShaderSource, this.gl.VERTEX_SHADER);
-                const fragmentShader = this.compileShader(fragmentShaderSource, this.gl.FRAGMENT_SHADER);
+                const vertShader = this.compileShader(vertexShaderSource, this.gl.VERTEX_SHADER);
+                const fragShader = this.compileShader(fragmentShaderSource, this.gl.FRAGMENT_SHADER);
 
                 this.program = this.gl.createProgram();
-                this.gl.attachShader(this.program, vertexShader);
-                this.gl.attachShader(this.program, fragmentShader);
+                this.gl.attachShader(this.program, vertShader);
+                this.gl.attachShader(this.program, fragShader);
                 this.gl.linkProgram(this.program);
 
                 if (!this.gl.getProgramParameter(this.program, this.gl.LINK_STATUS)) {
-                    console.error('Program link failed: ', this.gl.getProgramInfoLog(this.program));
+                    console.error('Program link error:', this.gl.getProgramInfoLog(this.program));
                     return;
                 }
 
                 this.gl.useProgram(this.program);
 
-                // Location lookups
+                // Attributes
                 this.attribs = {
-                    position: this.gl.getAttribLocation(this.program, 'aPosition'),
-                    normal: this.gl.getAttribLocation(this.program, 'aNormal'),
+                    pos: this.gl.getAttribLocation(this.program, 'aPosition'),
+                    norm: this.gl.getAttribLocation(this.program, 'aNormal'),
                     color: this.gl.getAttribLocation(this.program, 'aColor')
                 };
 
+                // Uniforms
                 this.uniforms = {
-                    modelMatrix: this.gl.getUniformLocation(this.program, 'uModelMatrix'),
-                    viewMatrix: this.gl.getUniformLocation(this.program, 'uViewMatrix'),
-                    projectionMatrix: this.gl.getUniformLocation(this.program, 'uProjectionMatrix'),
-                    normalMatrix: this.gl.getUniformLocation(this.program, 'uNormalMatrix'),
-
-                    lightPosition: this.gl.getUniformLocation(this.program, 'uLightPosition'),
+                    model: this.gl.getUniformLocation(this.program, 'uModelMatrix'),
+                    view: this.gl.getUniformLocation(this.program, 'uViewMatrix'),
+                    proj: this.gl.getUniformLocation(this.program, 'uProjectionMatrix'),
+                    lightPos: this.gl.getUniformLocation(this.program, 'uLightPosition'),
                     lightColor: this.gl.getUniformLocation(this.program, 'uLightColor'),
-                    materialColor: this.gl.getUniformLocation(this.program, 'uMaterialColor'),
-                    shininess: this.gl.getUniformLocation(this.program, 'uShininess'),
-                    lightIntensity: this.gl.getUniformLocation(this.program, 'uLightIntensity'),
-
-                    renderMode: this.gl.getUniformLocation(this.program, 'uRenderMode'),
-                    shadingModel: this.gl.getUniformLocation(this.program, 'uShadingModel')
+                    fogColor: this.gl.getUniformLocation(this.program, 'uFogColor'),
+                    fogDensity: this.gl.getUniformLocation(this.program, 'uFogDensity'),
+                    viewPos: this.gl.getUniformLocation(this.program, 'uViewPos'),
+                    renderMode: this.gl.getUniformLocation(this.program, 'uRenderMode')
                 };
             }
 
-            createBufferObject(data) {
+            createGpuBuffer(meshData) {
                 const gl = this.gl;
 
-                const posBuffer = gl.createBuffer();
-                gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
-                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.positions), gl.STATIC_DRAW);
+                const posBuf = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(meshData.positions), gl.STATIC_DRAW);
 
-                const normBuffer = gl.createBuffer();
-                gl.bindBuffer(gl.ARRAY_BUFFER, normBuffer);
-                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.normals), gl.STATIC_DRAW);
+                const normBuf = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, normBuf);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(meshData.normals), gl.STATIC_DRAW);
 
-                const colBuffer = gl.createBuffer();
-                gl.bindBuffer(gl.ARRAY_BUFFER, colBuffer);
-                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.colors), gl.STATIC_DRAW);
+                const colBuf = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, colBuf);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(meshData.colors), gl.STATIC_DRAW);
 
-                const indexBuffer = gl.createBuffer();
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices), gl.STATIC_DRAW);
+                const idxBuf = gl.createBuffer();
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(meshData.indices), gl.STATIC_DRAW);
 
-                // Wireframe indices buffer
-                const wireframeIndices = generateWireframeIndices(data.indices);
-                const wireframeBuffer = gl.createBuffer();
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wireframeBuffer);
+                // Wireframe Buffer
+                const wireframeIndices = generateWireframeIndices(meshData.indices);
+                const wireBuf = gl.createBuffer();
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wireBuf);
                 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(wireframeIndices), gl.STATIC_DRAW);
 
                 return {
-                    posBuffer,
-                    normBuffer,
-                    colBuffer,
-                    indexBuffer,
-                    wireframeBuffer,
-                    indexCount: data.indices.length,
-                    wireframeIndexCount: wireframeIndices.length
+                    posBuf, normBuf, colBuf, idxBuf, wireBuf,
+                    indexCount: meshData.indices.length,
+                    wireIndexCount: wireframeIndices.length
                 };
             }
 
-            initGeometries() {
+            initMeshes() {
                 this.meshes = {
-                    cube: this.createBufferObject(createCube()),
-                    pyramid: this.createBufferObject(createPyramid()),
-                    sphere: this.createBufferObject(createSphere()),
-                    cylinder: this.createBufferObject(createCylinder())
+                    terrain: this.createGpuBuffer(createTerrainGrid(400, 160)),
+                    cube: this.createGpuBuffer(createCube(1, 1, 1, [0.3, 0.5, 0.8])),
+                    pillar: this.createGpuBuffer(createCube(1.2, 12, 1.2, [0.15, 0.2, 0.35])),
+                    monolith: this.createGpuBuffer(createCube(3, 18, 3, [0.08, 0.12, 0.22])),
+                    pyramid: this.createGpuBuffer(createPyramid(2.0, 4.0, [0.9, 0.2, 0.4])),
+                    torus: this.createGpuBuffer(createTorus(2.5, 0.3, 32, 16, [0.2, 0.8, 1.0])),
+                    sun: this.createGpuBuffer(createSphere(2.5, 24, [1.0, 0.9, 0.5])),
+                    crystal: this.createGpuBuffer(createPyramid(1.5, 3.5, [0.4, 0.9, 0.6]))
                 };
+            }
+
+            buildWorldScene() {
+                this.sceneObjects = [];
+
+                // 1. Central Plaza Monoliths
+                this.sceneObjects.push({
+                    mesh: 'monolith',
+                    pos: [0, 9, 0],
+                    rot: [0, 0, 0],
+                    scale: [1, 1, 1]
+                });
+
+                // Floating Torus Rings over Central Monolith
+                this.sceneObjects.push({
+                    mesh: 'torus',
+                    pos: [0, 20, 0],
+                    rot: [Math.PI / 2, 0, 0],
+                    scale: [1.8, 1.8, 1.8],
+                    animate: (obj, t) => { obj.rot[1] = t * 0.8; }
+                });
+
+                this.sceneObjects.push({
+                    mesh: 'torus',
+                    pos: [0, 20, 0],
+                    rot: [0, 0, 0],
+                    scale: [2.6, 2.6, 2.6],
+                    animate: (obj, t) => { obj.rot[0] = t * -0.5; obj.rot[2] = t * 0.3; }
+                });
+
+                // 2. Ring of Pillars
+                const pillarCount = 12;
+                const pillarRadius = 25;
+                for (let i = 0; i < pillarCount; i++) {
+                    const angle = (i / pillarCount) * Math.PI * 2;
+                    const x = Math.cos(angle) * pillarRadius;
+                    const z = Math.sin(angle) * pillarRadius;
+                    this.sceneObjects.push({
+                        mesh: 'pillar',
+                        pos: [x, 6, z],
+                        rot: [0, angle, 0],
+                        scale: [1, 1, 1]
+                    });
+                }
+
+                // 3. Crystal Sanctuary Corner (Pyramids & Crystals)
+                const crystalClusterCount = 20;
+                for (let i = 0; i < crystalClusterCount; i++) {
+                    const cx = -35 + (Math.random() - 0.5) * 30;
+                    const cz = -35 + (Math.random() - 0.5) * 30;
+                    const scale = 0.6 + Math.random() * 1.2;
+                    this.sceneObjects.push({
+                        mesh: 'crystal',
+                        pos: [cx, 1.8 * scale, cz],
+                        rot: [0, Math.random() * Math.PI, 0],
+                        scale: [scale, scale, scale],
+                        animate: (obj, t) => {
+                            obj.rot[1] += 0.01;
+                            obj.pos[1] = (1.8 * scale) + Math.sin(t * 2 + cx) * 0.5;
+                        }
+                    });
+                }
+
+                // 4. Outer Pyramid Monuments
+                const pyramidLocs = [
+                    [50, 0, 50], [-50, 0, 50], [50, 0, -50], [-50, 0, -50]
+                ];
+                pyramidLocs.forEach(loc => {
+                    this.sceneObjects.push({
+                        mesh: 'pyramid',
+                        pos: [loc[0], 0, loc[2]],
+                        rot: [0, 0, 0],
+                        scale: [3, 3, 3]
+                    });
+                });
+
+                // 5. Floating Cubic Grid Field
+                for (let x = -60; x <= 60; x += 30) {
+                    for (let z = -60; z <= 60; z += 30) {
+                        if (x === 0 && z === 0) continue; // skip center
+                        this.sceneObjects.push({
+                            mesh: 'cube',
+                            pos: [x, 8 + Math.sin(x + z) * 3, z],
+                            rot: [0, 0, 0],
+                            scale: [2, 2, 2],
+                            animate: (obj, t) => {
+                                obj.rot[0] = t * 0.5 + x;
+                                obj.rot[1] = t * 0.7 + z;
+                            }
+                        });
+                    }
+                }
+
+                document.getElementById('hud-objs').innerText = this.sceneObjects.length + 1; // +1 terrain
+            }
+
+            initEvents() {
+                // Keyboard Input
+                window.addEventListener('keydown', (e) => {
+                    this.keys[e.code] = true;
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.code] = false;
+                });
+
+                // Pointer Lock Mouse Look
+                const lockBtn = document.getElementById('lock-btn');
+                lockBtn.addEventListener('click', () => {
+                    this.canvas.requestPointerLock();
+                });
+
+                document.addEventListener('pointerlockchange', () => {
+                    this.isPointerLocked = (document.pointerLockElement === this.canvas);
+                    const crosshair = document.getElementById('crosshair');
+                    crosshair.style.opacity = this.isPointerLocked ? '1' : '0.2';
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (!this.isPointerLocked) return;
+
+                    this.camera.yaw += e.movementX * this.camera.sens;
+                    this.camera.pitch -= e.movementY * this.camera.sens;
+
+                    // Clamp Pitch angle
+                    const maxPitch = Math.PI / 2 - 0.05;
+                    this.camera.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.camera.pitch));
+                });
+
+                // Window Resize
+                window.addEventListener('resize', () => this.resizeCanvas());
+
+                // UI Drawer Toggle
+                const toggleMenuBtn = document.getElementById('toggle-menu-btn');
+                const controlPanel = document.getElementById('control-panel');
+                toggleMenuBtn.addEventListener('click', () => {
+                    controlPanel.classList.toggle('translate-x-full');
+                    controlPanel.classList.toggle('opacity-0');
+                    controlPanel.classList.toggle('pointer-events-none');
+                });
+
+                // Teleport Buttons
+                document.querySelectorAll('#teleport-btns button').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const loc = btn.dataset.loc;
+                        if (loc === 'center') {
+                            this.camera.pos = [0, 2.5, 12];
+                            this.camera.yaw = -Math.PI / 2;
+                            this.camera.pitch = 0;
+                        } else if (loc === 'sanctuary') {
+                            this.camera.pos = [-35, 3.0, -25];
+                            this.camera.yaw = -Math.PI / 4;
+                            this.camera.pitch = 0.1;
+                        } else if (loc === 'overview') {
+                            this.camera.pos = [0, 55, 65];
+                            this.camera.yaw = -Math.PI / 2;
+                            this.camera.pitch = -0.65;
+                        } else if (loc === 'pillars') {
+                            this.camera.pos = [22, 2.5, 0];
+                            this.camera.yaw = Math.PI;
+                            this.camera.pitch = 0.05;
+                        }
+                    });
+                });
+
+                // Theme Selector
+                document.querySelectorAll('#theme-selector button').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('#theme-selector button').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.currentTheme = this.themes[btn.dataset.theme];
+                    });
+                });
+
+                // Render Mode Selector
+                document.querySelectorAll('#rendermode-selector button').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('#rendermode-selector button').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        const modeMap = { shaded: 0, wireframe: 1, normals: 2 };
+                        this.renderMode = modeMap[btn.dataset.mode];
+                    });
+                });
+
+                // Sliders
+                const fogSlider = document.getElementById('fog-slider');
+                fogSlider.addEventListener('input', (e) => {
+                    this.fogDensity = parseFloat(e.target.value);
+                    document.getElementById('fog-val').innerText = this.fogDensity.toFixed(3);
+                });
+
+                const speedSlider = document.getElementById('speed-slider');
+                speedSlider.addEventListener('input', (e) => {
+                    this.camera.moveSpeed = parseFloat(e.target.value);
+                    document.getElementById('speed-val').innerText = this.camera.moveSpeed.toFixed(1);
+                });
+
+                const fovSlider = document.getElementById('fov-slider');
+                fovSlider.addEventListener('input', (e) => {
+                    const fovDeg = parseFloat(e.target.value);
+                    this.camera.fov = fovDeg * Math.PI / 180;
+                    document.getElementById('fov-val').innerText = `${fovDeg}°`;
+                });
+
+                document.getElementById('orbit-sun-toggle').addEventListener('change', (e) => {
+                    this.orbitSun = e.target.checked;
+                });
+
+                // Mobile Touch Controls
+                const bindTouchBtn = (id, key) => {
+                    const btn = document.getElementById(id);
+                    if (!btn) return;
+                    btn.addEventListener('touchstart', (e) => { e.preventDefault(); this.keys[key] = true; });
+                    btn.addEventListener('touchend', (e) => { e.preventDefault(); this.keys[key] = false; });
+                };
+                bindTouchBtn('btn-fwd', 'KeyW');
+                bindTouchBtn('btn-back', 'KeyS');
+                bindTouchBtn('btn-left', 'KeyA');
+                bindTouchBtn('btn-right', 'KeyD');
+                bindTouchBtn('btn-up', 'Space');
+                bindTouchBtn('btn-down', 'KeyQ');
             }
 
             resizeCanvas() {
@@ -867,257 +1066,177 @@
                 this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
             }
 
-            initInteractions() {
-                let isDragging = false;
-                let lastMouseX = 0;
-                let lastMouseY = 0;
+            updateCamera(deltaTime) {
+                // Movement Speed Multiplier (Sprint with Shift)
+                const speedMult = (this.keys['ShiftLeft'] || this.keys['ShiftRight']) ? 2.2 : 1.0;
+                const moveStep = this.camera.moveSpeed * speedMult * deltaTime;
 
-                // Mouse Events
-                this.canvas.addEventListener('mousedown', (e) => {
-                    isDragging = true;
-                    lastMouseX = e.clientX;
-                    lastMouseY = e.clientY;
-                });
+                // Forward and Right vectors calculated from camera Yaw angle
+                const forward = [Math.cos(this.camera.yaw), 0, Math.sin(this.camera.yaw)];
+                const right = [-Math.sin(this.camera.yaw), 0, Math.cos(this.camera.yaw)];
 
-                window.addEventListener('mouseup', () => isDragging = false);
-
-                window.addEventListener('mousemove', (e) => {
-                    if (!isDragging) return;
-                    const deltaX = e.clientX - lastMouseX;
-                    const deltaY = e.clientY - lastMouseY;
-
-                    this.rotationY += deltaX * 0.008;
-                    this.rotationX += deltaY * 0.008;
-
-                    // Clamp X rotation to prevent flipping
-                    this.rotationX = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, this.rotationX));
-
-                    lastMouseX = e.clientX;
-                    lastMouseY = e.clientY;
-                });
-
-                // Scroll Wheel Zoom
-                this.canvas.addEventListener('wheel', (e) => {
-                    e.preventDefault();
-                    this.zoomDistance += e.deltaY * 0.005;
-                    this.zoomDistance = Math.max(2.0, Math.min(12.0, this.zoomDistance));
-                    document.getElementById('zoom-slider').value = this.zoomDistance;
-                    document.getElementById('zoom-val').innerText = this.zoomDistance.toFixed(1);
-                }, { passive: false });
-
-                // Touch Events for Mobile
-                this.canvas.addEventListener('touchstart', (e) => {
-                    if (e.touches.length === 1) {
-                        isDragging = true;
-                        lastMouseX = e.touches[0].clientX;
-                        lastMouseY = e.touches[0].clientY;
-                    }
-                });
-
-                window.addEventListener('touchend', () => isDragging = false);
-
-                this.canvas.addEventListener('touchmove', (e) => {
-                    if (!isDragging || e.touches.length !== 1) return;
-                    const deltaX = e.touches[0].clientX - lastMouseX;
-                    const deltaY = e.touches[0].clientY - lastMouseY;
-
-                    this.rotationY += deltaX * 0.008;
-                    this.rotationX += deltaY * 0.008;
-
-                    lastMouseX = e.touches[0].clientX;
-                    lastMouseY = e.touches[0].clientY;
-                });
-            }
-
-            updateNormalMatrix(modelMat) {
-                // Compute Normal Matrix (Transpose of Inverse of upper 3x3 model matrix)
-                const invMat = Mat4.create();
-                Mat4.invert(invMat, modelMat);
-                
-                // Extract 3x3 transpose into Float32Array
-                this.normalMatrix[0] = invMat[0];
-                this.normalMatrix[1] = invMat[4];
-                this.normalMatrix[2] = invMat[8];
-                this.normalMatrix[3] = invMat[1];
-                this.normalMatrix[4] = invMat[5];
-                this.normalMatrix[5] = invMat[9];
-                this.normalMatrix[6] = invMat[2];
-                this.normalMatrix[7] = invMat[6];
-                this.normalMatrix[8] = invMat[10];
-            }
-
-            render(time) {
-                const gl = this.gl;
-
-                // Auto Rotation Update
-                if (this.autoRotate) {
-                    this.rotationY += 0.005 * this.rotateSpeed;
+                // WASD / Arrow Keys Movement
+                if (this.keys['KeyW'] || this.keys['ArrowUp']) {
+                    this.camera.pos[0] += forward[0] * moveStep;
+                    this.camera.pos[2] += forward[2] * moveStep;
+                }
+                if (this.keys['KeyS'] || this.keys['ArrowDown']) {
+                    this.camera.pos[0] -= forward[0] * moveStep;
+                    this.camera.pos[2] -= forward[2] * moveStep;
+                }
+                if (this.keys['KeyA'] || this.keys['ArrowLeft']) {
+                    this.camera.pos[0] -= right[0] * moveStep;
+                    this.camera.pos[2] -= right[2] * moveStep;
+                }
+                if (this.keys['KeyD'] || this.keys['ArrowRight']) {
+                    this.camera.pos[0] += right[0] * moveStep;
+                    this.camera.pos[2] += right[2] * moveStep;
                 }
 
-                // Clear buffers
-                gl.clearColor(0.05, 0.06, 0.09, 1.0);
-                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                // Vertical Flight Movement (E/Space = Up, Q = Down)
+                if (this.keys['Space'] || this.keys['KeyE']) {
+                    this.camera.pos[1] += moveStep;
+                }
+                if (this.keys['KeyQ']) {
+                    this.camera.pos[1] -= moveStep;
+                }
 
-                // Calculate Projection Matrix
-                const aspect = this.canvas.width / this.canvas.height;
-                Mat4.perspective(this.projectionMatrix, Math.PI / 4, aspect, 0.1, 100.0);
+                // Ground Collision Floor Clamp
+                if (this.camera.pos[1] < 1.2) {
+                    this.camera.pos[1] = 1.2;
+                }
 
-                // Calculate View Matrix
-                Mat4.identity(this.viewMatrix);
-                Mat4.translate(this.viewMatrix, this.viewMatrix, [0.0, 0.0, -this.zoomDistance]);
+                // Update HUD Text
+                document.getElementById('hud-pos').innerText = 
+                    `${this.camera.pos[0].toFixed(1)}, ${this.camera.pos[1].toFixed(1)}, ${this.camera.pos[2].toFixed(1)}`;
+                
+                const yawDeg = Math.round(((this.camera.yaw * 180 / Math.PI) % 360 + 360) % 360);
+                const pitchDeg = Math.round(this.camera.pitch * 180 / Math.PI);
+                document.getElementById('hud-rot').innerText = `${yawDeg}°, ${pitchDeg}°`;
+            }
 
-                // Calculate Model Matrix
-                Mat4.identity(this.modelMatrix);
-                Mat4.rotateX(this.modelMatrix, this.modelMatrix, this.rotationX);
-                Mat4.rotateY(this.modelMatrix, this.modelMatrix, this.rotationY);
+            drawMesh(meshName, matrix) {
+                const gl = this.gl;
+                const mesh = this.meshes[meshName];
 
-                // Compute Normal Matrix
-                this.updateNormalMatrix(this.modelMatrix);
+                gl.uniformMatrix4fv(this.uniforms.model, false, matrix);
 
-                // Upload Uniforms
-                gl.uniformMatrix4fv(this.uniforms.projectionMatrix, false, this.projectionMatrix);
-                gl.uniformMatrix4fv(this.uniforms.viewMatrix, false, this.viewMatrix);
-                gl.uniformMatrix4fv(this.uniforms.modelMatrix, false, this.modelMatrix);
-                gl.uniformMatrix3fv(this.uniforms.normalMatrix, false, this.normalMatrix);
+                gl.bindBuffer(gl.ARRAY_BUFFER, mesh.posBuf);
+                gl.vertexAttribPointer(this.attribs.pos, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(this.attribs.pos);
 
-                // Lighting & Material Uniforms
-                gl.uniform3fv(this.uniforms.lightPosition, [5.0, 5.0, 5.0]);
-                gl.uniform3fv(this.uniforms.lightColor, [1.0, 1.0, 1.0]);
-                gl.uniform3fv(this.uniforms.materialColor, this.materialColor);
-                gl.uniform1f(this.uniforms.shininess, this.shininess);
-                gl.uniform1f(this.uniforms.lightIntensity, this.lightIntensity);
+                gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normBuf);
+                gl.vertexAttribPointer(this.attribs.norm, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(this.attribs.norm);
 
-                gl.uniform1i(this.uniforms.renderMode, this.renderMode);
-                gl.uniform1i(this.uniforms.shadingModel, this.shadingModel);
-
-                // Bind Active Mesh Buffers
-                const mesh = this.meshes[this.currentShape];
-
-                gl.bindBuffer(gl.ARRAY_BUFFER, mesh.posBuffer);
-                gl.vertexAttribPointer(this.attribs.position, 3, gl.FLOAT, false, 0, 0);
-                gl.enableVertexAttribArray(this.attribs.position);
-
-                gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normBuffer);
-                gl.vertexAttribPointer(this.attribs.normal, 3, gl.FLOAT, false, 0, 0);
-                gl.enableVertexAttribArray(this.attribs.normal);
-
-                gl.bindBuffer(gl.ARRAY_BUFFER, mesh.colBuffer);
+                gl.bindBuffer(gl.ARRAY_BUFFER, mesh.colBuf);
                 gl.vertexAttribPointer(this.attribs.color, 3, gl.FLOAT, false, 0, 0);
                 gl.enableVertexAttribArray(this.attribs.color);
 
-                // Render execution based on mode
                 if (this.renderMode === 1) {
-                    // Wireframe lines
-                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.wireframeBuffer);
-                    gl.drawElements(gl.LINES, mesh.wireframeIndexCount, gl.UNSIGNED_SHORT, 0);
+                    // Draw Wireframe Lines
+                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.wireBuf);
+                    gl.drawElements(gl.LINES, mesh.wireIndexCount, gl.UNSIGNED_SHORT, 0);
                 } else {
-                    // Solid triangles
-                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+                    // Draw Triangles
+                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.idxBuf);
                     gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
                 }
+            }
+
+            render(now) {
+                const deltaTime = Math.min((now - this.lastTime) / 1000, 0.1);
+                this.lastTime = now;
+
+                // FPS Counter
+                this.frameCount++;
+                if (now - this.lastFpsUpdate >= 500) {
+                    this.fps = Math.round((this.frameCount * 1000) / (now - this.lastFpsUpdate));
+                    document.getElementById('hud-fps').innerText = this.fps;
+                    this.frameCount = 0;
+                    this.lastFpsUpdate = now;
+                }
+
+                // Update Camera Controls
+                this.updateCamera(deltaTime);
+
+                const gl = this.gl;
+                const timeSec = now * 0.001;
+
+                // Orbit Sun/Light Source
+                if (this.orbitSun) {
+                    this.lightPos[0] = Math.cos(timeSec * 0.2) * 60.0;
+                    this.lightPos[2] = Math.sin(timeSec * 0.2) * 60.0;
+                }
+
+                // Clear Screen with Atmosphere Background Color
+                const bg = this.currentTheme.bg;
+                gl.clearColor(bg[0], bg[1], bg[2], 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                // Setup Perspective Projection Matrix
+                const aspect = this.canvas.width / this.canvas.height;
+                Mat4.perspective(this.projMatrix, this.camera.fov, aspect, 0.1, 500.0);
+
+                // Compute Camera View Target from Yaw and Pitch
+                const targetDir = [
+                    Math.cos(this.camera.pitch) * Math.cos(this.camera.yaw),
+                    Math.sin(this.camera.pitch),
+                    Math.cos(this.camera.pitch) * Math.sin(this.camera.yaw)
+                ];
+
+                const targetPos = [
+                    this.camera.pos[0] + targetDir[0],
+                    this.camera.pos[1] + targetDir[1],
+                    this.camera.pos[2] + targetDir[2]
+                ];
+
+                Mat4.lookAt(this.viewMatrix, this.camera.pos, targetPos, [0, 1, 0]);
+
+                // Upload Global Scene Uniforms
+                gl.uniformMatrix4fv(this.uniforms.proj, false, this.projMatrix);
+                gl.uniformMatrix4fv(this.uniforms.view, false, this.viewMatrix);
+                gl.uniform3fv(this.uniforms.lightPos, this.lightPos);
+                gl.uniform3fv(this.uniforms.lightColor, this.currentTheme.light);
+                gl.uniform3fv(this.uniforms.fogColor, this.currentTheme.fog);
+                gl.uniform1f(this.uniforms.fogDensity, this.fogDensity);
+                gl.uniform3fv(this.uniforms.viewPos, this.camera.pos);
+                gl.uniform1i(this.uniforms.renderMode, this.renderMode);
+
+                // 1. Render Ground Terrain Grid
+                Mat4.identity(this.modelMatrix);
+                this.drawMesh('terrain', this.modelMatrix);
+
+                // 2. Render Orbiting Sun / Light Sphere
+                Mat4.identity(this.modelMatrix);
+                Mat4.translate(this.modelMatrix, this.modelMatrix, this.lightPos);
+                this.drawMesh('sun', this.modelMatrix);
+
+                // 3. Render World Objects
+                this.sceneObjects.forEach(obj => {
+                    if (obj.animate) {
+                        obj.animate(obj, timeSec);
+                    }
+
+                    Mat4.identity(this.modelMatrix);
+                    Mat4.translate(this.modelMatrix, this.modelMatrix, obj.pos);
+                    Mat4.rotateY(this.modelMatrix, this.modelMatrix, obj.rot[1]);
+                    Mat4.rotateX(this.modelMatrix, this.modelMatrix, obj.rot[0]);
+                    Mat4.scale(this.modelMatrix, this.modelMatrix, obj.scale);
+
+                    this.drawMesh(obj.mesh, this.modelMatrix);
+                });
 
                 requestAnimationFrame((t) => this.render(t));
             }
         }
 
-        // --- 5. Application Initialization & UI Bindings ---
+        // Initialize App on DOM Load
         window.addEventListener('DOMContentLoaded', () => {
-            const engine = new WebGLEngine('webgl-canvas');
-            engine.render(0);
-
-            // Shape Selector
-            const shapeBtns = document.querySelectorAll('#shape-selector button');
-            shapeBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    shapeBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    engine.currentShape = btn.dataset.shape;
-                });
-            });
-
-            // Render Mode Selector
-            const modeBtns = document.querySelectorAll('#mode-selector button');
-            const shadingContainer = document.getElementById('shading-container');
-            modeBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    modeBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-
-                    const modeMap = { phong: 0, wireframe: 1, normals: 2, vertex: 3 };
-                    engine.renderMode = modeMap[btn.dataset.mode];
-
-                    // Show/hide shading model toggle
-                    if (engine.renderMode === 0) {
-                        shadingContainer.style.display = 'block';
-                    } else {
-                        shadingContainer.style.display = 'none';
-                    }
-                });
-            });
-
-            // Shading Model Selector
-            const shadingBtns = document.querySelectorAll('#shading-selector button');
-            shadingBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    shadingBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    engine.shadingModel = btn.dataset.shading === 'phong' ? 0 : 1;
-                });
-            });
-
-            // Color Picker
-            const colorPicker = document.getElementById('color-picker');
-            colorPicker.addEventListener('input', (e) => {
-                engine.materialColor = hexToRgb(e.target.value);
-            });
-
-            // Shininess Slider
-            const shininessSlider = document.getElementById('shininess-slider');
-            const shininessVal = document.getElementById('shininess-val');
-            shininessSlider.addEventListener('input', (e) => {
-                engine.shininess = parseFloat(e.target.value);
-                shininessVal.innerText = e.target.value;
-            });
-
-            // Light Intensity Slider
-            const lightSlider = document.getElementById('light-slider');
-            const lightVal = document.getElementById('light-val');
-            lightSlider.addEventListener('input', (e) => {
-                engine.lightIntensity = parseFloat(e.target.value);
-                lightVal.innerText = parseFloat(e.target.value).toFixed(1);
-            });
-
-            // Auto Rotation Toggle
-            const autoRotateToggle = document.getElementById('auto-rotate-toggle');
-            autoRotateToggle.addEventListener('change', (e) => {
-                engine.autoRotate = e.target.checked;
-            });
-
-            // Rotation Speed Slider
-            const speedSlider = document.getElementById('speed-slider');
-            const speedVal = document.getElementById('speed-val');
-            speedSlider.addEventListener('input', (e) => {
-                engine.rotateSpeed = parseFloat(e.target.value);
-                speedVal.innerText = `${parseFloat(e.target.value).toFixed(1)}x`;
-            });
-
-            // Camera Zoom Slider
-            const zoomSlider = document.getElementById('zoom-slider');
-            const zoomVal = document.getElementById('zoom-val');
-            zoomSlider.addEventListener('input', (e) => {
-                engine.zoomDistance = parseFloat(e.target.value);
-                zoomVal.innerText = parseFloat(e.target.value).toFixed(1);
-            });
-
-            // Reset Camera Button
-            document.getElementById('reset-cam-btn').addEventListener('click', () => {
-                engine.rotationX = 0.4;
-                engine.rotationY = 0.6;
-                engine.zoomDistance = 5.0;
-                zoomSlider.value = 5.0;
-                zoomVal.innerText = "5.0";
-            });
+            const world = new WebGL3DWorld();
+            requestAnimationFrame((t) => world.render(t));
         });
     </script>
 </body>
 </html>
+```
