@@ -1,449 +1,476 @@
 
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PS4 Controller AI Learner</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>Voice Recorder and Audio Data</title>
+
 <style>
-body{font-family:system-ui,sans-serif}
-.part{transition:fill .06s,filter .06s}
-.active-btn{fill:#3b82f6!important;filter:drop-shadow(0 0 7px #3b82f6)}
-.active-trigger{fill:#a855f7!important;filter:drop-shadow(0 0 7px #a855f7)}
-.active-special{fill:#38bdf8!important}
+body {
+  margin: 0;
+  padding: 20px;
+  background: #101522;
+  color: white;
+  font-family: system-ui, sans-serif;
+}
+main { max-width: 800px; margin: auto; }
+h1 { color: #8daaff; }
+button {
+  padding: 12px 16px;
+  margin: 5px 3px 5px 0;
+  border: 0;
+  border-radius: 9px;
+  font-size: 15px;
+  cursor: pointer;
+}
+#start { background: #8daaff; }
+#stop { background: #ff7185; }
+#status { color: #9fe8c8; margin: 15px 0; }
+.panel {
+  background: #1b2335;
+  padding: 16px;
+  border-radius: 12px;
+  margin: 15px 0;
+  overflow-wrap: anywhere;
+}
+canvas {
+  width: 100%;
+  height: 160px;
+  background: #080d18;
+  border-radius: 8px;
+}
+audio { width: 100%; margin-top: 15px; }
+.stat { margin: 8px 0; }
+small { color: #b9c4d9; }
 </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100">
-<header class="sticky top-0 z-20 border-b border-slate-800 bg-slate-900 p-4">
-<div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-<div>
-<h1 class="text-lg font-bold">DualShock 4 + AI Learner</h1>
-<p class="text-xs text-slate-400">Controller input recorder and pattern learner</p>
-</div>
-<div id="connection" class="rounded-full border border-red-500/40 bg-red-950 px-3 py-2 text-xs text-red-300">Disconnected — press a controller button</div>
-</div>
-</header>
 
-<main class="mx-auto grid max-w-6xl grid-cols-1 gap-5 p-4 lg:grid-cols-2">
+<body>
+<main>
+<h1>Voice Lab</h1>
+<p>Record your voice and extract numerical audio data.</p>
 
-<section class="space-y-5">
-<div class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-<div class="mb-3 flex items-center justify-between">
-<h2 class="font-bold">Controller</h2>
-<span id="gamepad-index" class="text-xs text-slate-400">Index: —</span>
-</div>
-
-<svg viewBox="0 0 500 300" class="w-full" aria-label="Controller visualization">
-<path d="M145 65 Q250 40 355 65 Q405 85 425 145 L448 245 Q435 275 408 258 L350 195 Q250 180 150 195 L92 258 Q65 275 52 245 L75 145 Q95 85 145 65Z" fill="#1e293b" stroke="#475569" stroke-width="3"/>
-<rect x="190" y="75" width="120" height="65" rx="9" fill="#0f172a" stroke="#475569" stroke-width="3"/>
-<text x="250" y="111" fill="#64748b" font-size="10" text-anchor="middle">TOUCHPAD</text>
-
-<g id="svg-l1"><rect x="112" y="45" width="65" height="15" rx="4" fill="#334155"/><text x="145" y="56" font-size="9" fill="white" text-anchor="middle">L1</text></g>
-<g id="svg-l2"><rect x="112" y="25" width="65" height="17" rx="4" fill="#334155"/><text x="145" y="37" font-size="9" fill="white" text-anchor="middle">L2</text></g>
-<g id="svg-r1"><rect x="323" y="45" width="65" height="15" rx="4" fill="#334155"/><text x="355" y="56" font-size="9" fill="white" text-anchor="middle">R1</text></g>
-<g id="svg-r2"><rect x="323" y="25" width="65" height="17" rx="4" fill="#334155"/><text x="355" y="37" font-size="9" fill="white" text-anchor="middle">R2</text></g>
-
-<g id="svg-share"><rect x="155" y="88" width="20" height="10" rx="3" fill="#475569"/></g>
-<g id="svg-options"><rect x="325" y="88" width="20" height="10" rx="3" fill="#475569"/></g>
-
-<g transform="translate(120 155)">
-<rect x="22" y="0" width="24" height="68" rx="4" fill="#334155" id="svg-dpad-up"/>
-<rect x="0" y="22" width="68" height="24" rx="4" fill="#334155"/>
-<rect x="22" y="0" width="24" height="68" rx="4" fill="#334155"/>
-<rect x="0" y="22" width="68" height="24" rx="4" fill="#334155"/>
-<circle cx="34" cy="34" r="13" fill="#1e293b"/>
-</g>
-
-<g id="svg-btn-triangle"><circle cx="365" cy="158" r="16" fill="#1e293b" stroke="#22c55e" stroke-width="3"/><text x="365" y="163" font-size="15" fill="#22c55e" text-anchor="middle">△</text></g>
-<g id="svg-btn-circle"><circle cx="392" cy="187" r="16" fill="#1e293b" stroke="#ef4444" stroke-width="3"/><text x="392" y="192" font-size="15" fill="#ef4444" text-anchor="middle">○</text></g>
-<g id="svg-btn-cross"><circle cx="365" cy="215" r="16" fill="#1e293b" stroke="#3b82f6" stroke-width="3"/><text x="365" y="220" font-size="15" fill="#3b82f6" text-anchor="middle">×</text></g>
-<g id="svg-btn-square"><circle cx="338" cy="187" r="16" fill="#1e293b" stroke="#ec4899" stroke-width="3"/><text x="338" y="192" font-size="15" fill="#ec4899" text-anchor="middle">□</text></g>
-
-<g id="svg-ps-btn"><circle cx="250" cy="160" r="13" fill="#0f172a" stroke="#64748b" stroke-width="2"/></g>
-
-<g transform="translate(205 218)">
-<circle r="30" fill="#0f172a" stroke="#475569" stroke-width="3"/>
-<circle id="stick-left" r="20" cx="0" cy="0" fill="#64748b" stroke="#94a3b8" stroke-width="2"/>
-</g>
-<g transform="translate(290 218)">
-<circle r="30" fill="#0f172a" stroke="#475569" stroke-width="3"/>
-<circle id="stick-right" r="20" cx="0" cy="0" fill="#64748b" stroke="#94a3b8" stroke-width="2"/>
-</g>
-</svg>
-
-<div class="grid grid-cols-2 gap-3 text-xs">
-<div class="rounded-lg bg-slate-950 p-3">Left stick: <span id="left-values">0.00, 0.00</span></div>
-<div class="rounded-lg bg-slate-950 p-3">Right stick: <span id="right-values">0.00, 0.00</span></div>
-<div class="rounded-lg bg-slate-950 p-3">L2 pressure: <span id="l2-value">0.00</span></div>
-<div class="rounded-lg bg-slate-950 p-3">R2 pressure: <span id="r2-value">0.00</span></div>
-</div>
-<div class="mt-4">
-<label for="deadzone" class="text-sm text-slate-400">Stick deadzone: <span id="deadzone-label">0.08</span></label>
-<input id="deadzone" class="mt-2 w-full" type="range" min="0" max=".3" step=".01" value=".08">
-</div>
+<div class="panel">
+  <button id="start">🎙 Start recording</button>
+  <button id="stop" disabled>■ Stop</button>
+  <p id="status">Ready to record.</p>
+  <div class="stat">Time: <b id="time">0.0 s</b></div>
+  <div class="stat">Sample rate: <b id="rate">—</b></div>
+  <div class="stat">RMS amplitude: <b id="rms">—</b></div>
+  <div class="stat">Peak amplitude: <b id="peak">—</b></div>
+  <div class="stat">Dominant frequency: <b id="freq">—</b></div>
+  <div class="stat">Data samples: <b id="count">0</b></div>
+  <audio id="player" controls hidden></audio>
 </div>
 
-<div class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-<h2 class="mb-3 font-bold">Button Matrix</h2>
-<div id="buttons-grid" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
-</div>
-</section>
-
-<section class="space-y-5">
-<div class="rounded-2xl border border-blue-500/30 bg-slate-900 p-5">
-<h2 class="text-xl font-bold">AI Controller Learner</h2>
-<p class="mt-2 text-sm text-slate-400">Learn recurring sequences of controller actions locally. The model counts which action tends to follow another.</p>
-<div class="my-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-<button id="ai-start" class="rounded-lg bg-blue-600 px-3 py-3 text-sm font-semibold hover:bg-blue-500">Start learning</button>
-<button id="ai-stop" class="rounded-lg bg-slate-700 px-3 py-3 text-sm">Pause</button>
-<button id="ai-clear" class="rounded-lg border border-red-800 bg-red-950 px-3 py-3 text-sm text-red-300">Reset model</button>
+<div class="panel">
+  <h3>Waveform</h3>
+  <canvas id="wave" width="800" height="200"></canvas>
 </div>
 
-<div class="grid grid-cols-2 gap-3">
-<div class="rounded-xl bg-slate-950 p-4"><p class="text-xs text-slate-400">Status</p><p id="ai-status" class="mt-1 font-bold text-amber-400">Paused</p></div>
-<div class="rounded-xl bg-slate-950 p-4"><p class="text-xs text-slate-400">Transitions learned</p><p id="ai-samples" class="mt-1 text-xl font-bold">0</p></div>
-<div class="rounded-xl bg-slate-950 p-4"><p class="text-xs text-slate-400">Distinct actions</p><p id="ai-actions" class="mt-1 text-xl font-bold">0</p></div>
-<div class="rounded-xl bg-slate-950 p-4"><p class="text-xs text-slate-400">Sequences observed</p><p id="ai-patterns" class="mt-1 text-xl font-bold">0</p></div>
+<div class="panel">
+  <h3>Frequency spectrum</h3>
+  <canvas id="spectrum" width="800" height="200"></canvas>
 </div>
 
-<div class="mt-4 rounded-xl bg-slate-950 p-4">
-<p class="text-xs text-slate-400">Current action</p>
-<p id="ai-current" class="mt-1 break-words font-mono text-blue-300">Waiting for controller</p>
-<p class="mt-4 text-xs text-slate-400">Most likely next action</p>
-<p id="ai-prediction" class="mt-1 break-words font-mono text-emerald-400">Not enough data</p>
-<p id="ai-confidence" class="mt-2 text-xs text-slate-500"></p>
+<div class="panel">
+  <h3>Export your data</h3>
+  <button id="downloadAudio" disabled>Download audio</button>
+  <button id="downloadCSV" disabled>Download CSV data</button>
+  <button id="downloadJSON" disabled>Download JSON data</button>
+  <p><small>Audio is processed in your browser. It is not uploaded to a server.</small></p>
 </div>
-</div>
-
-<div class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-<div class="flex items-center justify-between gap-3">
-<h2 class="font-bold">Learned transitions</h2>
-<button id="ai-export" class="rounded-lg bg-slate-700 px-3 py-2 text-xs">Export JSON</button>
-</div>
-<p class="mb-3 mt-1 text-xs text-slate-400">Most frequent action sequences discovered so far.</p>
-<div id="ai-transition-list" class="space-y-2 text-sm text-slate-300">No transitions learned yet.</div>
-</div>
-
-<div class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-<h2 class="font-bold">Controller information</h2>
-<div class="mt-3 space-y-2 text-sm">
-<div class="flex justify-between gap-3"><span class="text-slate-400">Device</span><span id="device-name" class="max-w-[65%] break-words text-right">None</span></div>
-<div class="flex justify-between"><span class="text-slate-400">Mapping</span><span id="device-mapping">—</span></div>
-<div class="flex justify-between"><span class="text-slate-400">Buttons / axes</span><span id="device-counts">0 / 0</span></div>
-</div>
-</div>
-</section>
 </main>
 
-<footer class="border-t border-slate-800 p-4 text-center text-xs text-slate-500">
-Local browser learning · No AI API key · No controller data uploaded
-</footer>
-
 <script>
-"use strict";
-
-const BUTTON_NAMES = [
-"Cross (X)", "Circle (O)", "Square", "Triangle",
-"L1", "R1", "L2", "R2", "Share", "Options",
-"L3 click", "R3 click", "D-pad Up", "D-pad Down",
-"D-pad Left", "D-pad Right", "PS Button", "Touchpad Click"
-];
-
-const SVG_IDS = [
-"svg-btn-cross", "svg-btn-circle", "svg-btn-square",
-"svg-btn-triangle", "svg-l1", "svg-r1", "svg-l2",
-"svg-r2", "svg-share", "svg-options", null, null,
-"svg-dpad-up", "svg-dpad-down", null, null,
-"svg-ps-btn", "svg-touchpad"
-];
-
-const STORAGE_KEY = "ps4_ai_learner_v2";
-let activeIndex = null;
-let deadzone = .08;
-let frame = null;
-let learning = false;
-let previousAction = null;
-let lastSample = 0;
-let transitions = {};
-let knownActions = {};
-let sampleCount = 0;
-
 const $ = id => document.getElementById(id);
 
-function makeButtonGrid() {
-  $("buttons-grid").innerHTML = "";
-  BUTTON_NAMES.forEach((name, i) => {
-    const card = document.createElement("div");
-    card.id = "button-" + i;
-    card.className = "flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950 p-2 text-xs";
-    const label = document.createElement("span");
-    label.textContent = i + ". " + name;
-    const value = document.createElement("span");
-    value.id = "button-value-" + i;
-    value.className = "font-mono text-slate-500";
-    value.textContent = "0.00";
-    card.append(label, value);
-    $("buttons-grid").appendChild(card);
-  });
+let stream = null;
+let audioContext = null;
+let analyser = null;
+let recorder = null;
+let chunks = [];
+let data = [];
+let audioBlob = null;
+let audioURL = null;
+let running = false;
+let startTime = 0;
+let lastSample = 0;
+let animation = null;
+let mime = "audio/webm";
+
+const waveCanvas = $("wave");
+const spectrumCanvas = $("spectrum");
+const waveCtx = waveCanvas.getContext("2d");
+const specCtx = spectrumCanvas.getContext("2d");
+
+function status(message) {
+  $("status").textContent = message;
 }
 
-function applyDeadzone(value) {
-  if (Math.abs(value) < deadzone) return 0;
-  return Math.sign(value) * (Math.abs(value) - deadzone) / (1 - deadzone);
-}
-
-function describeAction(gp) {
-  const b = gp.buttons;
-  const x = applyDeadzone(gp.axes[0] || 0);
-  const y = applyDeadzone(gp.axes[1] || 0);
-  const rx = applyDeadzone(gp.axes[2] || 0);
-  const ry = applyDeadzone(gp.axes[3] || 0);
-
-  const pressed = b.map((v, i) => v.pressed ? i : -1).filter(i => i >= 0);
-  if (pressed.length) return "Button: " + pressed.map(i => BUTTON_NAMES[i] || i).join(" + ");
-
-  if (Math.abs(x) > 0 || Math.abs(y) > 0) {
-    if (Math.abs(y) >= Math.abs(x)) return y < 0 ? "Move forward" : "Move backward";
-    return x < 0 ? "Move left" : "Move right";
-  }
-  if (Math.abs(rx) > 0 || Math.abs(ry) > 0) {
-    if (Math.abs(rx) >= Math.abs(ry)) return rx < 0 ? "Turn left" : "Turn right";
-    return ry < 0 ? "Look up" : "Look down";
-  }
-  return "Neutral";
-}
-
-function loadModel() {
-  try {
-    const model = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    transitions = model.transitions || {};
-    knownActions = model.actions || {};
-    sampleCount = Number(model.samples) || 0;
-  } catch (e) {
-    console.warn("Could not load saved model", e);
-    transitions = {};
-    knownActions = {};
-    sampleCount = 0;
-  }
-}
-
-function saveModel() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      transitions,
-      actions: knownActions,
-      samples: sampleCount
-    }));
-  } catch (e) {
-    console.warn("Model could not be saved", e);
-    $("ai-status").textContent = "Storage unavailable";
-  }
-}
-
-function predict(action) {
-  const options = transitions[action];
-  if (!options) return null;
-  const ranked = Object.entries(options).sort((a, b) => b[1] - a[1]);
-  if (!ranked.length) return null;
-  const total = ranked.reduce((sum, entry) => sum + entry[1], 0);
-  return { action: ranked[0][0], count: ranked[0][1], confidence: ranked[0][1] / total };
-}
-
-function renderModel() {
-  $("ai-status").textContent = learning ? "Learning" : "Paused";
-  $("ai-status").className = "mt-1 font-bold " + (learning ? "text-emerald-400" : "text-amber-400");
-  $("ai-samples").textContent = sampleCount.toLocaleString();
-  $("ai-actions").textContent = Object.keys(knownActions).length;
-  $("ai-patterns").textContent = Object.values(transitions).reduce((n, row) => n + Object.keys(row).length, 0);
-
-  const rows = [];
-  for (const [from, next] of Object.entries(transitions)) {
-    for (const [to, count] of Object.entries(next)) rows.push({from, to, count});
-  }
-  rows.sort((a, b) => b.count - a.count);
-  $("ai-transition-list").replaceChildren();
-
-  if (!rows.length) {
-    $("ai-transition-list").textContent = "No transitions learned yet.";
-  } else {
-    rows.slice(0, 12).forEach(row => {
-      const div = document.createElement("div");
-      div.className = "rounded-lg bg-slate-950 p-3";
-      const text = document.createElement("p");
-      text.className = "break-words";
-      text.textContent = row.from + " → " + row.to;
-      const count = document.createElement("p");
-      count.className = "mt-1 text-xs text-slate-500";
-      count.textContent = "Observed " + row.count + " time(s)";
-      div.append(text, count);
-      $("ai-transition-list").appendChild(div);
-    });
-  }
-}
-
-function observe(gp) {
-  if (!learning) return;
-  const now = performance.now();
-  if (now - lastSample < 200) return;
-
-  const action = describeAction(gp);
-  if (action === previousAction) return;
-  lastSample = now;
-
-  knownActions[action] = true;
-  if (previousAction !== null) {
-    transitions[previousAction] ||= {};
-    transitions[previousAction][action] = (transitions[previousAction][action] || 0) + 1;
-    sampleCount++;
-  }
-
-  previousAction = action;
-  $("ai-current").textContent = action;
-
-  const result = predict(action);
-  $("ai-prediction").textContent = result ? result.action : "Not enough data";
-  $("ai-confidence").textContent = result
-    ? "Historical share of this next action: " + (result.confidence * 100).toFixed(1) + "% (" + result.count + " observations)"
-    : "Try repeating a few action sequences.";
-
-  saveModel();
-  renderModel();
-}
-
-function updateGamepad(gp) {
-  $("connection").textContent = "Connected: " + gp.id;
-  $("connection").className = "rounded-full border border-emerald-500/40 bg-emerald-950 px-3 py-2 text-xs text-emerald-300";
-  $("gamepad-index").textContent = "Index: " + gp.index;
-  $("device-name").textContent = gp.id;
-  $("device-mapping").textContent = gp.mapping || "Non-standard";
-  $("device-counts").textContent = gp.buttons.length + " / " + gp.axes.length;
-
-  gp.buttons.forEach((button, i) => {
-    const val = $("button-value-" + i);
-    const card = $("button-" + i);
-    if (val) val.textContent = button.value.toFixed(2);
-    if (card) card.className = "flex items-center justify-between gap-2 rounded-lg border p-2 text-xs " +
-      (button.pressed ? "border-blue-500 bg-blue-950" : "border-slate-800 bg-slate-950");
-
-    const svg = SVG_IDS[i] && $(SVG_IDS[i]);
-    if (svg) {
-      svg.classList.toggle("active-trigger", (i === 6 || i === 7) && button.pressed);
-      svg.classList.toggle("active-special", [8,9,16,17].includes(i) && button.pressed);
-      svg.classList.toggle("active-btn", ![6,7,8,9,16,17].includes(i) && button.pressed);
-    }
-  });
-
-  const x = applyDeadzone(gp.axes[0] || 0);
-  const y = applyDeadzone(gp.axes[1] || 0);
-  const rx = applyDeadzone(gp.axes[2] || 0);
-  const ry = applyDeadzone(gp.axes[3] || 0);
-
-  $("left-values").textContent = x.toFixed(2) + ", " + y.toFixed(2);
-  $("right-values").textContent = rx.toFixed(2) + ", " + ry.toFixed(2);
-  $("stick-left").setAttribute("cx", x * 16);
-  $("stick-left").setAttribute("cy", y * 16);
-  $("stick-right").setAttribute("cx", rx * 16);
-  $("stick-right").setAttribute("cy", ry * 16);
-  $("l2-value").textContent = (gp.buttons[6]?.value || 0).toFixed(2);
-  $("r2-value").textContent = (gp.buttons[7]?.value || 0).toFixed(2);
-
-  observe(gp);
-}
-
-function poll() {
-  frame = null;
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  let gp = activeIndex === null ? null : pads[activeIndex];
-
-  if (!gp) gp = Array.from(pads).find(Boolean) || null;
-
-  if (gp) {
-    activeIndex = gp.index;
-    updateGamepad(gp);
-    frame = requestAnimationFrame(poll);
-  } else {
-    activeIndex = null;
-    $("connection").textContent = "Disconnected — press a controller button";
-    $("connection").className = "rounded-full border border-red-500/40 bg-red-950 px-3 py-2 text-xs text-red-300";
-    $("gamepad-index").textContent = "Index: —";
-    $("device-name").textContent = "None";
-    $("device-mapping").textContent = "—";
-    $("device-counts").textContent = "0 / 0";
-    $("left-values").textContent = "0.00, 0.00";
-    $("right-values").textContent = "0.00, 0.00";
-    $("l2-value").textContent = "0.00";
-    $("r2-value").textContent = "0.00";
-    $("stick-left").setAttribute("cx", 0);
-    $("stick-left").setAttribute("cy", 0);
-    $("stick-right").setAttribute("cx", 0);
-    $("stick-right").setAttribute("cy", 0);
-  }
-}
-
-window.addEventListener("gamepadconnected", e => {
-  activeIndex = e.gamepad.index;
-  if (!frame) poll();
-});
-
-window.addEventListener("gamepaddisconnected", e => {
-  if (activeIndex === e.gamepad.index) activeIndex = null;
-});
-
-$("ai-start").addEventListener("click", () => {
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  if (activeIndex === null || !pads[activeIndex]) {
-    $("ai-status").textContent = "Connect controller first";
-    return;
-  }
-  learning = true;
-  previousAction = null;
-  lastSample = 0;
-  renderModel();
-});
-
-$("ai-stop").addEventListener("click", () => {
-  learning = false;
-  renderModel();
-});
-
-$("ai-clear").addEventListener("click", () => {
-  if (!confirm("Delete all learned patterns?")) return;
-  transitions = {};
-  knownActions = {};
-  sampleCount = 0;
-  previousAction = null;
-  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
-  $("ai-current").textContent = "Waiting for controller";
-  $("ai-prediction").textContent = "Not enough data";
-  $("ai-confidence").textContent = "";
-  renderModel();
-});
-
-$("ai-export").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify({
-    transitions, actions: knownActions, samples: sampleCount
-  }, null, 2)], {type: "application/json"});
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "controller-ai-model.json";
+  a.download = filename;
+  document.body.appendChild(a);
   a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+function clearGraph(ctx, canvas) {
+  ctx.fillStyle = "#080d18";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawWave(samples) {
+  clearGraph(waveCtx, waveCanvas);
+  const middle = waveCanvas.height / 2;
+
+  waveCtx.strokeStyle = "#8daaff";
+  waveCtx.lineWidth = 2;
+  waveCtx.beginPath();
+
+  for (let x = 0; x < waveCanvas.width; x++) {
+    const i = Math.floor(
+      x * samples.length / waveCanvas.width
+    );
+    const y = middle + samples[i] * middle * 0.9;
+
+    if (x === 0) waveCtx.moveTo(x, y);
+    else waveCtx.lineTo(x, y);
+  }
+
+  waveCtx.stroke();
+}
+
+function drawSpectrum(samples) {
+  clearGraph(specCtx, spectrumCanvas);
+
+  const bars = 100;
+  const width = spectrumCanvas.width / bars;
+  const height = spectrumCanvas.height;
+
+  for (let b = 0; b < bars; b++) {
+    const from = Math.floor(b * samples.length / bars);
+    const to = Math.floor((b + 1) * samples.length / bars);
+    let maximum = 0;
+
+    for (let i = from; i < to; i++) {
+      maximum = Math.max(maximum, samples[i]);
+    }
+
+    const barHeight = maximum / 255 * height;
+
+    specCtx.fillStyle = "#63dfb1";
+    specCtx.fillRect(
+      b * width,
+      height - barHeight,
+      Math.max(1, width - 1),
+      barHeight
+    );
+  }
+}
+
+function analyze() {
+  if (!analyser || !audioContext) return;
+
+  const waveform = new Float32Array(analyser.fftSize);
+  const frequencies = new Uint8Array(
+    analyser.frequencyBinCount
+  );
+
+  analyser.getFloatTimeDomainData(waveform);
+  analyser.getByteFrequencyData(frequencies);
+
+  let sumSquares = 0;
+  let peak = 0;
+
+  for (const sample of waveform) {
+    sumSquares += sample * sample;
+    peak = Math.max(peak, Math.abs(sample));
+  }
+
+  const rms = Math.sqrt(sumSquares / waveform.length);
+
+  let maxIndex = 0;
+  let maxValue = 0;
+
+  for (let i = 1; i < frequencies.length; i++) {
+    if (frequencies[i] > maxValue) {
+      maxValue = frequencies[i];
+      maxIndex = i;
+    }
+  }
+
+  const dominantFrequency =
+    maxIndex * audioContext.sampleRate / analyser.fftSize;
+
+  $("rms").textContent = rms.toFixed(5);
+  $("peak").textContent = peak.toFixed(5);
+  $("freq").textContent =
+    maxValue > 0 ? Math.round(dominantFrequency) + " Hz" : "—";
+  $("rate").textContent =
+    audioContext.sampleRate.toLocaleString() + " Hz";
+
+  drawWave(waveform);
+  drawSpectrum(frequencies);
+
+  const elapsed = (performance.now() - startTime) / 1000;
+  $("time").textContent = elapsed.toFixed(1) + " s";
+
+  if (running && elapsed - lastSample >= 0.1) {
+    lastSample = elapsed;
+
+    // Save a compact snapshot of the waveform.
+    const snapshot = [];
+    const step = Math.max(1, Math.floor(waveform.length / 64));
+
+    for (let i = 0; i < waveform.length; i += step) {
+      snapshot.push(Number(waveform[i].toFixed(4)));
+    }
+
+    data.push({
+      time_s: Number(elapsed.toFixed(3)),
+      rms: Number(rms.toFixed(6)),
+      peak: Number(peak.toFixed(6)),
+      dominant_frequency_hz:
+        Number(dominantFrequency.toFixed(2)),
+      waveform: snapshot
+    });
+
+    $("count").textContent = data.length;
+  }
+
+  if (running) {
+    animation = requestAnimationFrame(analyze);
+  }
+}
+
+async function startRecording() {
+  if (running) return;
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    status(
+      "Microphone unavailable. Open this page on HTTPS " +
+      "using a modern browser."
+    );
+    return;
+  }
+
+  if (!window.MediaRecorder) {
+    status("This browser does not support audio recording.");
+    return;
+  }
+
+  $("start").disabled = true;
+  status("Requesting microphone permission...");
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: true
+    });
+
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    audioContext = new AudioContextClass();
+    await audioContext.resume();
+
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.5;
+
+    const source =
+      audioContext.createMediaStreamSource(stream);
+
+    source.connect(analyser);
+
+    const types = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+      "audio/mp4"
+    ];
+
+    mime = types.find(
+      type => MediaRecorder.isTypeSupported(type)
+    ) || "";
+
+    recorder = mime
+      ? new MediaRecorder(stream, { mimeType: mime })
+      : new MediaRecorder(stream);
+
+    mime = recorder.mimeType || mime || "audio/webm";
+
+    chunks = [];
+    data = [];
+    lastSample = 0;
+
+    $("count").textContent = "0";
+    $("downloadAudio").disabled = true;
+    $("downloadCSV").disabled = true;
+    $("downloadJSON").disabled = true;
+
+    if (audioURL) {
+      URL.revokeObjectURL(audioURL);
+      audioURL = null;
+    }
+
+    $("player").hidden = true;
+    $("player").removeAttribute("src");
+
+    recorder.ondataavailable = event => {
+      if (event.data && event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
+
+    recorder.onerror = () => {
+      status("The browser encountered a recording error.");
+    };
+
+    recorder.onstop = () => {
+      audioBlob = new Blob(chunks, { type: mime });
+      audioURL = URL.createObjectURL(audioBlob);
+
+      $("player").src = audioURL;
+      $("player").hidden = false;
+
+      $("downloadAudio").disabled = false;
+      $("downloadCSV").disabled = data.length === 0;
+      $("downloadJSON").disabled = data.length === 0;
+
+      status(
+        "Recording complete. " + data.length +
+        " measurement samples collected."
+      );
+    };
+
+    startTime = performance.now();
+    running = true;
+
+    recorder.start(250);
+
+    $("stop").disabled = false;
+    status("Recording... Speak into your microphone.");
+
+    cancelAnimationFrame(animation);
+    analyze();
+
+  } catch (error) {
+    running = false;
+
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+
+    $("start").disabled = false;
+    $("stop").disabled = true;
+
+    const messages = {
+      NotAllowedError:
+        "Microphone permission denied. Allow microphone access " +
+        "in your browser settings.",
+      NotFoundError:
+        "No microphone was found on this device.",
+      NotReadableError:
+        "The microphone is busy or cannot be accessed."
+    };
+
+    status(messages[error.name] ||
+      "Recording failed: " + error.message);
+  }
+}
+
+function stopRecording() {
+  if (!running) return;
+
+  running = false;
+  cancelAnimationFrame(animation);
+
+  if (recorder && recorder.state !== "inactive") {
+    recorder.stop();
+  }
+
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+
+  $("stop").disabled = true;
+  $("start").disabled = false;
+}
+
+function exportCSV() {
+  if (!data.length) return;
+
+  const headers = [
+    "time_s",
+    "rms",
+    "peak",
+    "dominant_frequency_hz",
+    "waveform"
+  ];
+
+  const rows = data.map(item =>
+    headers.map(key => {
+      let value = key === "waveform"
+        ? item.waveform.join(" ")
+        : item[key];
+
+      value = String(value);
+
+      return /[",\n]/.test(value)
+        ? '"' + value.replace(/"/g, '""') + '"'
+        : value;
+    }).join(",")
+  );
+
+  downloadBlob(
+    new Blob(
+      [headers.join(",") + "\r\n" + rows.join("\r\n")],
+      { type: "text/csv;charset=utf-8" }
+    ),
+    "voice-data.csv"
+  );
+}
+
+$("start").addEventListener("click", startRecording);
+$("stop").addEventListener("click", stopRecording);
+
+$("downloadAudio").addEventListener("click", () => {
+  if (!audioBlob) return;
+
+  const extension = mime.includes("ogg")
+    ? "ogg"
+    : mime.includes("mp4")
+      ? "m4a"
+      : "webm";
+
+  downloadBlob(audioBlob, "voice-recording." + extension);
 });
 
-$("deadzone").addEventListener("input", e => {
-  deadzone = Number(e.target.value);
-  $("deadzone-label").textContent = deadzone.toFixed(2);
+$("downloadCSV").addEventListener("click", exportCSV);
+
+$("downloadJSON").addEventListener("click", () => {
+  downloadBlob(
+    new Blob(
+      [JSON.stringify({
+        sample_rate_hz: audioContext?.sampleRate || null,
+        measurements: data
+      }, null, 2)],
+      { type: "application/json" }
+    ),
+    "voice-data.json"
+  );
 });
 
-makeButtonGrid();
-loadModel();
-renderModel();
-
-window.addEventListener("load", () => {
-  if (navigator.getGamepads && !frame) poll();
-});
+clearGraph(waveCtx, waveCanvas);
+clearGraph(specCtx, spectrumCanvas);
 </script>
 </body>
 </html>
