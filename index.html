@@ -1,308 +1,200 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Emergent Time Experiment</title>
-<style>
-  body {
-    margin: 0; padding: 18px;
-    font: 16px system-ui, sans-serif;
-    background: #101722; color: #edf3ff;
-  }
-  main { max-width: 850px; margin: auto; }
-  h1 { font-size: 1.65rem; }
-  .panel {
-    background: #1b2737; border-radius: 12px;
-    padding: 15px; margin: 14px 0;
-  }
-  label { display: block; margin: 14px 0 5px; }
-  input, select, button {
-    box-sizing: border-box; padding: 10px;
-    border-radius: 7px; font: inherit;
-  }
-  input, select { width: 100%; background: #101722;
-    color: white; border: 1px solid #52637a; }
-  button { border: 0; cursor: pointer; margin: 5px 4px 5px 0; }
-  .run { background: #7dd3fc; color: #102033; font-weight: bold; }
-  canvas { width: 100%; background: #0b111b; border-radius: 8px; }
-  .result { font-size: 1.05rem; line-height: 1.8; }
-  .muted { color: #afbed2; font-size: .92rem; }
-  table { width: 100%; border-collapse: collapse; }
-  td, th { padding: 8px 4px; text-align: left;
-    border-bottom: 1px solid #3b4a60; }
-  .good { color: #86efac; }
-  .bad { color: #fca5a5; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محاكي حاسوب i^n التخيلي</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #161f33;
+            --accent-color: #00d2ff;
+            --text-color: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        p.description {
+            color: #8fa0c2;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .machine-controls {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+
+        .machine {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 12px;
+            width: 40%;
+        }
+
+        .machine h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: #a5b4fc;
+        }
+
+        .switch-btn {
+            background-color: #1e293b;
+            color: #fff;
+            border: 2px solid #475569;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .switch-btn.active {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: #000;
+            box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        .output-panel {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 5px solid var(--accent-color);
+            transition: all 0.5s ease;
+        }
+
+        .bit-combination {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .state-result {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+            transition: color 0.3s;
+        }
+
+        .state-desc {
+            font-size: 16px;
+            font-style: italic;
+            color: #cbd5e1;
+        }
+
+        /* ألوان الحالات الأربعة للبلورة/المعالج */
+        .state-1 { --accent-color: #ffffff; }      /* 00 -> 1 */
+        .state-i { --accent-color: #38bdf8; }      /* 01 -> i */
+        .state-neg1 { --accent-color: #ef4444; }   /* 10 -> -1 */
+        .state-negi { --accent-color: #a855f7; }   /* 11 -> -i */
+
+    </style>
 </head>
 <body>
-<main>
-<h1>Emergent Time Simulator</h1>
-<p class="muted">
-Computer science experiment: can elapsed time be recovered
-from state transitions when timestamps are hidden?
-</p>
 
-<div class="panel">
-  <label for="mode">Experiment</label>
-  <select id="mode">
-    <option value="regular">Regular motion: fixed transition rate</option>
-    <option value="random">Irregular motion: random waiting times</option>
-    <option value="pause">Motion with a hidden pause</option>
-    <option value="same">Same states, different durations</option>
-  </select>
+    <div class="container" id="computer-panel">
+        <h1>حاسوب \(i^n\) المدمج ثنائي البت</h1>
+        <p class="description">قم بتغيير مخرجات الآلة 1 والآلة 2 لرؤية كيف يتشكل البت التخيلي رباعي الأبعاد.</p>
 
-  <label for="duration">True simulated duration (seconds)</label>
-  <input id="duration" type="number" min="1" max="300" value="30">
+        <div class="machine-controls">
+            <!-- الآلة الأولى -->
+            <div class="machine">
+                <h3>الآلة 1 (البت الأول)</h3>
+                <button id="btn-m1" class="switch-btn" onclick="toggleMachine(1)">0</button>
+            </div>
+            
+            <!-- الآلة الثانية -->
+            <div class="machine">
+                <h3>الآلة 2 (البت الثاني)</h3>
+                <button id="btn-m2" class="switch-btn" onclick="toggleMachine(2)">0</button>
+            </div>
+        </div>
 
-  <label for="rate">Calibrated transition rate (events/second)</label>
-  <input id="rate" type="number" min="0.1" max="100" step="0.1" value="2">
+        <!-- لوحة عرض المخرجات والحالة التخيلية -->
+        <div class="output-panel" id="output-panel">
+            <div class="bit-combination" id="bit-display">المخرجات المدمجة: 00</div>
+            <div class="state-result" id="math-display">1</div>
+            <div class="state-desc" id="desc-display">الحالة الواقعية الموجبة (n=0)</div>
+        </div>
+    </div>
 
-  <button class="run" id="run">Run experiment</button>
-  <button id="export">Export results as CSV</button>
-  <p class="muted">
-    Changing the mode changes the information available in the
-    generated event sequence. The true duration is hidden from
-    the reconstruction algorithms.
-  </p>
-</div>
+    <script>
+        // الحالات الابتدائية للآلتين
+        let bit1 = 0;
+        let bit2 = 0;
 
-<div class="panel">
-  <h2>State sequence</h2>
-  <canvas id="chart" width="800" height="220"></canvas>
-  <p id="sequence" class="muted"></p>
-</div>
+        // مصفوفة خارطة التطابق التي اقترحتَها
+        const statesMapping = {
+            "00": { math: "1",  desc: "الحالة الواقعية الموجبة (n=0)", class: "state-1" },
+            "01": { math: "i",  desc: "الحالة التخيلية الموجبة (n=1)", class: "state-i" },
+            "10": { math: "-1", desc: "الحالة الواقعية السالبة / المعكوسة (n=2)", class: "state-neg1" },
+            "11": { math: "-i", desc: "الحالة التخيلية السالبة (n=3)", class: "state-negi" }
+        };
 
-<div class="panel">
-  <h2>Reconstruction results</h2>
-  <div id="results" class="result">Run an experiment to begin.</div>
-</div>
+        function toggleMachine(machineNum) {
+            if (machineNum === 1) {
+                bit1 = bit1 === 0 ? 1 : 0;
+                document.getElementById("btn-m1").innerText = bit1;
+                document.getElementById("btn-m1").classList.toggle("active", bit1 === 1);
+            } else {
+                bit2 = bit2 === 0 ? 1 : 0;
+                document.getElementById("btn-m2").innerText = bit2;
+                document.getElementById("btn-m2").classList.toggle("active", bit2 === 1);
+            }
 
-<div class="panel">
-  <h2>Scientific interpretation</h2>
-  <div id="interpretation">
-    Results will appear here after a simulation.
-  </div>
-</div>
+            updateComputerState();
+        }
 
-<div class="panel">
-  <h2>Repeatability test</h2>
-  <p class="muted">
-    Run many trials to see whether a method works consistently.
-    Each trial generates a new random sequence where applicable.
-  </p>
-  <button id="batch">Run 100 trials</button>
-  <div id="batchResults" class="result"></div>
-</div>
+        function updateComputerState() {
+            // دمج المخرجات لإنتاج المفتاح (مثل "01" أو "11")
+            const combination = `${bit1}${bit2}`;
+            const currentState = statesMapping[combination];
 
-<p class="muted">
-This is a mathematical simulation, not a measurement of physical
-time. Its results can test algorithms and expose assumptions, but
-cannot by themselves prove that time emerges from physical motion.
-</p>
-</main>
+            // تحديث واجهة المستخدم بالبيانات الجديدة
+            document.getElementById("bit-display").innerText = `المخرجات المدمجة: ${combination}`;
+            document.getElementById("math-display").innerText = currentState.math;
+            document.getElementById("desc-display").innerText = currentState.desc;
 
-<script>
-const $ = id => document.getElementById(id);
-let last = null;
+            // تغيير نمط الألوان بناءً على الحالة التخيلية النشطة
+            const panel = document.getElementById("computer-panel");
+            panel.className = "container " + currentState.class;
+        }
 
-function simulate(mode, T, rate) {
-  let events = [];
-  let t = 0;
-  let state = 0;
-  const step = 1 / rate;
-
-  if (mode === "regular" || mode === "same") {
-    while (t < T) {
-      t += step;
-      if (t <= T) {
-        state = (state + 1) % 8;
-        events.push({state});
-      }
-    }
-  } else if (mode === "random") {
-    while (t < T && events.length < 10000) {
-      t += -Math.log(Math.max(1e-9, Math.random())) / rate;
-      if (t <= T) {
-        state = (state + 1) % 8;
-        events.push({state});
-      }
-    }
-  } else if (mode === "pause") {
-    const pauseStart = T * 0.35;
-    const pauseEnd = T * 0.65;
-    while (t < T) {
-      t += step;
-      if (t > T) break;
-      if (t >= pauseStart && t < pauseEnd) continue;
-      state = (state + 1) % 8;
-      events.push({state});
-    }
-  }
-
-  // Timestamps are deliberately discarded from the output.
-  return events;
-}
-
-function reconstruct(events, mode, T, rate) {
-  const n = events.length;
-
-  // Method A: count events and assume the calibrated rate.
-  const calibrated = n / rate;
-
-  // Method B: infer duration from a fixed number of state changes.
-  // This is not a general time estimator; it assumes a regular clock.
-  const count = n > 0 ? n / rate : 0;
-
-  return {n, calibrated, count};
-}
-
-function draw(events) {
-  const c = $("chart");
-  const ctx = c.getContext("2d");
-  ctx.clearRect(0, 0, c.width, c.height);
-
-  ctx.fillStyle = "#0b111b";
-  ctx.fillRect(0, 0, c.width, c.height);
-
-  if (!events.length) {
-    ctx.fillStyle = "#afbed2";
-    ctx.fillText("No transitions observed", 20, 40);
-    return;
-  }
-
-  const pad = 24;
-  const usable = c.width - 2 * pad;
-  const step = usable / Math.max(1, events.length - 1);
-
-  ctx.strokeStyle = "#7dd3fc";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-
-  events.forEach((e, i) => {
-    const x = pad + i * step;
-    const y = c.height - pad - e.state * (c.height - 2 * pad) / 7;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-}
-
-function run() {
-  const T = Number($("duration").value);
-  const rate = Number($("rate").value);
-  const mode = $("mode").value;
-
-  if (!Number.isFinite(T) || T < 1 || T > 300 ||
-      !Number.isFinite(rate) || rate <= 0 || rate > 100) {
-    alert("Choose a duration from 1 to 300 seconds and a rate above 0.");
-    return;
-  }
-
-  const events = simulate(mode, T, rate);
-  const r = reconstruct(events, mode, T, rate);
-  const error = Math.abs(r.calibrated - T);
-  const relative = error / T * 100;
-
-  last = {mode, T, rate, events, r};
-
-  draw(events);
-  $("sequence").textContent =
-    "Observed states: " +
-    events.slice(0, 60).map(e => e.state).join(" → ") +
-    (events.length > 60 ? " …" : "") +
-    " | Total events: " + events.length;
-
-  $("results").innerHTML = `
-    <table>
-      <tr><th>Quantity</th><th>Result</th></tr>
-      <tr><td>Observed transitions</td><td>${r.n}</td></tr>
-      <tr><td>True duration (reference only)</td><td>${T.toFixed(2)} s</td></tr>
-      <tr><td>Estimated duration</td><td>${r.calibrated.toFixed(2)} s</td></tr>
-      <tr><td>Absolute error</td><td>${error.toFixed(2)} s</td></tr>
-      <tr><td>Relative error</td><td>${relative.toFixed(2)}%</td></tr>
-    </table>`;
-
-  let msg = "";
-  if (mode === "same") {
-    msg = "This run records state transitions at a calibrated rate. " +
-      "Without that rate, the same ordered states cannot determine duration.";
-  } else if (mode === "pause") {
-    msg = "A hidden pause removes transitions. Event counting may " +
-      "underestimate duration because inactivity is not represented.";
-  } else if (mode === "random") {
-    msg = "Random waiting times cause uncertainty. Event count gives " +
-      "a statistical estimate, not an exact reconstruction.";
-  } else {
-    msg = "Regular transitions can estimate duration when the rate " +
-      "is known. That rate is a calibration, not a clock-free discovery.";
-  }
-  $("interpretation").textContent = msg;
-}
-
-function batch() {
-  const T = Number($("duration").value);
-  const rate = Number($("rate").value);
-  const mode = $("mode").value;
-
-  if (!Number.isFinite(T) || T < 1 || T > 300 ||
-      !Number.isFinite(rate) || rate <= 0 || rate > 100) {
-    alert("Check duration and rate.");
-    return;
-  }
-
-  let totalError = 0;
-  let totalRelative = 0;
-  let maxError = 0;
-
-  for (let i = 0; i < 100; i++) {
-    const events = simulate(mode, T, rate);
-    const estimate = events.length / rate;
-    const error = Math.abs(estimate - T);
-    totalError += error;
-    totalRelative += error / T * 100;
-    maxError = Math.max(maxError, error);
-  }
-
-  $("batchResults").innerHTML = `
-    <p>Trials: 100</p>
-    <p>Mean absolute error: ${(totalError / 100).toFixed(3)} s</p>
-    <p>Mean relative error: ${(totalRelative / 100).toFixed(2)}%</p>
-    <p>Maximum absolute error: ${maxError.toFixed(3)} s</p>
-    <p class="muted">These are simulated results, not experimental
-    measurements. The estimator assumes a known transition rate.</p>`;
-}
-
-function exportCSV() {
-  if (!last) {
-    alert("Run an experiment first.");
-    return;
-  }
-
-  const {mode, T, rate, events, r} = last;
-  const rows = [
-    "mode,true_duration_s,calibrated_rate,transition_count,estimated_duration_s",
-    [mode, T, rate, events.length, r.calibrated].join(","),
-    "",
-    "event_index,state"
-  ];
-
-  events.forEach((e, i) => rows.push([i + 1, e.state].join(",")));
-
-  const blob = new Blob([rows.join("\n")], {type: "text/csv"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "emergent-time-results.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-$("run").addEventListener("click", run);
-$("batch").addEventListener("click", batch);
-$("export").addEventListener("click", exportCSV);
-run();
-</script>
+        // تشغيل التهيئة الأولى
+        updateComputerState();
+    </script>
 </body>
 </html>
