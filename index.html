@@ -68,7 +68,12 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x07101e);
 scene.fog = new THREE.Fog(0x07101e, 22, 85);
 const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, .1, 120);
-camera.position.set(0,1.65,7);
+camera.position.set(0,1.65,0);
+// A rig lets us position the player without fighting the headset's tracked camera pose.
+const playerRig = new THREE.Group();
+playerRig.position.set(0,0,7);
+playerRig.add(camera);
+scene.add(playerRig);
 const renderer = new THREE.WebGLRenderer({antialias:false, powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
 renderer.setSize(innerWidth,innerHeight);
@@ -78,6 +83,15 @@ document.body.appendChild(renderer.domElement);
 const vrButton = VRButton.createButton(renderer);
 vrButton.style.cssText += ';position:fixed;bottom:78px;left:12px;z-index:8;font-size:12px;padding:10px 12px;border-radius:10px;';
 document.body.appendChild(vrButton);
+renderer.xr.addEventListener('sessionstart', () => {
+  $('message').textContent = '';
+  $('hud').style.display = 'none';
+  $('start').classList.add('hidden');
+});
+renderer.xr.addEventListener('sessionend', () => {
+  $('message').textContent = '';
+  $('hud').style.display = '';
+});
 
 scene.add(new THREE.HemisphereLight(0x9fdcff,0x172033,2.1));
 const light = new THREE.DirectionalLight(0xffffff,2.2); light.position.set(-4,9,5); scene.add(light);
@@ -94,7 +108,7 @@ for(let i=0;i<24;i++){
  const p=box(1.2,2.5+Math.random()*5,1.2, i%2?0x1b3853:0x173047,Math.cos(a)*r,1.2,Math.sin(a)*r,0x031020);
  const stripe=box(1.25,.08,1.25,0x00bfff,p.position.x,p.position.y+.8,p.position.z,0x00bfff);
 }
-const gun=new THREE.Group(); camera.add(gun); scene.add(camera);
+const gun=new THREE.Group(); camera.add(gun);
 const gunBody=new THREE.Mesh(new THREE.BoxGeometry(.22,.18,.7),new THREE.MeshStandardMaterial({color:0x25394b,metalness:.8,roughness:.25}));
 gunBody.position.set(.32,-.25,-.55); gun.add(gunBody);
 const gunTop=new THREE.Mesh(new THREE.BoxGeometry(.1,.07,.45),new THREE.MeshStandardMaterial({color:0x08c9ff,emissive:0x0088bb,emissiveIntensity:2}));
@@ -156,9 +170,12 @@ function takeDamage(n){hp-=n;damageFlash=.18;$('damage').style.background='rgba(
 function startGame(tryVR=false){
  hp=100;score=0;wave=1;ammo=12;reloading=false;gameOver=false;paused=false;gameStarted=true;spawnTimer=0;fireCooldown=0;
  enemies.forEach(e=>scene.remove(e.mesh));enemies.length=0;particles.forEach(p=>scene.remove(p.mesh));particles.length=0;
- camera.position.set(0,1.65,7);camera.rotation.set(0,0,0);
+ playerRig.position.set(0,0,7);camera.position.set(0,1.65,0);camera.rotation.set(0,0,0);
  $('start').classList.add('hidden');$('message').textContent='';$('startCard').querySelector('h1').textContent='VOXEL STRIKE';updateUI();
- if(tryVR && navigator.xr){navigator.xr.isSessionSupported('immersive-vr').then(ok=>{if(ok)vrButton.click();else $('message').textContent='VR NOT SUPPORTED — PLAYING FLAT';}).catch(()=>{});}
+ if(tryVR){
+   // Let the user press the visible WebXR button directly; browsers require a user gesture.
+   $('message').textContent='Tap the VR button to enter immersive mode';
+ }
 }
 $('play').addEventListener('click',()=>startGame(false));
 $('playVR').addEventListener('click',()=>startGame(true));
@@ -170,25 +187,61 @@ addEventListener('pointerup',()=>pointerDown=false);
 addEventListener('pointermove',e=>{if(!pointerDown||renderer.xr.isPresenting)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;camera.rotation.order='YXZ';camera.rotation.y-=dx*.004;camera.rotation.x-=dy*.003;camera.rotation.x=Math.max(-1.2,Math.min(1.2,camera.rotation.x));});
 renderer.domElement.addEventListener('click',e=>{if(gameStarted&&!renderer.xr.isPresenting&&e.target===renderer.domElement)shoot();});
 addEventListener('keydown',e=>{if(e.code==='Space')shoot();if(e.code==='KeyR')reload();if(e.code==='Escape')paused=!paused;});
+addEventListener('gamepadconnected', e => { $('message').textContent = 'GAMEPAD CONNECTED'; setTimeout(()=>{if($('message').textContent==='GAMEPAD CONNECTED')$('message').textContent='';},1200); });
+addEventListener('gamepaddisconnected', () => { $('message').textContent = 'GAMEPAD DISCONNECTED'; setTimeout(()=>{$('message').textContent='';},1000); });
+const gamepadState = new Map();
 function gamepadUpdate(dt){
- const pads=navigator.getGamepads?.()||[];
- for(const p of pads){if(!p)continue;
-  const dz=v=>Math.abs(v)<.18?0:v;
-  if(!renderer.xr.isPresenting){
-   camera.rotation.order='YXZ';
-   camera.rotation.y-=dz(p.axes[2]||0)*dt*2.1;
-   camera.rotation.x-=dz(p.axes[3]||0)*dt*1.7;
-   camera.rotation.x=Math.max(-1.2,Math.min(1.2,camera.rotation.x));
-   const moveX=dz(p.axes[0]||0),moveZ=dz(p.axes[1]||0);
-   const forward=new THREE.Vector3(-Math.sin(camera.rotation.y),0,-Math.cos(camera.rotation.y));
-   const right=new THREE.Vector3(Math.cos(camera.rotation.y),0,-Math.sin(camera.rotation.y));
-   camera.position.addScaledVector(forward,moveZ*dt*5);camera.position.addScaledVector(right,moveX*dt*5);
-   camera.position.x=THREE.MathUtils.clamp(camera.position.x,-12,12);camera.position.z=THREE.MathUtils.clamp(camera.position.z,-12,12);
+ const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+ for(let pi=0; pi<pads.length; pi++){
+  const p=pads[pi]; if(!p) continue;
+  const dead = v => Math.abs(v) < 0.18 ? 0 : (Math.sign(v) * (Math.abs(v)-0.18)/0.82);
+  const axes = p.axes || [];
+  // Standard Gamepad mapping: left stick = axes 0/1, right stick = axes 2/3.
+  // For non-standard pads, also look for the strongest pair as a best-effort fallback.
+  let lx=dead(axes[0]||0), ly=dead(axes[1]||0), rx=dead(axes[2]||0), ry=dead(axes[3]||0);
+  if(p.mapping !== 'standard' && axes.length >= 4){
+    if(Math.abs(lx)+Math.abs(ly) < .06 && axes.length >= 2){lx=dead(axes[0]||0);ly=dead(axes[1]||0);}
+    if(Math.abs(rx)+Math.abs(ry) < .06 && axes.length >= 4){rx=dead(axes[2]||0);ry=dead(axes[3]||0);}
   }
-  if((p.buttons[7]?.pressed||p.buttons[0]?.pressed)&&!gamepadUpdate.wasFire)shoot();
-  gamepadUpdate.wasFire=!!(p.buttons[7]?.pressed||p.buttons[0]?.pressed);
+  const buttons = p.buttons || [];
+  const pressed = i => !!(buttons[i] && (buttons[i].pressed || buttons[i].value > .65));
+  const anyPressed = (...ids) => ids.some(pressed);
+  const prev = gamepadState.get(p.index) || {};
+  if(!renderer.xr.isPresenting){
+    camera.rotation.order='YXZ';
+    camera.rotation.y -= rx*dt*2.2;
+    camera.rotation.x -= ry*dt*1.8;
+    camera.rotation.x=Math.max(-1.2,Math.min(1.2,camera.rotation.x));
+    const yaw=camera.rotation.y;
+    const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+    const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+    playerRig.position.addScaledVector(forward,ly*dt*5);
+    playerRig.position.addScaledVector(right,lx*dt*5);
+    playerRig.position.x=THREE.MathUtils.clamp(playerRig.position.x,-12,12);
+    playerRig.position.z=THREE.MathUtils.clamp(playerRig.position.z,-12,12);
+  } else {
+    // In VR, let headset orientation aim; sticks can still move/turn the player rig.
+    playerRig.rotation.y -= rx*dt*2.0;
+    const forward=new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0),playerRig.rotation.y);
+    const right=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),playerRig.rotation.y);
+    playerRig.position.addScaledVector(forward,ly*dt*4.5);
+    playerRig.position.addScaledVector(right,lx*dt*4.5);
+    playerRig.position.x=THREE.MathUtils.clamp(playerRig.position.x,-12,12);
+    playerRig.position.z=THREE.MathUtils.clamp(playerRig.position.z,-12,12);
+  }
+  // Common mappings across Xbox, PlayStation, Switch-style, generic USB and many Bluetooth pads.
+  const fireNow = anyPressed(7,0,5, rightTriggerIndex(p));
+  const reloadNow = anyPressed(2,3,4);
+  const pauseNow = anyPressed(9, startButtonIndex(p));
+  if(fireNow && !prev.fire) shoot();
+  if(reloadNow && !prev.reload) reload();
+  if(pauseNow && !prev.pause) paused=!paused;
+  gamepadState.set(p.index,{fire:fireNow,reload:reloadNow,pause:pauseNow});
  }
 }
+function rightTriggerIndex(p){ return p.mapping==='standard' ? 7 : 7; }
+function startButtonIndex(p){ return p.mapping==='standard' ? 9 : 9; }
+
 function tick(t){
  const dt=Math.min(.04,(t-lastTime)/1000||0);lastTime=t;
  if(gameStarted&&!paused&&!gameOver){
