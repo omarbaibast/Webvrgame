@@ -1,200 +1,217 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكي حاسوب i^n التخيلي</title>
-    <style>
-        :root {
-            --bg-color: #0b0f19;
-            --card-bg: #161f33;
-            --accent-color: #00d2ff;
-            --text-color: #ffffff;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
-
-        .container {
-            background-color: var(--card-bg);
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            text-align: center;
-            max-width: 500px;
-            width: 100%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: #fff;
-        }
-
-        p.description {
-            color: #8fa0c2;
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
-
-        .machine-controls {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 30px;
-        }
-
-        .machine {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 12px;
-            width: 40%;
-        }
-
-        .machine h3 {
-            margin-top: 0;
-            font-size: 16px;
-            color: #a5b4fc;
-        }
-
-        .switch-btn {
-            background-color: #1e293b;
-            color: #fff;
-            border: 2px solid #475569;
-            padding: 10px 20px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-
-        .switch-btn.active {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
-            color: #000;
-            box-shadow: 0 0 15px var(--accent-color);
-        }
-
-        .output-panel {
-            margin-top: 20px;
-            padding: 20px;
-            border-radius: 12px;
-            background: rgba(0, 0, 0, 0.3);
-            border-left: 5px solid var(--accent-color);
-            transition: all 0.5s ease;
-        }
-
-        .bit-combination {
-            font-size: 14px;
-            color: #94a3b8;
-            margin-bottom: 5px;
-        }
-
-        .state-result {
-            font-size: 32px;
-            font-weight: bold;
-            margin: 10px 0;
-            transition: color 0.3s;
-        }
-
-        .state-desc {
-            font-size: 16px;
-            font-style: italic;
-            color: #cbd5e1;
-        }
-
-        /* ألوان الحالات الأربعة للبلورة/المعالج */
-        .state-1 { --accent-color: #ffffff; }      /* 00 -> 1 */
-        .state-i { --accent-color: #38bdf8; }      /* 01 -> i */
-        .state-neg1 { --accent-color: #ef4444; }   /* 10 -> -1 */
-        .state-negi { --accent-color: #a855f7; }   /* 11 -> -i */
-
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#080d18">
+<title>Voxel Strike VR</title>
+<style>
+  *{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d18;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}
+  canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+  .panel{background:rgba(5,12,24,.72);border:1px solid rgba(120,200,255,.25);border-radius:12px;padding:9px 12px;backdrop-filter:blur(5px);text-shadow:0 1px 3px #000}
+  #stats{position:absolute;top:env(safe-area-inset-top,10px);left:10px;display:flex;gap:8px;font-weight:800;font-size:13px}
+  #help{position:absolute;top:env(safe-area-inset-top,10px);right:10px;max-width:46%;font-size:11px;text-align:right;line-height:1.4;color:#d9eaff}
+  #crosshair{position:absolute;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%);opacity:.95}
+  #crosshair:before,#crosshair:after{content:"";position:absolute;background:#baf7ff;box-shadow:0 0 8px #4beaff}
+  #crosshair:before{width:2px;height:22px;left:10px;top:0}#crosshair:after{height:2px;width:22px;top:10px;left:0}
+  #message{position:absolute;left:50%;top:18%;transform:translateX(-50%);font-weight:900;font-size:clamp(22px,5vw,42px);text-align:center;color:#fff;text-shadow:0 3px 15px #00bfff}
+  #bottom{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:auto}
+  button{border:1px solid rgba(144,225,255,.65);border-radius:13px;padding:12px 15px;background:rgba(12,34,58,.86);color:#fff;font-weight:850;letter-spacing:.04em;touch-action:manipulation}
+  button:active{background:#126c92;transform:scale(.97)}
+  #fire{background:rgba(180,35,45,.88);border-color:#ff9b9b;min-width:86px}
+  #start{pointer-events:auto;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(8,30,52,.62),rgba(2,6,14,.95));}
+  #startCard{width:min(90vw,470px);padding:25px;border:1px solid #3d95b9;border-radius:22px;background:rgba(4,15,29,.94);text-align:center;box-shadow:0 0 50px #007ca044}
+  #startCard h1{margin:0 0 7px;font-size:clamp(28px,7vw,44px);letter-spacing:.06em}
+  #startCard p{color:#c9d9eb;line-height:1.5;font-size:14px}
+  #startCard button{margin:5px;font-size:14px}
+  #aimHint{font-size:12px;color:#9cc7dc}
+  .hidden{display:none!important}
+  #damage{position:fixed;inset:0;pointer-events:none;z-index:4;background:rgba(255,0,25,0);transition:background .12s}
+  @media(min-width:800px){#help{font-size:13px}button{padding:13px 18px}}
+</style>
 </head>
 <body>
+<div id="damage"></div>
+<div id="hud">
+  <div id="stats">
+    <div class="panel">HP <span id="hp">100</span></div>
+    <div class="panel">SCORE <span id="score">0</span></div>
+    <div class="panel">WAVE <span id="wave">1</span></div>
+  </div>
+  <div id="help" class="panel">AIM: move phone / drag screen<br>FIRE: tap FIRE or screen center<br>VR: enter immersive mode when supported</div>
+  <div id="crosshair"></div>
+  <div id="message"></div>
+  <div id="bottom">
+    <button id="pause">Ⅱ</button>
+    <button id="reload">RELOAD</button>
+    <button id="fire">FIRE</button>
+  </div>
+</div>
+<div id="start">
+  <div id="startCard">
+    <h1>VOXEL STRIKE</h1>
+    <div style="color:#5de3ff;font-weight:900;letter-spacing:.2em">MOBILE VR SHOOTER</div>
+    <p>Survive waves of hostile voxel drones in a neon arena. No block building — just aim, shoot, dodge, and survive.</p>
+    <p><b>Phone:</b> drag to aim, tap FIRE to shoot.<br><b>Cardboard VR:</b> use the VR button if your browser supports WebXR. In stereo mode, aim with head movement.<br><b>Controller:</b> left stick moves, right stick aims, R2 / right trigger fires when supported.</p>
+    <button id="play">PLAY FLAT</button>
+    <button id="playVR">TRY VR</button>
+    <p id="aimHint">Tip: host this folder on GitHub Pages (HTTPS is required for WebXR).</p>
+  </div>
+</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { VRButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/VRButton.js';
 
-    <div class="container" id="computer-panel">
-        <h1>حاسوب \(i^n\) المدمج ثنائي البت</h1>
-        <p class="description">قم بتغيير مخرجات الآلة 1 والآلة 2 لرؤية كيف يتشكل البت التخيلي رباعي الأبعاد.</p>
+const $ = id => document.getElementById(id);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x07101e);
+scene.fog = new THREE.Fog(0x07101e, 22, 85);
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, .1, 120);
+camera.position.set(0,1.65,7);
+const renderer = new THREE.WebGLRenderer({antialias:false, powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
+renderer.setSize(innerWidth,innerHeight);
+renderer.xr.enabled = true;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+const vrButton = VRButton.createButton(renderer);
+vrButton.style.cssText += ';position:fixed;bottom:78px;left:12px;z-index:8;font-size:12px;padding:10px 12px;border-radius:10px;';
+document.body.appendChild(vrButton);
 
-        <div class="machine-controls">
-            <!-- الآلة الأولى -->
-            <div class="machine">
-                <h3>الآلة 1 (البت الأول)</h3>
-                <button id="btn-m1" class="switch-btn" onclick="toggleMachine(1)">0</button>
-            </div>
-            
-            <!-- الآلة الثانية -->
-            <div class="machine">
-                <h3>الآلة 2 (البت الثاني)</h3>
-                <button id="btn-m2" class="switch-btn" onclick="toggleMachine(2)">0</button>
-            </div>
-        </div>
+scene.add(new THREE.HemisphereLight(0x9fdcff,0x172033,2.1));
+const light = new THREE.DirectionalLight(0xffffff,2.2); light.position.set(-4,9,5); scene.add(light);
+const arena = new THREE.Group(); scene.add(arena);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:0x101d2e,roughness:.92,metalness:.12}));
+floor.rotation.x=-Math.PI/2; floor.position.y=-.08; arena.add(floor);
+const grid = new THREE.GridHelper(100,100,0x126080,0x17334b); grid.position.y=-.06; arena.add(grid);
+function box(w,h,d,color,x,y,z, emissive=0){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.65,metalness:.2,emissive,emissiveIntensity:.6}));
+ m.position.set(x,y,z); scene.add(m); return m;
+}
+for(let i=0;i<24;i++){
+ const a=i*Math.PI*2/24, r=24;
+ const p=box(1.2,2.5+Math.random()*5,1.2, i%2?0x1b3853:0x173047,Math.cos(a)*r,1.2,Math.sin(a)*r,0x031020);
+ const stripe=box(1.25,.08,1.25,0x00bfff,p.position.x,p.position.y+.8,p.position.z,0x00bfff);
+}
+const gun=new THREE.Group(); camera.add(gun); scene.add(camera);
+const gunBody=new THREE.Mesh(new THREE.BoxGeometry(.22,.18,.7),new THREE.MeshStandardMaterial({color:0x25394b,metalness:.8,roughness:.25}));
+gunBody.position.set(.32,-.25,-.55); gun.add(gunBody);
+const gunTop=new THREE.Mesh(new THREE.BoxGeometry(.1,.07,.45),new THREE.MeshStandardMaterial({color:0x08c9ff,emissive:0x0088bb,emissiveIntensity:2}));
+gunTop.position.set(.32,-.13,-.6); gun.add(gunTop);
+const muzzle=new THREE.Object3D(); muzzle.position.set(.32,-.25,-.93); gun.add(muzzle);
 
-        <!-- لوحة عرض المخرجات والحالة التخيلية -->
-        <div class="output-panel" id="output-panel">
-            <div class="bit-combination" id="bit-display">المخرجات المدمجة: 00</div>
-            <div class="state-result" id="math-display">1</div>
-            <div class="state-desc" id="desc-display">الحالة الواقعية الموجبة (n=0)</div>
-        </div>
-    </div>
-
-    <script>
-        // الحالات الابتدائية للآلتين
-        let bit1 = 0;
-        let bit2 = 0;
-
-        // مصفوفة خارطة التطابق التي اقترحتَها
-        const statesMapping = {
-            "00": { math: "1",  desc: "الحالة الواقعية الموجبة (n=0)", class: "state-1" },
-            "01": { math: "i",  desc: "الحالة التخيلية الموجبة (n=1)", class: "state-i" },
-            "10": { math: "-1", desc: "الحالة الواقعية السالبة / المعكوسة (n=2)", class: "state-neg1" },
-            "11": { math: "-i", desc: "الحالة التخيلية السالبة (n=3)", class: "state-negi" }
-        };
-
-        function toggleMachine(machineNum) {
-            if (machineNum === 1) {
-                bit1 = bit1 === 0 ? 1 : 0;
-                document.getElementById("btn-m1").innerText = bit1;
-                document.getElementById("btn-m1").classList.toggle("active", bit1 === 1);
-            } else {
-                bit2 = bit2 === 0 ? 1 : 0;
-                document.getElementById("btn-m2").innerText = bit2;
-                document.getElementById("btn-m2").classList.toggle("active", bit2 === 1);
-            }
-
-            updateComputerState();
-        }
-
-        function updateComputerState() {
-            // دمج المخرجات لإنتاج المفتاح (مثل "01" أو "11")
-            const combination = `${bit1}${bit2}`;
-            const currentState = statesMapping[combination];
-
-            // تحديث واجهة المستخدم بالبيانات الجديدة
-            document.getElementById("bit-display").innerText = `المخرجات المدمجة: ${combination}`;
-            document.getElementById("math-display").innerText = currentState.math;
-            document.getElementById("desc-display").innerText = currentState.desc;
-
-            // تغيير نمط الألوان بناءً على الحالة التخيلية النشطة
-            const panel = document.getElementById("computer-panel");
-            panel.className = "container " + currentState.class;
-        }
-
-        // تشغيل التهيئة الأولى
-        updateComputerState();
-    </script>
+const enemies=[], shots=[], particles=[];
+let hp=100, score=0, wave=1, ammo=12, reloading=false, gameStarted=false, paused=false, gameOver=false;
+let spawnTimer=0, fireCooldown=0, damageFlash=0, lastTime=0, pointerDown=false, lastX=0,lastY=0;
+const raycaster=new THREE.Raycaster();
+const tempVec=new THREE.Vector3();
+const enemyGeo=new THREE.BoxGeometry(1,1,1);
+const enemyColors=[0xff315c,0xff7b35,0xd64dff,0xffd34e];
+function spawnEnemy(){
+ const angle=Math.random()*Math.PI*2, radius=19+Math.random()*8;
+ const size=.75+Math.random()*.55;
+ const material=new THREE.MeshStandardMaterial({color:enemyColors[Math.floor(Math.random()*enemyColors.length)],emissive:0x300008,emissiveIntensity:1.3,roughness:.55});
+ const mesh=new THREE.Mesh(enemyGeo,material); mesh.scale.set(size,size,size);
+ mesh.position.set(Math.cos(angle)*radius,1.1+Math.random()*2.5,-Math.sin(angle)*radius-3);
+ scene.add(mesh);
+ const core=new THREE.Mesh(new THREE.BoxGeometry(size*.38,size*.38,size*.38),new THREE.MeshBasicMaterial({color:0xffffff}));
+ mesh.add(core);
+ enemies.push({mesh,hp:1+Math.floor(wave/3),speed:1.1+Math.random()*.5+wave*.09,phase:Math.random()*6,attack:0});
+}
+function burst(pos,color=0x53eaff,count=7){
+ for(let i=0;i<count;i++){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(.08,.08,.08),new THREE.MeshBasicMaterial({color}));
+  m.position.copy(pos); scene.add(m);
+  particles.push({mesh:m,vel:new THREE.Vector3((Math.random()-.5)*5,Math.random()*4,(Math.random()-.5)*5),life:.45+Math.random()*.4});
+ }
+}
+function updateUI(){ $('hp').textContent=Math.max(0,Math.ceil(hp)); $('score').textContent=score; $('wave').textContent=wave; }
+function shoot(){
+ if(!gameStarted||paused||gameOver||fireCooldown>0) return;
+ if(ammo<=0){reload();return;}
+ ammo--; fireCooldown=.22;
+ gun.position.z=.07; setTimeout(()=>gun.position.z=0,55);
+ // Aim ray follows center of view; targets are voxel drones.
+ raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
+ const hits=raycaster.intersectObjects(enemies.map(e=>e.mesh),false);
+ if(hits.length){
+  const obj=hits[0].object, idx=enemies.findIndex(e=>e.mesh===obj);
+  if(idx>=0){
+   const e=enemies[idx]; e.hp--; burst(hits[0].point,0x6ef5ff,5);
+   if(e.hp<=0){score+=10;burst(e.mesh.position,0xff496d,13);scene.remove(e.mesh);e.mesh.geometry.dispose();e.mesh.material.dispose();enemies.splice(idx,1);updateUI();}
+  }
+ }else{
+  // small tracer flash in the aiming direction
+  const dir=new THREE.Vector3(); camera.getWorldDirection(dir);
+  const start=camera.getWorldPosition(new THREE.Vector3()).add(dir.clone().multiplyScalar(.6));
+  const end=start.clone().add(dir.multiplyScalar(10));
+  const geo=new THREE.BufferGeometry().setFromPoints([start,end]);
+  const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0x52e8ff,transparent:true,opacity:.85}));
+  scene.add(line);shots.push({mesh:line,life:.07});
+ }
+}
+function reload(){if(reloading||ammo===12||!gameStarted)return;reloading=true;$('message').textContent='RELOADING';setTimeout(()=>{ammo=12;reloading=false;if(!gameOver)$('message').textContent='';},900);}
+function takeDamage(n){hp-=n;damageFlash=.18;$('damage').style.background='rgba(255,0,25,.25)';updateUI();if(hp<=0){gameOver=true;$('message').textContent='SYSTEM FAILURE';$('startCard').querySelector('h1').textContent='GAME OVER';$('startCard').querySelector('p').innerHTML='Final score: <b>'+score+'</b><br>Try another run and survive longer.';$('start').classList.remove('hidden');}}
+function startGame(tryVR=false){
+ hp=100;score=0;wave=1;ammo=12;reloading=false;gameOver=false;paused=false;gameStarted=true;spawnTimer=0;fireCooldown=0;
+ enemies.forEach(e=>scene.remove(e.mesh));enemies.length=0;particles.forEach(p=>scene.remove(p.mesh));particles.length=0;
+ camera.position.set(0,1.65,7);camera.rotation.set(0,0,0);
+ $('start').classList.add('hidden');$('message').textContent='';$('startCard').querySelector('h1').textContent='VOXEL STRIKE';updateUI();
+ if(tryVR && navigator.xr){navigator.xr.isSessionSupported('immersive-vr').then(ok=>{if(ok)vrButton.click();else $('message').textContent='VR NOT SUPPORTED — PLAYING FLAT';}).catch(()=>{});}
+}
+$('play').addEventListener('click',()=>startGame(false));
+$('playVR').addEventListener('click',()=>startGame(true));
+$('fire').addEventListener('pointerdown',e=>{e.preventDefault();shoot();});
+$('reload').addEventListener('click',reload);
+$('pause').addEventListener('click',()=>{paused=!paused;$('message').textContent=paused?'PAUSED':'';});
+renderer.domElement.addEventListener('pointerdown',e=>{pointerDown=true;lastX=e.clientX;lastY=e.clientY;});
+addEventListener('pointerup',()=>pointerDown=false);
+addEventListener('pointermove',e=>{if(!pointerDown||renderer.xr.isPresenting)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;camera.rotation.order='YXZ';camera.rotation.y-=dx*.004;camera.rotation.x-=dy*.003;camera.rotation.x=Math.max(-1.2,Math.min(1.2,camera.rotation.x));});
+renderer.domElement.addEventListener('click',e=>{if(gameStarted&&!renderer.xr.isPresenting&&e.target===renderer.domElement)shoot();});
+addEventListener('keydown',e=>{if(e.code==='Space')shoot();if(e.code==='KeyR')reload();if(e.code==='Escape')paused=!paused;});
+function gamepadUpdate(dt){
+ const pads=navigator.getGamepads?.()||[];
+ for(const p of pads){if(!p)continue;
+  const dz=v=>Math.abs(v)<.18?0:v;
+  if(!renderer.xr.isPresenting){
+   camera.rotation.order='YXZ';
+   camera.rotation.y-=dz(p.axes[2]||0)*dt*2.1;
+   camera.rotation.x-=dz(p.axes[3]||0)*dt*1.7;
+   camera.rotation.x=Math.max(-1.2,Math.min(1.2,camera.rotation.x));
+   const moveX=dz(p.axes[0]||0),moveZ=dz(p.axes[1]||0);
+   const forward=new THREE.Vector3(-Math.sin(camera.rotation.y),0,-Math.cos(camera.rotation.y));
+   const right=new THREE.Vector3(Math.cos(camera.rotation.y),0,-Math.sin(camera.rotation.y));
+   camera.position.addScaledVector(forward,moveZ*dt*5);camera.position.addScaledVector(right,moveX*dt*5);
+   camera.position.x=THREE.MathUtils.clamp(camera.position.x,-12,12);camera.position.z=THREE.MathUtils.clamp(camera.position.z,-12,12);
+  }
+  if((p.buttons[7]?.pressed||p.buttons[0]?.pressed)&&!gamepadUpdate.wasFire)shoot();
+  gamepadUpdate.wasFire=!!(p.buttons[7]?.pressed||p.buttons[0]?.pressed);
+ }
+}
+function tick(t){
+ const dt=Math.min(.04,(t-lastTime)/1000||0);lastTime=t;
+ if(gameStarted&&!paused&&!gameOver){
+  fireCooldown=Math.max(0,fireCooldown-dt);spawnTimer-=dt;
+  if(spawnTimer<=0){spawnEnemy();spawnTimer=Math.max(.35,1.25-wave*.07);if(score>0&&score%100===0)wave=Math.min(12,Math.floor(score/100)+1);}
+  gamepadUpdate(dt);
+  const player=camera.getWorldPosition(new THREE.Vector3());
+  for(let i=enemies.length-1;i>=0;i--){
+   const e=enemies[i],m=e.mesh;
+   const toPlayer=player.clone().sub(m.position);const dist=toPlayer.length();
+   if(dist>1.6){toPlayer.normalize();m.position.addScaledVector(toPlayer,e.speed*dt);}
+   m.position.y=1.1+Math.sin(t*.002+e.phase)*.35;m.rotation.x+=dt*.45;m.rotation.y+=dt*.8;
+   e.attack+=dt;if(dist<2.2&&e.attack>1.0){takeDamage(8);e.attack=0;m.position.addScaledVector(toPlayer,-2);if(gameOver)break;}
+  }
+  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;p.mesh.position.addScaledVector(p.vel,dt);p.vel.y-=5*dt;if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry.dispose();p.mesh.material.dispose();particles.splice(i,1);}}
+  for(let i=shots.length-1;i>=0;i--){shots[i].life-=dt;if(shots[i].life<=0){scene.remove(shots[i].mesh);shots[i].mesh.geometry.dispose();shots[i].mesh.material.dispose();shots.splice(i,1);}}
+  if(damageFlash>0){damageFlash-=dt;if(damageFlash<=0)$('damage').style.background='rgba(255,0,25,0)';}
+ }
+ renderer.render(scene,camera);
+}
+renderer.setAnimationLoop(tick);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&gameStarted)paused=true;});
+</script>
 </body>
 </html>
