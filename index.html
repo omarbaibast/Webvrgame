@@ -14,6 +14,8 @@
 
   <!-- Three.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Three.js VRButton module helper script -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/VRButton.js"></script>
   <!-- PeerJS for WebRTC Multiplayer -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
@@ -116,15 +118,15 @@
         <div id="score-val" class="text-xl font-bold text-white neon-text">0</div>
       </div>
     </div>
-
-    <!-- Controller & VR Quick Status -->
+    /* Controller & VR Quick Status */
     <div class="bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-xl border border-cyan-500/30 flex items-center space-x-3 text-xs">
       <div id="gamepad-status" class="flex items-center text-gray-400">
         <i class="fa-solid fa-gamepad mr-1.5 text-base"></i>
         <span id="gamepad-text">No Gamepad</span>
       </div>
+      <div id="vr-button-container" class="pointer-events-auto"></div>
       <button id="vr-toggle-btn" class="pointer-events-auto bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg font-semibold flex items-center transition shadow-lg shadow-cyan-500/30">
-        <i class="fa-solid fa-vr-cardboard mr-1.5"></i> VR Mode
+        <i class="fa-solid fa-vr-cardboard mr-1.5"></i> Cardboard VR
       </button>
     </div>
   </div>
@@ -297,7 +299,35 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+    // Enable WebXR on Three.js Renderer
+    renderer.xr.enabled = true;
     container.appendChild(renderer.domElement);
+
+    // Append standard Three.js VRButton
+    const vrBtnContainer = document.getElementById('vr-button-container');
+    if (typeof VRButton !== 'undefined') {
+      const xrVRButton = VRButton.createButton(renderer);
+      xrVRButton.style.position = 'static';
+      xrVRButton.style.padding = '6px 12px';
+      xrVRButton.style.fontSize = '12px';
+      xrVRButton.style.borderRadius = '0.5rem';
+      xrVRButton.style.background = '#0284c7';
+      xrVRButton.style.border = 'none';
+      xrVRButton.style.color = '#fff';
+      xrVRButton.style.fontWeight = '600';
+      xrVRButton.style.cursor = 'pointer';
+      vrBtnContainer.appendChild(xrVRButton);
+    }
+
+    // WebXR Controllers / Gamepad Event Listening
+    const controller1 = renderer.xr.getController(0);
+    controller1.addEventListener('selectstart', shootLaser);
+    scene.add(controller1);
+
+    const controller2 = renderer.xr.getController(1);
+    controller2.addEventListener('selectstart', shootLaser);
+    scene.add(controller2);
 
     // --- CARDBOARD STEREOSCOPIC & BARREL DISTORTION SHADER SETUP ---
     const leftCamera = new THREE.PerspectiveCamera(75, (window.innerWidth / 2) / window.innerHeight, 0.1, 1000);
@@ -947,11 +977,27 @@
 
     // --- MAIN GAME LOOP ---
     function animate() {
-      requestAnimationFrame(animate);
-
       if (gameState.isStarted) {
         pollGamepad();
         updatePlayerMovement();
+
+        // Check WebXR Controller stick inputs if in WebXR session
+        if (renderer.xr.isPresenting) {
+          const session = renderer.xr.getSession();
+          if (session && session.inputSources) {
+            for (const source of session.inputSources) {
+              if (source.gamepad) {
+                const gp = source.gamepad;
+                // Stick inputs on WebXR controllers
+                if (gp.axes && gp.axes.length >= 4) {
+                  if (Math.abs(gp.axes[2]) > 0.15) inputs.moveX = gp.axes[2];
+                  if (Math.abs(gp.axes[3]) > 0.15) inputs.moveY = gp.axes[3];
+                  if (Math.abs(gp.axes[0]) > 0.15) inputs.lookX = gp.axes[0] * 0.04;
+                }
+              }
+            }
+          }
+        }
 
         // 1. Update Projectiles
         for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -1019,7 +1065,7 @@
       }
 
       // Render Scene
-      if (gameState.isVR) {
+      if (gameState.isVR && !renderer.xr.isPresenting) {
         renderStereoVR();
       } else {
         renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
@@ -1027,6 +1073,9 @@
         renderer.render(scene, camera);
       }
     }
+
+    // Three.js WebXR Animation Loop
+    renderer.setAnimationLoop(animate);
 
     // --- VR CARDBOARD TOGGLE ---
     document.getElementById('vr-toggle-btn').addEventListener('click', () => {
@@ -1067,11 +1116,6 @@
       renderTargetR.setSize(width / 2, height);
       renderer.setSize(width, height);
     });
-
-    // START ANIMATION LOOP
-    window.onload = function() {
-      animate();
-    };
   </script>
 </body>
 </html>
