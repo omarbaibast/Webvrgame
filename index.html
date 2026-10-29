@@ -1,4 +1,4 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -35,27 +35,11 @@
       left: 0;
       z-index: 1;
     }
-    /* Dual Viewport Stereo Overlay */
+    /* Mono Crosshair */
     .crosshair {
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      z-index: 10;
-    }
-    .stereo-crosshair-left {
-      position: absolute;
-      top: 50%;
-      left: 25%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      z-index: 10;
-    }
-    .stereo-crosshair-right {
-      position: absolute;
-      top: 50%;
-      left: 75%;
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 10;
@@ -148,34 +132,38 @@
   <!-- DUAL HUD Overlay for Stereo/VR Mode -->
   <div id="stereo-hud" class="hidden absolute top-0 left-0 w-full h-full pointer-events-none z-10 flex">
     <!-- Left Eye HUD -->
-    <div class="w-1/2 h-full p-4 flex justify-between items-start scale-75 transform origin-top-left">
+    <div class="w-1/2 h-full p-6 flex justify-between items-start scale-90 transform origin-top-left">
       <div class="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/30 flex items-center space-x-4">
         <div>
-          <div class="text-xs text-cyan-400 font-semibold">HEALTH</div>
-          <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
+          <div class="text-[10px] text-cyan-400 font-bold">HEALTH</div>
+          <div class="w-20 bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
             <div id="health-bar-l" class="bg-cyan-400 h-full w-full"></div>
           </div>
         </div>
         <div>
-          <div class="text-xs text-cyan-400 font-semibold">SCORE</div>
-          <div id="score-val-l" class="text-lg font-bold">0</div>
+          <div class="text-[10px] text-cyan-400 font-bold">SCORE</div>
+          <div id="score-val-l" class="text-sm font-bold">0</div>
         </div>
       </div>
+      <!-- Center eye marker for VR align -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 border-2 border-cyan-400/80 rounded-full bg-cyan-400/20"></div>
     </div>
     <!-- Right Eye HUD -->
-    <div class="w-1/2 h-full p-4 flex justify-between items-start scale-75 transform origin-top-left ml-4">
+    <div class="w-1/2 h-full p-6 flex justify-between items-start scale-90 transform origin-top-left">
       <div class="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/30 flex items-center space-x-4">
         <div>
-          <div class="text-xs text-cyan-400 font-semibold">HEALTH</div>
-          <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
+          <div class="text-[10px] text-cyan-400 font-bold">HEALTH</div>
+          <div class="w-20 bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
             <div id="health-bar-r" class="bg-cyan-400 h-full w-full"></div>
           </div>
         </div>
         <div>
-          <div class="text-xs text-cyan-400 font-semibold">SCORE</div>
-          <div id="score-val-r" class="text-lg font-bold">0</div>
+          <div class="text-[10px] text-cyan-400 font-bold">SCORE</div>
+          <div id="score-val-r" class="text-sm font-bold">0</div>
         </div>
       </div>
+      <!-- Center eye marker for VR align -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 border-2 border-cyan-400/80 rounded-full bg-cyan-400/20"></div>
     </div>
   </div>
 
@@ -206,11 +194,11 @@
       <!-- Controls Info & Status -->
       <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-xs space-y-2 text-slate-300">
         <div class="flex items-center justify-between text-cyan-400 font-semibold border-b border-slate-800 pb-1">
-          <span><i class="fa-solid fa-gamepad mr-1"></i> Control Modes Supported</span>
+          <span><i class="fa-solid fa-vr-cardboard mr-1"></i> Google Cardboard / Gyro Setup</span>
         </div>
-        <p>• <b>Gamepad:</b> Pair Bluetooth Gamepad. L-Stick: Move, R-Stick: Look, RT/A: Fire</p>
-        <p>• <b>VR View:</b> Tap VR button top-right for Split-Screen VR Box / Cardboard</p>
-        <p>• <b>Touch:</b> On-screen virtual sticks & center fire button</p>
+        <p>• <b>Cardboard VR:</b> Tap VR button to activate stereoscopic split-screen & gyro tracking.</p>
+        <p>• <b>Gyroscope:</b> Move phone head orientation in 360° space.</p>
+        <p>• <b>Gamepad:</b> L-Stick Move, R-Stick/Gyro Aim, RT/A Fire, L2 Jump.</p>
       </div>
 
       <!-- Multiplayer Section -->
@@ -272,7 +260,7 @@
   <script>
     // --- GLOBAL CONSTANTS & GAME STATE ---
     const VOXEL_SIZE = 1;
-    const WORLD_SIZE = 32; // 32x32 Voxel grid
+    const WORLD_SIZE = 32;
     const PLAYER_HEIGHT = 1.6;
     
     let gameState = {
@@ -282,6 +270,11 @@
       health: 100,
       maxHealth: 100
     };
+
+    // Device Orientation / Gyro scope variables
+    let gyroEnabled = false;
+    const gyroQuaternion = new THREE.Quaternion();
+    const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
     // Controls input states
     const inputs = {
@@ -306,12 +299,74 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
+    // --- CARDBOARD STEREOSCOPIC & BARREL DISTORTION SHADER SETUP ---
+    const leftCamera = new THREE.PerspectiveCamera(75, (window.innerWidth / 2) / window.innerHeight, 0.1, 1000);
+    const rightCamera = new THREE.PerspectiveCamera(75, (window.innerWidth / 2) / window.innerHeight, 0.1, 1000);
+    const eyeSeparation = 0.064; // Standard IPD in meters
+
+    // Off-screen render targets for stereo eyes
+    const renderTargetL = new THREE.WebGLRenderTarget(window.innerWidth / 2, window.innerHeight);
+    const renderTargetR = new THREE.WebGLRenderTarget(window.innerWidth / 2, window.innerHeight);
+
+    // Barrel Distortion Post-Processing Scene
+    const distortionScene = new THREE.Scene();
+    const distortionCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+    const barrelDistortionShader = {
+      uniforms: {
+        'tDiffuse': { value: null },
+        'distortion': { value: new THREE.Vector2(0.22, 0.22) }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec2 distortion;
+        varying vec2 vUv;
+
+        void main() {
+          vec2 p = vUv * 2.0 - 1.0;
+          float r2 = p.x * p.x + p.y * p.y;
+          vec2 newUv = (p * (1.0 + distortion.x * r2 + distortion.y * r2 * r2)) * 0.5 + 0.5;
+
+          if (newUv.x < 0.0 || newUv.x > 1.0 || newUv.y < 0.0 || newUv.y > 1.0) {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+          } else {
+            gl_FragColor = texture2D(tDiffuse, newUv);
+          }
+        }
+      `
+    };
+
+    const distortionMaterialL = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.clone(barrelDistortionShader.uniforms),
+      vertexShader: barrelDistortionShader.vertexShader,
+      fragmentShader: barrelDistortionShader.fragmentShader
+    });
+    const distortionMaterialR = distortionMaterialL.clone();
+
+    const planeGeo = new THREE.PlaneGeometry(1, 2);
+    const planeL = new THREE.Mesh(planeGeo, distortionMaterialL);
+    planeL.position.x = -0.5;
+    const planeR = new THREE.Mesh(planeGeo, distortionMaterialR);
+    planeR.position.x = 0.5;
+    distortionScene.add(planeL, planeR);
+
     // Camera Rig Container for Smooth Movement
     const playerRig = new THREE.Group();
     playerRig.position.set(0, 5, 0);
     scene.add(playerRig);
     playerRig.add(camera);
     camera.position.set(0, PLAYER_HEIGHT, 0);
+
+    // Dynamic Head group inside Camera for Gyro Rotation
+    const headGroup = new THREE.Group();
+    camera.add(headGroup);
 
     // Ambient & Directional Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
@@ -410,7 +465,44 @@
     gunBarrel.position.set(0, 0.02, -0.2);
     weaponGroup.add(gunBody, gunBarrel);
     weaponGroup.position.set(0.2, -0.2, -0.4);
-    camera.add(weaponGroup);
+    headGroup.add(weaponGroup);
+
+    // --- DEVICE ORIENTATION GYROSCOPE tracking ---
+    function setupDeviceOrientation() {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission().then(response => {
+          if (response === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation, true);
+            gyroEnabled = true;
+          }
+        }).catch(console.error);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+        gyroEnabled = true;
+      }
+    }
+
+    function handleOrientation(event) {
+      if (!event.alpha && !event.beta && !event.gamma) return;
+      
+      const alpha = THREE.MathUtils.degToRad(event.alpha || 0);
+      const beta = THREE.MathUtils.degToRad(event.beta || 0);
+      const gamma = THREE.MathUtils.degToRad(event.gamma || 0);
+
+      euler.set(beta, alpha, -gamma, 'YXZ');
+      gyroQuaternion.setFromEuler(euler);
+
+      // Adjust for screen orientation offset
+      const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+      const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+      gyroQuaternion.multiply(q1);
+
+      const q0 = new THREE.Quaternion();
+      q0.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -orient);
+      gyroQuaternion.multiply(q0);
+
+      headGroup.quaternion.copy(gyroQuaternion);
+    }
 
     // --- PROJECTILES & LASERS ---
     let lastShotTime = 0;
@@ -426,9 +518,9 @@
       const pMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
       const pMesh = new THREE.Mesh(pGeo, pMat);
 
-      // Get forward vector from camera direction
+      // Get forward vector from head direction
       const dir = new THREE.Vector3();
-      camera.getWorldDirection(dir);
+      headGroup.getWorldDirection(dir);
 
       // Start position at gun tip
       const startPos = new THREE.Vector3();
@@ -441,7 +533,7 @@
         mesh: pMesh,
         direction: dir.clone(),
         speed: 1.2,
-        life: 60, // frames
+        life: 60,
         isLocal: true
       });
 
@@ -763,14 +855,16 @@
     let yaw = 0;
 
     function updatePlayerMovement() {
-      // Rotate Rig & Camera
+      // Rotate Rig & Camera via Gamepad Stick / Touch when gyro isn't actively rotating yaw
       if (inputs.lookX !== 0 || inputs.lookY !== 0) {
         yaw -= inputs.lookX;
         pitch -= inputs.lookY;
         pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch));
 
         playerRig.rotation.y = yaw;
-        camera.rotation.x = pitch;
+        if (!gyroEnabled) {
+          headGroup.rotation.x = pitch;
+        }
       }
 
       // Smooth gun positioning return after recoil
@@ -797,12 +891,58 @@
 
       // Sync position across WebRTC network
       if (gameState.isStarted) {
+        const headRot = new THREE.Euler().setFromQuaternion(headGroup.quaternion);
         broadcastNetworkData({
           type: 'transform',
           pos: { x: playerRig.position.x, y: playerRig.position.y, z: playerRig.position.z },
-          rot: { x: camera.rotation.x, y: playerRig.rotation.y, z: 0 }
+          rot: { x: headRot.x, y: playerRig.rotation.y + headRot.y, z: headRot.z }
         });
       }
+    }
+
+    // --- CARDBOARD STEREOSCOPIC RENDER LOOP ---
+    function renderStereoVR() {
+      const halfWidth = window.innerWidth / 2;
+      const height = window.innerHeight;
+
+      // Update Stereo Left/Right eye cameras from center head camera
+      leftCamera.aspect = halfWidth / height;
+      leftCamera.fov = camera.fov;
+      leftCamera.updateProjectionMatrix();
+
+      rightCamera.aspect = halfWidth / height;
+      rightCamera.fov = camera.fov;
+      rightCamera.updateProjectionMatrix();
+
+      // Position Left & Right eye offset
+      leftCamera.position.copy(camera.position);
+      rightCamera.position.copy(camera.position);
+
+      leftCamera.translateX(-eyeSeparation / 2);
+      rightCamera.translateX(eyeSeparation / 2);
+
+      leftCamera.quaternion.copy(camera.quaternion).multiply(headGroup.quaternion);
+      rightCamera.quaternion.copy(camera.quaternion).multiply(headGroup.quaternion);
+
+      // Render Left Eye to Off-Screen Target
+      renderer.setRenderTarget(renderTargetL);
+      renderer.clear();
+      renderer.render(scene, leftCamera);
+
+      // Render Right Eye to Off-Screen Target
+      renderer.setRenderTarget(renderTargetR);
+      renderer.clear();
+      renderer.render(scene, rightCamera);
+
+      // Pass texture targets to Barrel Distortion Shaders
+      distortionMaterialL.uniforms.tDiffuse.value = renderTargetL.texture;
+      distortionMaterialR.uniforms.tDiffuse.value = renderTargetR.texture;
+
+      // Render Barrel Distorted Quad to Screen Viewport
+      renderer.setRenderTarget(null);
+      renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+      renderer.setScissorTest(false);
+      renderer.render(distortionScene, distortionCamera);
     }
 
     // --- MAIN GAME LOOP ---
@@ -852,7 +992,6 @@
         // 2. Update Enemies Movement & Damage
         for (let i = 0; i < enemies.length; i++) {
           const e = enemies[i];
-          // Move towards local player
           const dir = new THREE.Vector3().subVectors(playerRig.position, e.mesh.position);
           dir.y = 0;
           dir.normalize();
@@ -860,7 +999,6 @@
           e.mesh.position.addScaledVector(dir, e.speed);
           e.mesh.lookAt(playerRig.position.x, e.mesh.position.y, playerRig.position.z);
 
-          // Damage Player on contact
           if (e.mesh.position.distanceTo(playerRig.position) < 1.1) {
             damagePlayer(0.5);
           }
@@ -880,7 +1018,7 @@
         }
       }
 
-      // Render Scene (Stereo VR or Mono)
+      // Render Scene
       if (gameState.isVR) {
         renderStereoVR();
       } else {
@@ -890,83 +1028,24 @@
       }
     }
 
-    // Dual Viewport Split-Screen VR (Mobile Cardboard / VR Box compatible)
-    function renderStereoVR() {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const halfWidth = width / 2;
-
-      renderer.setScissorTest(true);
-
-      // Left Eye
-      renderer.setViewport(0, 0, halfWidth, height);
-      renderer.setScissor(0, 0, halfWidth, height);
-      camera.position.x = -0.03; // Interpupillary distance offset
-      renderer.render(scene, camera);
-
-      // Right Eye
-      renderer.setViewport(halfWidth, 0, halfWidth, height);
-      renderer.setScissor(halfWidth, 0, halfWidth, height);
-      camera.position.x = 0.03;
-      renderer.render(scene, camera);
-
-      // Reset camera center
-      camera.position.x = 0;
-    }
-
-    // --- HEALTH & SCORE UI UPDATES ---
-    function updateScoreUI() {
-      document.getElementById('score-val').innerText = gameState.score;
-      document.getElementById('score-val-l').innerText = gameState.score;
-      document.getElementById('score-val-r').innerText = gameState.score;
-    }
-
-    function damagePlayer(amount) {
-      gameState.health = Math.max(0, gameState.health - amount);
-      const pct = (gameState.health / gameState.maxHealth) * 100;
-      
-      document.getElementById('health-bar').style.width = pct + '%';
-      document.getElementById('health-bar-l').style.width = pct + '%';
-      document.getElementById('health-bar-r').style.width = pct + '%';
-
-      if (gameState.health <= 0) {
-        gameOver();
-      }
-    }
-
-    function gameOver() {
-      gameState.isStarted = false;
-      document.getElementById('final-score').innerText = gameState.score;
-      document.getElementById('game-over-modal').classList.remove('hidden');
-    }
-
-    document.getElementById('respawn-btn').addEventListener('click', () => {
-      gameState.health = 100;
-      gameState.score = 0;
-      damagePlayer(0);
-      updateScoreUI();
-      playerRig.position.set(0, 5, 0);
-      document.getElementById('game-over-modal').classList.add('hidden');
-      gameState.isStarted = true;
-    });
-
-    // --- VR STEREO TOGGLE BUTTON ---
+    // --- VR CARDBOARD TOGGLE ---
     document.getElementById('vr-toggle-btn').addEventListener('click', () => {
       gameState.isVR = !gameState.isVR;
+      setupDeviceOrientation();
       
       if (gameState.isVR) {
         document.getElementById('mono-crosshair').classList.add('hidden');
-        document.getElementById('stereo-crosshairs').classList.remove('hidden');
         document.getElementById('hud-overlay').classList.add('hidden');
+        document.getElementById('touch-controls').classList.add('hidden');
         document.getElementById('stereo-hud').classList.remove('hidden');
-        // Auto-request full screen for mobile VR immersion
+        
         if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen();
         }
       } else {
         document.getElementById('mono-crosshair').classList.remove('hidden');
-        document.getElementById('stereo-crosshairs').classList.add('hidden');
         document.getElementById('hud-overlay').classList.remove('hidden');
+        document.getElementById('touch-controls').classList.remove('hidden');
         document.getElementById('stereo-hud').classList.add('hidden');
       }
     });
@@ -979,9 +1058,14 @@
 
     // WINDOW RESIZE HANDLER
     window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      camera.aspect = width / height;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      renderTargetL.setSize(width / 2, height);
+      renderTargetR.setSize(width / 2, height);
+      renderer.setSize(width, height);
     });
 
     // START ANIMATION LOOP
@@ -991,4 +1075,3 @@
   </script>
 </body>
 </html>
-```
