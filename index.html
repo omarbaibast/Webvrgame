@@ -1,297 +1,994 @@
-<!doctype html>
+```html
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#080d18">
-<title>Voxel Strike VR</title>
-<style>
-  *{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d18;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}
-  canvas{display:block}
-  #hud{position:fixed;inset:0;pointer-events:none;z-index:5}
-  .panel{background:rgba(5,12,24,.72);border:1px solid rgba(120,200,255,.25);border-radius:12px;padding:9px 12px;backdrop-filter:blur(5px);text-shadow:0 1px 3px #000}
-  #stats{position:absolute;top:env(safe-area-inset-top,10px);left:10px;display:flex;gap:8px;font-weight:800;font-size:13px}
-  #help{position:absolute;top:env(safe-area-inset-top,10px);right:10px;max-width:46%;font-size:11px;text-align:right;line-height:1.4;color:#d9eaff}
-  #crosshair{position:absolute;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%);opacity:.95}
-  #crosshair:before,#crosshair:after{content:"";position:absolute;background:#baf7ff;box-shadow:0 0 8px #4beaff}
-  #crosshair:before{width:2px;height:22px;left:10px;top:0}#crosshair:after{height:2px;width:22px;top:10px;left:0}
-  #message{position:absolute;left:50%;top:18%;transform:translateX(-50%);font-weight:900;font-size:clamp(22px,5vw,42px);text-align:center;color:#fff;text-shadow:0 3px 15px #00bfff}
-  #bottom{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:auto}
-  button{border:1px solid rgba(144,225,255,.65);border-radius:13px;padding:12px 15px;background:rgba(12,34,58,.86);color:#fff;font-weight:850;letter-spacing:.04em;touch-action:manipulation}
-  button:active{background:#126c92;transform:scale(.97)}
-  #fire{background:rgba(180,35,45,.88);border-color:#ff9b9b;min-width:86px}
-  #start{pointer-events:auto;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(8,30,52,.62),rgba(2,6,14,.95));}
-  #startCard{width:min(90vw,470px);padding:25px;border:1px solid #3d95b9;border-radius:22px;background:rgba(4,15,29,.94);text-align:center;box-shadow:0 0 50px #007ca044}
-  #startCard h1{margin:0 0 7px;font-size:clamp(28px,7vw,44px);letter-spacing:.06em}
-  #startCard p{color:#c9d9eb;line-height:1.5;font-size:14px}
-  #startCard button{margin:5px;font-size:14px}
-  #aimHint{font-size:12px;color:#9cc7dc}
-  .hidden{display:none!important}
-  #damage{position:fixed;inset:0;pointer-events:none;z-index:4;background:rgba(255,0,25,0);transition:background .12s}
-  @media(min-width:800px){#help{font-size:13px}button{padding:13px 18px}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>VoxelVR Shooter - Multiplayer Mobile VR</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- PeerJS for WebRTC Multiplayer -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #05050a;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    /* Dual Viewport Stereo Overlay */
+    .crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .stereo-crosshair-left {
+      position: absolute;
+      top: 50%;
+      left: 25%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .stereo-crosshair-right {
+      position: absolute;
+      top: 50%;
+      left: 75%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+    /* Touch UI Virtual Joysticks */
+    .touch-zone {
+      position: absolute;
+      bottom: 20px;
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      z-index: 20;
+      backdrop-filter: blur(4px);
+      touch-action: none;
+    }
+    #stick-left { left: 20px; }
+    #stick-right { right: 20px; }
+    .stick-knob {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 50px;
+      height: 50px;
+      margin-top: -25px;
+      margin-left: -25px;
+      background: rgba(0, 240, 255, 0.5);
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
+      pointer-events: none;
+    }
+    /* Neon Glow UI */
+    .neon-border {
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+    }
+    .neon-text {
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.8);
+    }
+  </style>
 </head>
-<body>
-<div id="damage"></div>
-<div id="hud">
-  <div id="stats">
-    <div class="panel">HP <span id="hp">100</span></div>
-    <div class="panel">SCORE <span id="score">0</span></div>
-    <div class="panel">WAVE <span id="wave">1</span></div>
+<body class="text-white overflow-hidden select-none">
+
+  <!-- Three.js Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- MONO CROSSHAIR -->
+  <div id="mono-crosshair" class="crosshair flex items-center justify-center">
+    <div class="w-3 h-3 border-2 border-cyan-400 rounded-full bg-cyan-400/30"></div>
   </div>
-  <div id="help" class="panel">AIM: move phone / drag screen<br>FIRE: tap FIRE or screen center<br>VR: enter immersive mode when supported</div>
-  <div id="crosshair"></div>
-  <div id="message"></div>
-  <div id="bottom">
-    <button id="pause">Ⅱ</button>
-    <button id="reload">RELOAD</button>
-    <button id="fire">FIRE</button>
+
+  <!-- STEREO CROSSHAIRS (For VR Cardboard Mode) -->
+  <div id="stereo-crosshairs" class="hidden">
+    <div class="stereo-crosshair-left flex items-center justify-center">
+      <div class="w-3 h-3 border-2 border-cyan-400 rounded-full bg-cyan-400/30"></div>
+    </div>
+    <div class="stereo-crosshair-right flex items-center justify-center">
+      <div class="w-3 h-3 border-2 border-cyan-400 rounded-full bg-cyan-400/30"></div>
+    </div>
   </div>
-</div>
-<div id="start">
-  <div id="startCard">
-    <h1>VOXEL STRIKE</h1>
-    <div style="color:#5de3ff;font-weight:900;letter-spacing:.2em">MOBILE VR SHOOTER</div>
-    <p>Survive waves of hostile voxel drones in a neon arena. No block building — just aim, shoot, dodge, and survive.</p>
-    <p><b>Phone:</b> drag to aim, tap FIRE to shoot.<br><b>Cardboard VR:</b> use the VR button if your browser supports WebXR. In stereo mode, aim with head movement.<br><b>Controller:</b> left stick moves, right stick aims, R2 / right trigger fires when supported.</p>
-    <button id="play">PLAY FLAT</button>
-    <button id="playVR">TRY VR</button>
-    <p id="aimHint">Tip: host this folder on GitHub Pages (HTTPS is required for WebXR).</p>
+
+  <!-- HUD overlay (Single Screen) -->
+  <div id="hud-overlay" class="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none z-10">
+    <div class="bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-cyan-500/30 flex items-center space-x-4">
+      <div>
+        <div class="text-xs text-cyan-400 font-semibold tracking-wider uppercase">Health</div>
+        <div class="w-32 bg-slate-800 h-3 rounded-full overflow-hidden mt-1 border border-slate-700">
+          <div id="health-bar" class="bg-gradient-to-r from-red-500 to-cyan-400 h-full w-full transition-all duration-200"></div>
+        </div>
+      </div>
+      <div>
+        <div class="text-xs text-cyan-400 font-semibold tracking-wider uppercase">Score</div>
+        <div id="score-val" class="text-xl font-bold text-white neon-text">0</div>
+      </div>
+    </div>
+
+    <!-- Controller & VR Quick Status -->
+    <div class="bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-xl border border-cyan-500/30 flex items-center space-x-3 text-xs">
+      <div id="gamepad-status" class="flex items-center text-gray-400">
+        <i class="fa-solid fa-gamepad mr-1.5 text-base"></i>
+        <span id="gamepad-text">No Gamepad</span>
+      </div>
+      <button id="vr-toggle-btn" class="pointer-events-auto bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg font-semibold flex items-center transition shadow-lg shadow-cyan-500/30">
+        <i class="fa-solid fa-vr-cardboard mr-1.5"></i> VR Mode
+      </button>
+    </div>
   </div>
-</div>
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { VRButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/VRButton.js';
 
-const $ = id => document.getElementById(id);
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x18334f);
-scene.fog = new THREE.Fog(0x18334f, 30, 95);
-const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, .1, 120);
-camera.position.set(0,1.65,0);
-// A rig lets us position the player without fighting the headset's tracked camera pose.
-const playerRig = new THREE.Group();
-playerRig.position.set(0,0,7);
-playerRig.add(camera);
-scene.add(playerRig);
-const renderer = new THREE.WebGLRenderer({antialias:false, powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
-renderer.setSize(innerWidth,innerHeight);
-renderer.xr.enabled = true;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-document.body.appendChild(renderer.domElement);
-const vrButton = VRButton.createButton(renderer);
-vrButton.style.cssText += ';position:fixed;bottom:78px;left:12px;z-index:8;font-size:12px;padding:10px 12px;border-radius:10px;';
-document.body.appendChild(vrButton);
-renderer.xr.addEventListener('sessionstart', () => {
-  $('message').textContent = '';
-  // Keep the crosshair visible as a DOM overlay; hide only flat-screen HUD/buttons.
-  $('stats').style.display = 'none';
-  $('help').style.display = 'none';
-  $('bottom').style.display = 'none';
-  $('start').classList.add('hidden');
-});
-renderer.xr.addEventListener('sessionend', () => {
-  $('message').textContent = '';
-  $('stats').style.display = '';
-  $('help').style.display = '';
-  $('bottom').style.display = '';
-});
+  <!-- DUAL HUD Overlay for Stereo/VR Mode -->
+  <div id="stereo-hud" class="hidden absolute top-0 left-0 w-full h-full pointer-events-none z-10 flex">
+    <!-- Left Eye HUD -->
+    <div class="w-1/2 h-full p-4 flex justify-between items-start scale-75 transform origin-top-left">
+      <div class="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/30 flex items-center space-x-4">
+        <div>
+          <div class="text-xs text-cyan-400 font-semibold">HEALTH</div>
+          <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
+            <div id="health-bar-l" class="bg-cyan-400 h-full w-full"></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-cyan-400 font-semibold">SCORE</div>
+          <div id="score-val-l" class="text-lg font-bold">0</div>
+        </div>
+      </div>
+    </div>
+    <!-- Right Eye HUD -->
+    <div class="w-1/2 h-full p-4 flex justify-between items-start scale-75 transform origin-top-left ml-4">
+      <div class="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/30 flex items-center space-x-4">
+        <div>
+          <div class="text-xs text-cyan-400 font-semibold">HEALTH</div>
+          <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
+            <div id="health-bar-r" class="bg-cyan-400 h-full w-full"></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-cyan-400 font-semibold">SCORE</div>
+          <div id="score-val-r" class="text-lg font-bold">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-// High-contrast landmarks make the world visible in dim mobile VR displays.
-const horizonGlow = new THREE.Mesh(
-  new THREE.SphereGeometry(90, 16, 12),
-  new THREE.MeshBasicMaterial({color:0x18334f, side:THREE.BackSide})
-);
-scene.add(horizonGlow);
-scene.add(new THREE.HemisphereLight(0xc7edff,0x34445b,2.8));
-const light = new THREE.DirectionalLight(0xffffff,2.2); light.position.set(-4,9,5); scene.add(light);
-const arena = new THREE.Group(); scene.add(arena);
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:0x101d2e,roughness:.92,metalness:.12}));
-floor.rotation.x=-Math.PI/2; floor.position.y=-.08; arena.add(floor);
-const grid = new THREE.GridHelper(100,100,0x126080,0x17334b); grid.position.y=-.06; arena.add(grid);
-function box(w,h,d,color,x,y,z, emissive=0){
- const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.65,metalness:.2,emissive,emissiveIntensity:.6}));
- m.position.set(x,y,z); scene.add(m); return m;
-}
-for(let i=0;i<24;i++){
- const a=i*Math.PI*2/24, r=24;
- const p=box(1.2,2.5+Math.random()*5,1.2, i%2?0x1b3853:0x173047,Math.cos(a)*r,1.2,Math.sin(a)*r,0x031020);
- const stripe=box(1.25,.08,1.25,0x00bfff,p.position.x,p.position.y+.8,p.position.z,0x00bfff);
-}
-// Front-facing landmarks are deliberately placed in view when the game starts.
-for (const [x,z,h] of [[-7,-5,3],[7,-7,4],[-10,-15,6],[10,-17,5],[0,-23,7]]) {
-  const tower = new THREE.Mesh(
-    new THREE.BoxGeometry(1.7,h,1.7),
-    new THREE.MeshStandardMaterial({color:0x246083,emissive:0x09243b,emissiveIntensity:1.1,roughness:.8})
-  );
-  tower.position.set(x,h/2-0.05,z);
-  scene.add(tower);
-  const band = new THREE.Mesh(
-    new THREE.BoxGeometry(1.78,.12,1.78),
-    new THREE.MeshBasicMaterial({color:0x35d9ff})
-  );
-  band.position.set(x,Math.max(.4,h*.65),z);
-  scene.add(band);
-}
-const gun=new THREE.Group(); camera.add(gun);
-const gunBody=new THREE.Mesh(new THREE.BoxGeometry(.22,.18,.7),new THREE.MeshStandardMaterial({color:0x25394b,metalness:.8,roughness:.25}));
-gunBody.position.set(.32,-.25,-.55); gun.add(gunBody);
-const gunTop=new THREE.Mesh(new THREE.BoxGeometry(.1,.07,.45),new THREE.MeshStandardMaterial({color:0x08c9ff,emissive:0x0088bb,emissiveIntensity:2}));
-gunTop.position.set(.32,-.13,-.6); gun.add(gunTop);
-const muzzle=new THREE.Object3D(); muzzle.position.set(.32,-.25,-.93); gun.add(muzzle);
+  <!-- Touch On-Screen Controls (For mobile without gamepad) -->
+  <div id="touch-controls" class="block">
+    <div id="stick-left" class="touch-zone">
+      <div id="knob-left" class="stick-knob"></div>
+    </div>
+    <div id="stick-right" class="touch-zone">
+      <div id="knob-right" class="stick-knob"></div>
+    </div>
+    <button id="fire-btn" class="absolute bottom-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-red-600/80 border-2 border-red-400 rounded-full flex items-center justify-center text-white text-xl z-20 active:scale-95 transition shadow-lg shadow-red-500/50 pointer-events-auto">
+      <i class="fa-solid fa-crosshairs"></i>
+    </button>
+  </div>
 
-const enemies=[], shots=[], particles=[];
-let hp=100, score=0, wave=1, ammo=12, reloading=false, gameStarted=false, paused=false, gameOver=false;
-let spawnTimer=0, fireCooldown=0, damageFlash=0, lastTime=0, pointerDown=false, lastX=0,lastY=0;
-const raycaster=new THREE.Raycaster();
-const tempVec=new THREE.Vector3();
-const enemyGeo=new THREE.BoxGeometry(1,1,1);
-const enemyColors=[0xff315c,0xff7b35,0xd64dff,0xffd34e];
-function spawnEnemy(){
- const angle=Math.random()*Math.PI*2;
- const radius=10+Math.random()*9;
- const size=.75+Math.random()*.55;
- const material=new THREE.MeshStandardMaterial({color:enemyColors[Math.floor(Math.random()*enemyColors.length)],emissive:0x300008,emissiveIntensity:1.3,roughness:.55});
- const mesh=new THREE.Mesh(enemyGeo,material); mesh.scale.set(size,size,size);
- mesh.position.set(Math.sin(angle)*radius*.72,1.1+Math.random()*2.5, -Math.cos(angle)*radius + 1);
- scene.add(mesh);
- const core=new THREE.Mesh(new THREE.BoxGeometry(size*.38,size*.38,size*.38),new THREE.MeshBasicMaterial({color:0xffffff}));
- mesh.add(core);
- enemies.push({mesh,hp:1+Math.floor(wave/3),speed:1.1+Math.random()*.5+wave*.09,phase:Math.random()*6,attack:0});
-}
-function burst(pos,color=0x53eaff,count=7){
- for(let i=0;i<count;i++){
-  const m=new THREE.Mesh(new THREE.BoxGeometry(.08,.08,.08),new THREE.MeshBasicMaterial({color}));
-  m.position.copy(pos); scene.add(m);
-  particles.push({mesh:m,vel:new THREE.Vector3((Math.random()-.5)*5,Math.random()*4,(Math.random()-.5)*5),life:.45+Math.random()*.4});
- }
-}
-function updateUI(){ $('hp').textContent=Math.max(0,Math.ceil(hp)); $('score').textContent=score; $('wave').textContent=wave; }
-function shoot(){
- if(!gameStarted||paused||gameOver||fireCooldown>0) return;
- if(ammo<=0){reload();return;}
- ammo--; fireCooldown=.22;
- gun.position.z=.07; setTimeout(()=>gun.position.z=0,55);
- // Aim ray follows center of view; targets are voxel drones.
- raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
- const hits=raycaster.intersectObjects(enemies.map(e=>e.mesh),false);
- if(hits.length){
-  const obj=hits[0].object, idx=enemies.findIndex(e=>e.mesh===obj);
-  if(idx>=0){
-   const e=enemies[idx]; e.hp--; burst(hits[0].point,0x6ef5ff,5);
-   if(e.hp<=0){score+=10;burst(e.mesh.position,0xff496d,13);scene.remove(e.mesh);e.mesh.geometry.dispose();e.mesh.material.dispose();enemies.splice(idx,1);updateUI();}
-  }
- }else{
-  // small tracer flash in the aiming direction
-  const dir=new THREE.Vector3(); camera.getWorldDirection(dir);
-  const start=camera.getWorldPosition(new THREE.Vector3()).add(dir.clone().multiplyScalar(.6));
-  const end=start.clone().add(dir.multiplyScalar(10));
-  const geo=new THREE.BufferGeometry().setFromPoints([start,end]);
-  const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0x52e8ff,transparent:true,opacity:.85}));
-  scene.add(line);shots.push({mesh:line,life:.07});
- }
-}
-function reload(){if(reloading||ammo===12||!gameStarted)return;reloading=true;$('message').textContent='RELOADING';setTimeout(()=>{ammo=12;reloading=false;if(!gameOver)$('message').textContent='';},900);}
-function takeDamage(n){hp-=n;damageFlash=.18;$('damage').style.background='rgba(255,0,25,.25)';updateUI();if(hp<=0){gameOver=true;$('message').textContent='SYSTEM FAILURE';$('startCard').querySelector('h1').textContent='GAME OVER';$('startCard').querySelector('p').innerHTML='Final score: <b>'+score+'</b><br>Try another run and survive longer.';$('start').classList.remove('hidden');}}
-function startGame(tryVR=false){
- hp=100;score=0;wave=1;ammo=12;reloading=false;gameOver=false;paused=false;gameStarted=true;spawnTimer=0;fireCooldown=0;
- enemies.forEach(e=>scene.remove(e.mesh));enemies.length=0;particles.forEach(p=>scene.remove(p.mesh));particles.length=0;
- playerRig.position.set(0,0,7);camera.position.set(0,1.65,0);camera.rotation.set(0,0,0);
- $('start').classList.add('hidden');$('message').textContent='';$('startCard').querySelector('h1').textContent='VOXEL STRIKE';updateUI();
- if(tryVR){
-   // Let the user press the visible WebXR button directly; browsers require a user gesture.
-   $('message').textContent='Tap the VR button to enter immersive mode';
- }
-}
-$('play').addEventListener('click',()=>startGame(false));
-$('playVR').addEventListener('click',()=>startGame(true));
-$('fire').addEventListener('pointerdown',e=>{e.preventDefault();shoot();});
-$('reload').addEventListener('click',reload);
-$('pause').addEventListener('click',()=>{paused=!paused;$('message').textContent=paused?'PAUSED':'';});
-renderer.domElement.addEventListener('pointerdown',e=>{pointerDown=true;lastX=e.clientX;lastY=e.clientY;});
-addEventListener('pointerup',()=>pointerDown=false);
-addEventListener('pointermove',e=>{if(!pointerDown||renderer.xr.isPresenting)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;camera.rotation.order='YXZ';camera.rotation.y-=dx*.004;camera.rotation.x-=dy*.003;camera.rotation.x=Math.max(-1.2,Math.min(1.2,camera.rotation.x));});
-renderer.domElement.addEventListener('click',e=>{if(gameStarted&&!renderer.xr.isPresenting&&e.target===renderer.domElement)shoot();});
-addEventListener('keydown',e=>{if(e.code==='Space')shoot();if(e.code==='KeyR')reload();if(e.code==='Escape')paused=!paused;});
-addEventListener('gamepadconnected', e => { $('message').textContent = 'GAMEPAD CONNECTED'; setTimeout(()=>{if($('message').textContent==='GAMEPAD CONNECTED')$('message').textContent='';},1200); });
-addEventListener('gamepaddisconnected', () => { $('message').textContent = 'GAMEPAD DISCONNECTED'; setTimeout(()=>{$('message').textContent='';},1000); });
-const gamepadState = new Map();
-function gamepadUpdate(dt){
- const pads = navigator.getGamepads ? navigator.getGamepads() : [];
- for(let pi=0; pi<pads.length; pi++){
-  const p=pads[pi]; if(!p) continue;
-  const dead = v => Math.abs(v) < 0.18 ? 0 : (Math.sign(v) * (Math.abs(v)-0.18)/0.82);
-  const axes = p.axes || [];
-  // Standard Gamepad mapping: left stick = axes 0/1, right stick = axes 2/3.
-  // For non-standard pads, also look for the strongest pair as a best-effort fallback.
-  let lx=dead(axes[0]||0), ly=dead(axes[1]||0), rx=dead(axes[2]||0), ry=dead(axes[3]||0);
-  if(p.mapping !== 'standard' && axes.length >= 4){
-    if(Math.abs(lx)+Math.abs(ly) < .06 && axes.length >= 2){lx=dead(axes[0]||0);ly=dead(axes[1]||0);}
-    if(Math.abs(rx)+Math.abs(ry) < .06 && axes.length >= 4){rx=dead(axes[2]||0);ry=dead(axes[3]||0);}
-  }
-  const buttons = p.buttons || [];
-  const pressed = i => !!(buttons[i] && (buttons[i].pressed || buttons[i].value > .65));
-  const anyPressed = (...ids) => ids.some(pressed);
-  const prev = gamepadState.get(p.index) || {};
-  if(!renderer.xr.isPresenting){
-    camera.rotation.order='YXZ';
-    camera.rotation.y -= rx*dt*2.2;
-    camera.rotation.x -= ry*dt*1.8;
-    camera.rotation.x=Math.max(-1.2,Math.min(1.2,camera.rotation.x));
-    const yaw=camera.rotation.y;
-    const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
-    const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
-    playerRig.position.addScaledVector(forward,ly*dt*5);
-    playerRig.position.addScaledVector(right,lx*dt*5);
-    playerRig.position.x=THREE.MathUtils.clamp(playerRig.position.x,-12,12);
-    playerRig.position.z=THREE.MathUtils.clamp(playerRig.position.z,-12,12);
-  } else {
-    // In VR, let headset orientation aim; sticks can still move/turn the player rig.
-    playerRig.rotation.y -= rx*dt*2.0;
-    const forward=new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0),playerRig.rotation.y);
-    const right=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),playerRig.rotation.y);
-    playerRig.position.addScaledVector(forward,ly*dt*4.5);
-    playerRig.position.addScaledVector(right,lx*dt*4.5);
-    playerRig.position.x=THREE.MathUtils.clamp(playerRig.position.x,-12,12);
-    playerRig.position.z=THREE.MathUtils.clamp(playerRig.position.z,-12,12);
-  }
-  // Common mappings across Xbox, PlayStation, Switch-style, generic USB and many Bluetooth pads.
-  const fireNow = anyPressed(7,0,5, rightTriggerIndex(p));
-  const reloadNow = anyPressed(2,3,4);
-  const pauseNow = anyPressed(9, startButtonIndex(p));
-  if(fireNow && !prev.fire) shoot();
-  if(reloadNow && !prev.reload) reload();
-  if(pauseNow && !prev.pause) paused=!paused;
-  gamepadState.set(p.index,{fire:fireNow,reload:reloadNow,pause:pauseNow});
- }
-}
-function rightTriggerIndex(p){ return p.mapping==='standard' ? 7 : 7; }
-function startButtonIndex(p){ return p.mapping==='standard' ? 9 : 9; }
+  <!-- Lobby & Room Menu Overlay -->
+  <div id="menu-overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center z-50 p-4">
+    <div class="max-w-md w-full bg-slate-900 border border-cyan-500/30 rounded-2xl p-6 shadow-2xl space-y-6 neon-border">
+      
+      <div class="text-center space-y-2">
+        <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-500 tracking-wider uppercase">
+          Voxel VR Shooter
+        </h1>
+        <p class="text-slate-400 text-sm">3D Procedural Mobile VR Arena with WebRTC Multiplayer</p>
+      </div>
 
-function tick(t){
- const dt=Math.min(.04,(t-lastTime)/1000||0);lastTime=t;
- if(gameStarted&&!paused&&!gameOver){
-  fireCooldown=Math.max(0,fireCooldown-dt);spawnTimer-=dt;
-  if(spawnTimer<=0){spawnEnemy();spawnTimer=Math.max(.35,1.25-wave*.07);if(score>0&&score%100===0)wave=Math.min(12,Math.floor(score/100)+1);}
-  gamepadUpdate(dt);
-  const player=camera.getWorldPosition(new THREE.Vector3());
-  for(let i=enemies.length-1;i>=0;i--){
-   const e=enemies[i],m=e.mesh;
-   const toPlayer=player.clone().sub(m.position);const dist=toPlayer.length();
-   if(dist>1.6){toPlayer.normalize();m.position.addScaledVector(toPlayer,e.speed*dt);}
-   m.position.y=1.1+Math.sin(t*.002+e.phase)*.35;m.rotation.x+=dt*.45;m.rotation.y+=dt*.8;
-   e.attack+=dt;if(dist<2.2&&e.attack>1.0){takeDamage(8);e.attack=0;m.position.addScaledVector(toPlayer,-2);if(gameOver)break;}
-  }
-  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;p.mesh.position.addScaledVector(p.vel,dt);p.vel.y-=5*dt;if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry.dispose();p.mesh.material.dispose();particles.splice(i,1);}}
-  for(let i=shots.length-1;i>=0;i--){shots[i].life-=dt;if(shots[i].life<=0){scene.remove(shots[i].mesh);shots[i].mesh.geometry.dispose();shots[i].mesh.material.dispose();shots.splice(i,1);}}
-  if(damageFlash>0){damageFlash-=dt;if(damageFlash<=0)$('damage').style.background='rgba(255,0,25,0)';}
- }
- renderer.render(scene,camera);
-}
-renderer.setAnimationLoop(tick);
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&gameStarted)paused=true;});
-</script>
+      <!-- Controls Info & Status -->
+      <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-xs space-y-2 text-slate-300">
+        <div class="flex items-center justify-between text-cyan-400 font-semibold border-b border-slate-800 pb-1">
+          <span><i class="fa-solid fa-gamepad mr-1"></i> Control Modes Supported</span>
+        </div>
+        <p>• <b>Gamepad:</b> Pair Bluetooth Gamepad. L-Stick: Move, R-Stick: Look, RT/A: Fire</p>
+        <p>• <b>VR View:</b> Tap VR button top-right for Split-Screen VR Box / Cardboard</p>
+        <p>• <b>Touch:</b> On-screen virtual sticks & center fire button</p>
+      </div>
+
+      <!-- Multiplayer Section -->
+      <div class="space-y-4 pt-2">
+        <div class="text-sm font-semibold text-slate-200 flex items-center">
+          <i class="fa-solid fa-network-wired text-cyan-400 mr-2"></i> PeerJS Multiplayer Lobby
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <!-- Create Room -->
+          <div class="flex items-center space-x-2">
+            <button id="host-btn" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white py-2.5 px-4 rounded-xl font-bold transition shadow-lg shadow-cyan-600/30 flex items-center justify-center">
+              <i class="fa-solid fa-tower-broadcast mr-2"></i> Host Room
+            </button>
+          </div>
+
+          <!-- Room ID Display -->
+          <div id="room-id-box" class="hidden bg-slate-950 p-3 rounded-xl border border-cyan-500/50 flex items-center justify-between">
+            <span class="text-xs text-slate-400">ROOM CODE:</span>
+            <span id="my-room-id" class="font-mono text-cyan-400 font-bold select-all">-----</span>
+            <button id="copy-room-btn" class="text-xs bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700">Copy</button>
+          </div>
+
+          <!-- Join Room Input -->
+          <div class="flex space-x-2">
+            <input type="text" id="join-room-input" placeholder="Enter Room Code..." class="flex-1 bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2 text-sm text-white focus:outline-none transition">
+            <button id="join-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl font-bold transition flex items-center justify-center">
+              Join
+            </button>
+          </div>
+          <div id="net-status" class="text-xs text-center text-slate-400 h-4">Not connected to peers</div>
+        </div>
+      </div>
+
+      <!-- Start Game Solo / Ready Button -->
+      <button id="start-game-btn" class="w-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white py-3 rounded-xl font-extrabold text-lg transition shadow-xl shadow-cyan-500/20 uppercase tracking-wider">
+        Enter Battle Arena
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="game-over-modal" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center z-50 p-4">
+    <div class="max-w-sm w-full bg-slate-900 border border-red-500/30 rounded-2xl p-6 text-center space-y-4 neon-border">
+      <h2 class="text-3xl font-black text-red-500 tracking-wider">SYSTEM DESTROYED</h2>
+      <p class="text-slate-400 text-sm">Your voxel avatar was defeated in combat!</p>
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+        <div class="text-xs text-slate-500">FINAL SCORE</div>
+        <div id="final-score" class="text-3xl font-extrabold text-cyan-400">0</div>
+      </div>
+      <button id="respawn-btn" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-600/30 transition">
+        RESPAWN AVATAR
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN SCRIPT -->
+  <script>
+    // --- GLOBAL CONSTANTS & GAME STATE ---
+    const VOXEL_SIZE = 1;
+    const WORLD_SIZE = 32; // 32x32 Voxel grid
+    const PLAYER_HEIGHT = 1.6;
+    
+    let gameState = {
+      isStarted: false,
+      isVR: false,
+      score: 0,
+      health: 100,
+      maxHealth: 100
+    };
+
+    // Controls input states
+    const inputs = {
+      moveX: 0,
+      moveY: 0,
+      lookX: 0,
+      lookY: 0,
+      shooting: false
+    };
+
+    // --- THREE.JS SETUP ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x05050f);
+    scene.fog = new THREE.FogExp2(0x05050f, 0.035);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // Camera Rig Container for Smooth Movement
+    const playerRig = new THREE.Group();
+    playerRig.position.set(0, 5, 0);
+    scene.add(playerRig);
+    playerRig.add(camera);
+    camera.position.set(0, PLAYER_HEIGHT, 0);
+
+    // Ambient & Directional Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0x00f0ff, 0.8);
+    dirLight.position.set(20, 40, 20);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    scene.add(dirLight);
+
+    const gridPointLight = new THREE.PointLight(0xff0055, 1, 30);
+    gridPointLight.position.set(0, 5, 0);
+    scene.add(gridPointLight);
+
+    // --- PROCEDURAL VOXEL TERRAIN GENERATION (InstancedMesh for Performance) ---
+    const voxelGeometry = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
+    
+    // Grid Material with Voxel Style
+    const voxelMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1e1e2f,
+      roughness: 0.6,
+      metalness: 0.2,
+    });
+
+    // We generate a heightmap terrain using simplified sine combination
+    function getTerrainHeight(x, z) {
+      const scale1 = 0.1;
+      const scale2 = 0.05;
+      let h = Math.sin(x * scale1) * Math.cos(z * scale1) * 3;
+      h += Math.sin(x * scale2 + 2) * Math.sin(z * scale2) * 4;
+      return Math.floor(h);
+    }
+
+    // Build Voxel Mesh Grid
+    let totalVoxels = WORLD_SIZE * WORLD_SIZE * 6; // Max voxels depth
+    const instancedVoxelMesh = new THREE.InstancedMesh(voxelGeometry, voxelMaterial, totalVoxels);
+    instancedVoxelMesh.castShadow = true;
+    instancedVoxelMesh.receiveShadow = true;
+
+    const dummyMatrix = new THREE.Matrix4();
+    const voxelColors = [new THREE.Color(0x1a1a2e), new THREE.Color(0x16213e), new THREE.Color(0x0f3460)];
+    let instanceIdx = 0;
+
+    for (let x = -WORLD_SIZE / 2; x < WORLD_SIZE / 2; x++) {
+      for (let z = -WORLD_SIZE / 2; z < WORLD_SIZE / 2; z++) {
+        const height = getTerrainHeight(x, z);
+        for (let y = -3; y <= height; y++) {
+          dummyMatrix.setPosition(x * VOXEL_SIZE, y * VOXEL_SIZE, z * VOXEL_SIZE);
+          instancedVoxelMesh.setMatrixAt(instanceIdx, dummyMatrix);
+          
+          // Slight color variation based on depth/height
+          const color = voxelColors[Math.abs(y) % voxelColors.length];
+          instancedVoxelMesh.setColorAt(instanceIdx, color);
+          
+          instanceIdx++;
+        }
+      }
+    }
+    instancedVoxelMesh.count = instanceIdx;
+    instancedVoxelMesh.instanceMatrix.needsUpdate = true;
+    if (instancedVoxelMesh.instanceColor) instancedVoxelMesh.instanceColor.needsUpdate = true;
+    scene.add(instancedVoxelMesh);
+
+    // Decorative Glowing Cyber Voxel Pillars
+    const pillarGeo = new THREE.BoxGeometry(1, 1, 1);
+    const pillarMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, wireframe: true });
+    for (let i = 0; i < 8; i++) {
+      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      const px = (Math.random() - 0.5) * (WORLD_SIZE - 4);
+      const pz = (Math.random() - 0.5) * (WORLD_SIZE - 4);
+      const py = getTerrainHeight(px, pz) + 2;
+      pillar.position.set(px, py, pz);
+      pillar.scale.set(1, 4, 1);
+      scene.add(pillar);
+    }
+
+    // --- GAME ENTITIES & ARRAYS ---
+    const projectiles = [];
+    const enemies = [];
+    const particleSystems = [];
+    const remotePlayers = {}; // WebRTC peers
+
+    // Weapon mesh mounted on camera
+    const weaponGroup = new THREE.Group();
+    const gunBody = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.15, 0.4),
+      new THREE.MeshStandardMaterial({ color: 0x222233, roughness: 0.3 })
+    );
+    const gunBarrel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.03, 0.3),
+      new THREE.MeshBasicMaterial({ color: 0x00f0ff })
+    );
+    gunBarrel.rotation.x = Math.PI / 2;
+    gunBarrel.position.set(0, 0.02, -0.2);
+    weaponGroup.add(gunBody, gunBarrel);
+    weaponGroup.position.set(0.2, -0.2, -0.4);
+    camera.add(weaponGroup);
+
+    // --- PROJECTILES & LASERS ---
+    let lastShotTime = 0;
+    const SHOOT_COOLDOWN = 180; // ms
+
+    function shootLaser() {
+      const now = Date.now();
+      if (now - lastShotTime < SHOOT_COOLDOWN) return;
+      lastShotTime = now;
+
+      // Projectile Mesh
+      const pGeo = new THREE.SphereGeometry(0.08, 8, 8);
+      const pMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+      const pMesh = new THREE.Mesh(pGeo, pMat);
+
+      // Get forward vector from camera direction
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+
+      // Start position at gun tip
+      const startPos = new THREE.Vector3();
+      weaponGroup.getWorldPosition(startPos);
+
+      pMesh.position.copy(startPos);
+      scene.add(pMesh);
+
+      projectiles.push({
+        mesh: pMesh,
+        direction: dir.clone(),
+        speed: 1.2,
+        life: 60, // frames
+        isLocal: true
+      });
+
+      // Recoil animation
+      weaponGroup.position.z = -0.3;
+
+      // Sync shot to WebRTC peers
+      broadcastNetworkData({
+        type: 'shoot',
+        pos: { x: startPos.x, y: startPos.y, z: startPos.z },
+        dir: { x: dir.x, y: dir.y, z: dir.z }
+      });
+    }
+
+    // --- VOXEL ENEMY SYSTEM ---
+    function createVoxelEnemyMesh() {
+      const group = new THREE.Group();
+      
+      // Voxel Body
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055, roughness: 0.4 });
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+      
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), bodyMat);
+      torso.position.y = 0.4;
+      group.add(torso);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), bodyMat);
+      head.position.y = 1.05;
+      group.add(head);
+
+      const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), eyeMat);
+      eyeL.position.set(-0.15, 1.1, -0.26);
+      const eyeR = eyeL.clone();
+      eyeR.position.x = 0.15;
+      group.add(eyeL, eyeR);
+
+      group.castShadow = true;
+      return group;
+    }
+
+    function spawnEnemy() {
+      if (enemies.length >= 10 || !gameState.isStarted) return;
+
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 15 + Math.random() * 10;
+      const x = playerRig.position.x + Math.cos(angle) * dist;
+      const z = playerRig.position.z + Math.sin(angle) * dist;
+      const y = getTerrainHeight(x, z) + 0.5;
+
+      const mesh = createVoxelEnemyMesh();
+      mesh.position.set(x, y, z);
+      scene.add(mesh);
+
+      enemies.push({
+        mesh: mesh,
+        health: 3,
+        speed: 0.04 + Math.random() * 0.02
+      });
+    }
+
+    // Enemy Spawner Interval
+    setInterval(spawnEnemy, 2500);
+
+    // --- VOXEL EXPLOSION PARTICLES ---
+    function createVoxelExplosion(pos, colorHex = 0xff0055) {
+      const count = 12;
+      const pGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+      const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
+
+      for (let i = 0; i < count; i++) {
+        const pMesh = new THREE.Mesh(pGeo, pMat);
+        pMesh.position.copy(pos);
+
+        const vel = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.2,
+          Math.random() * 0.2,
+          (Math.random() - 0.5) * 0.2
+        );
+
+        scene.add(pMesh);
+        particleSystems.push({
+          mesh: pMesh,
+          vel: vel,
+          life: 25
+        });
+      }
+    }
+
+    // --- GAMEPAD SUPPORT (navigator.getGamepads) ---
+    let gamepadIndex = null;
+
+    window.addEventListener("gamepadconnected", (e) => {
+      gamepadIndex = e.gamepad.index;
+      document.getElementById('gamepad-status').className = 'flex items-center text-green-400 font-semibold';
+      document.getElementById('gamepad-text').innerText = 'Gamepad Ready';
+    });
+
+    window.addEventListener("gamepaddisconnected", () => {
+      gamepadIndex = null;
+      document.getElementById('gamepad-status').className = 'flex items-center text-gray-400';
+      document.getElementById('gamepad-text').innerText = 'No Gamepad';
+    });
+
+    function pollGamepad() {
+      if (gamepadIndex === null) return;
+      const gamepads = navigator.getGamepads();
+      const gp = gamepads[gamepadIndex];
+      if (!gp) return;
+
+      // Analog Sticks Deadzone handling
+      const deadzone = 0.15;
+      
+      // Left Stick -> Movement (Axes 0, 1)
+      const lx = gp.axes[0];
+      const ly = gp.axes[1];
+      inputs.moveX = Math.abs(lx) > deadzone ? lx : 0;
+      inputs.moveY = Math.abs(ly) > deadzone ? ly : 0;
+
+      // Right Stick -> Rotation Look (Axes 2, 3 or 3, 4 depending on OS)
+      const rx = gp.axes[2] !== undefined && Math.abs(gp.axes[2]) > deadzone ? gp.axes[2] : (gp.axes[3] || 0);
+      const ry = gp.axes[3] !== undefined && Math.abs(gp.axes[3]) > deadzone ? gp.axes[3] : (gp.axes[4] || 0);
+      inputs.lookX = Math.abs(rx) > deadzone ? rx * 0.04 : 0;
+      inputs.lookY = Math.abs(ry) > deadzone ? ry * 0.03 : 0;
+
+      // Buttons -> Right Trigger (Axis 5 or Button 7/5) or Button 0 (A/X) for Shooting
+      const fireButton = gp.buttons[0]?.pressed || gp.buttons[7]?.pressed || gp.buttons[5]?.pressed;
+      if (fireButton) {
+        shootLaser();
+      }
+    }
+
+    // --- TOUCH JOYSTICKS CONTROLS ---
+    function setupTouchJoystick(stickId, knobId, onMove) {
+      const stick = document.getElementById(stickId);
+      const knob = document.getElementById(knobId);
+      let touchId = null;
+      let startX = 0, startY = 0;
+
+      stick.addEventListener('touchstart', (e) => {
+        if (touchId !== null) return;
+        const touch = e.changedTouches[0];
+        touchId = touch.identifier;
+        const rect = stick.getBoundingClientRect();
+        startX = rect.left + rect.width / 2;
+        startY = rect.top + rect.height / 2;
+      });
+
+      window.addEventListener('touchmove', (e) => {
+        if (touchId === null) return;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === touchId) {
+            const touch = e.changedTouches[i];
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+            const dist = Math.min(Math.hypot(dx, dy), 40);
+            const angle = Math.atan2(dy, dx);
+
+            const knX = Math.cos(angle) * dist;
+            const knY = Math.sin(angle) * dist;
+            knob.style.transform = `translate(${knX}px, ${knY}px)`;
+
+            onMove(knX / 40, knY / 40);
+          }
+        }
+      });
+
+      const resetStick = (e) => {
+        if (touchId === null) return;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === touchId) {
+            touchId = null;
+            knob.style.transform = `translate(0px, 0px)`;
+            onMove(0, 0);
+          }
+        }
+      };
+
+      window.addEventListener('touchend', resetStick);
+      window.addEventListener('touchcancel', resetStick);
+    }
+
+    setupTouchJoystick('stick-left', 'knob-left', (x, y) => {
+      inputs.moveX = x;
+      inputs.moveY = y;
+    });
+
+    setupTouchJoystick('stick-right', 'knob-right', (x, y) => {
+      inputs.lookX = x * 0.05;
+      inputs.lookY = y * 0.03;
+    });
+
+    document.getElementById('fire-btn').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      shootLaser();
+    });
+
+    // --- PEERJS WEBRTC MULTIPLAYER NETWORK ---
+    let peer = null;
+    let connections = [];
+    let isHost = false;
+
+    function initPeerJS() {
+      // Create random peer ID
+      peer = new Peer();
+
+      peer.on('open', (id) => {
+        document.getElementById('net-status').innerText = 'Connected to Network (ID: ' + id.substring(0, 5) + ')';
+      });
+
+      peer.on('connection', (conn) => {
+        setupConnection(conn);
+      });
+
+      peer.on('error', (err) => {
+        console.error("PeerJS Error:", err);
+        document.getElementById('net-status').innerText = 'Net Error: ' + err.type;
+      });
+    }
+
+    function setupConnection(conn) {
+      connections.push(conn);
+      document.getElementById('net-status').innerText = 'Peer Connected! Total: ' + connections.length;
+
+      conn.on('data', (data) => {
+        handleNetworkMessage(conn.peer, data);
+      });
+
+      conn.on('close', () => {
+        removeRemotePlayer(conn.peer);
+        connections = connections.filter(c => c !== conn);
+        document.getElementById('net-status').innerText = 'Peer Left. Total: ' + connections.length;
+      });
+    }
+
+    function createRemotePlayerMesh() {
+      const group = new THREE.Group();
+      const headMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff });
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), headMat);
+      head.position.y = 1.4;
+      const gun = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.4), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      gun.position.set(0.3, 1.2, -0.3);
+      group.add(head, gun);
+      scene.add(group);
+      return group;
+    }
+
+    function removeRemotePlayer(peerId) {
+      if (remotePlayers[peerId]) {
+        scene.remove(remotePlayers[peerId].mesh);
+        delete remotePlayers[peerId];
+      }
+    }
+
+    function handleNetworkMessage(peerId, data) {
+      if (data.type === 'transform') {
+        if (!remotePlayers[peerId]) {
+          remotePlayers[peerId] = {
+            mesh: createRemotePlayerMesh()
+          };
+        }
+        remotePlayers[peerId].mesh.position.set(data.pos.x, data.pos.y, data.pos.z);
+        remotePlayers[peerId].mesh.rotation.set(data.rot.x, data.rot.y, data.rot.z);
+      } else if (data.type === 'shoot') {
+        // Spawn laser from peer position
+        const pGeo = new THREE.SphereGeometry(0.08, 8, 8);
+        const pMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+        const pMesh = new THREE.Mesh(pGeo, pMat);
+        pMesh.position.set(data.pos.x, data.pos.y, data.pos.z);
+        scene.add(pMesh);
+
+        projectiles.push({
+          mesh: pMesh,
+          direction: new THREE.Vector3(data.dir.x, data.dir.y, data.dir.z),
+          speed: 1.2,
+          life: 60,
+          isLocal: false
+        });
+      }
+    }
+
+    function broadcastNetworkData(data) {
+      connections.forEach(conn => {
+        if (conn.open) {
+          conn.send(data);
+        }
+      });
+    }
+
+    // Host Room
+    document.getElementById('host-btn').addEventListener('click', () => {
+      if (!peer || !peer.id) return;
+      isHost = true;
+      document.getElementById('room-id-box').classList.remove('hidden');
+      document.getElementById('my-room-id').innerText = peer.id;
+    });
+
+    // Copy Room ID
+    document.getElementById('copy-room-btn').addEventListener('click', () => {
+      const roomCode = document.getElementById('my-room-id').innerText;
+      navigator.clipboard.writeText(roomCode);
+      document.getElementById('copy-room-btn').innerText = 'Copied!';
+      setTimeout(() => { document.getElementById('copy-room-btn').innerText = 'Copy'; }, 2000);
+    });
+
+    // Join Room
+    document.getElementById('join-btn').addEventListener('click', () => {
+      const targetId = document.getElementById('join-room-input').value.trim();
+      if (!targetId || !peer) return;
+      const conn = peer.connect(targetId);
+      conn.on('open', () => {
+        setupConnection(conn);
+      });
+    });
+
+    initPeerJS();
+
+    // --- GAMEPLAY & CAMERA ROTATION LOGIC ---
+    let pitch = 0;
+    let yaw = 0;
+
+    function updatePlayerMovement() {
+      // Rotate Rig & Camera
+      if (inputs.lookX !== 0 || inputs.lookY !== 0) {
+        yaw -= inputs.lookX;
+        pitch -= inputs.lookY;
+        pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch));
+
+        playerRig.rotation.y = yaw;
+        camera.rotation.x = pitch;
+      }
+
+      // Smooth gun positioning return after recoil
+      weaponGroup.position.z += (-0.4 - weaponGroup.position.z) * 0.15;
+
+      // Movement relative to Player Facing Angle
+      if (inputs.moveX !== 0 || inputs.moveY !== 0) {
+        const speed = 0.12;
+        const moveVec = new THREE.Vector3(inputs.moveX, 0, inputs.moveY);
+        moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+        playerRig.position.x += moveVec.x * speed;
+        playerRig.position.z += moveVec.z * speed;
+
+        // Keep inside terrain boundary
+        const maxB = (WORLD_SIZE / 2) - 1;
+        playerRig.position.x = Math.max(-maxB, Math.min(maxB, playerRig.position.x));
+        playerRig.position.z = Math.max(-maxB, Math.min(maxB, playerRig.position.z));
+
+        // Adjust terrain collision height smoothly
+        const groundY = getTerrainHeight(playerRig.position.x, playerRig.position.z) + 1;
+        playerRig.position.y += (groundY - playerRig.position.y) * 0.2;
+      }
+
+      // Sync position across WebRTC network
+      if (gameState.isStarted) {
+        broadcastNetworkData({
+          type: 'transform',
+          pos: { x: playerRig.position.x, y: playerRig.position.y, z: playerRig.position.z },
+          rot: { x: camera.rotation.x, y: playerRig.rotation.y, z: 0 }
+        });
+      }
+    }
+
+    // --- MAIN GAME LOOP ---
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (gameState.isStarted) {
+        pollGamepad();
+        updatePlayerMovement();
+
+        // 1. Update Projectiles
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+          const p = projectiles[i];
+          p.mesh.position.addScaledVector(p.direction, p.speed);
+          p.life--;
+
+          // Hit detection with Enemies
+          let hit = false;
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            const e = enemies[j];
+            if (p.mesh.position.distanceTo(e.mesh.position) < 0.9) {
+              hit = true;
+              e.health--;
+
+              createVoxelExplosion(p.mesh.position, 0x00ffff);
+
+              if (e.health <= 0) {
+                createVoxelExplosion(e.mesh.position, 0xff0055);
+                scene.remove(e.mesh);
+                enemies.splice(j, 1);
+                
+                if (p.isLocal) {
+                  gameState.score += 100;
+                  updateScoreUI();
+                }
+              }
+              break;
+            }
+          }
+
+          if (hit || p.life <= 0) {
+            scene.remove(p.mesh);
+            projectiles.splice(i, 1);
+          }
+        }
+
+        // 2. Update Enemies Movement & Damage
+        for (let i = 0; i < enemies.length; i++) {
+          const e = enemies[i];
+          // Move towards local player
+          const dir = new THREE.Vector3().subVectors(playerRig.position, e.mesh.position);
+          dir.y = 0;
+          dir.normalize();
+
+          e.mesh.position.addScaledVector(dir, e.speed);
+          e.mesh.lookAt(playerRig.position.x, e.mesh.position.y, playerRig.position.z);
+
+          // Damage Player on contact
+          if (e.mesh.position.distanceTo(playerRig.position) < 1.1) {
+            damagePlayer(0.5);
+          }
+        }
+
+        // 3. Update Voxel Particles
+        for (let i = particleSystems.length - 1; i >= 0; i--) {
+          const pt = particleSystems[i];
+          pt.mesh.position.add(pt.vel);
+          pt.life--;
+          pt.mesh.scale.multiplyScalar(0.92);
+
+          if (pt.life <= 0) {
+            scene.remove(pt.mesh);
+            particleSystems.splice(i, 1);
+          }
+        }
+      }
+
+      // Render Scene (Stereo VR or Mono)
+      if (gameState.isVR) {
+        renderStereoVR();
+      } else {
+        renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+        renderer.setScissorTest(false);
+        renderer.render(scene, camera);
+      }
+    }
+
+    // Dual Viewport Split-Screen VR (Mobile Cardboard / VR Box compatible)
+    function renderStereoVR() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const halfWidth = width / 2;
+
+      renderer.setScissorTest(true);
+
+      // Left Eye
+      renderer.setViewport(0, 0, halfWidth, height);
+      renderer.setScissor(0, 0, halfWidth, height);
+      camera.position.x = -0.03; // Interpupillary distance offset
+      renderer.render(scene, camera);
+
+      // Right Eye
+      renderer.setViewport(halfWidth, 0, halfWidth, height);
+      renderer.setScissor(halfWidth, 0, halfWidth, height);
+      camera.position.x = 0.03;
+      renderer.render(scene, camera);
+
+      // Reset camera center
+      camera.position.x = 0;
+    }
+
+    // --- HEALTH & SCORE UI UPDATES ---
+    function updateScoreUI() {
+      document.getElementById('score-val').innerText = gameState.score;
+      document.getElementById('score-val-l').innerText = gameState.score;
+      document.getElementById('score-val-r').innerText = gameState.score;
+    }
+
+    function damagePlayer(amount) {
+      gameState.health = Math.max(0, gameState.health - amount);
+      const pct = (gameState.health / gameState.maxHealth) * 100;
+      
+      document.getElementById('health-bar').style.width = pct + '%';
+      document.getElementById('health-bar-l').style.width = pct + '%';
+      document.getElementById('health-bar-r').style.width = pct + '%';
+
+      if (gameState.health <= 0) {
+        gameOver();
+      }
+    }
+
+    function gameOver() {
+      gameState.isStarted = false;
+      document.getElementById('final-score').innerText = gameState.score;
+      document.getElementById('game-over-modal').classList.remove('hidden');
+    }
+
+    document.getElementById('respawn-btn').addEventListener('click', () => {
+      gameState.health = 100;
+      gameState.score = 0;
+      damagePlayer(0);
+      updateScoreUI();
+      playerRig.position.set(0, 5, 0);
+      document.getElementById('game-over-modal').classList.add('hidden');
+      gameState.isStarted = true;
+    });
+
+    // --- VR STEREO TOGGLE BUTTON ---
+    document.getElementById('vr-toggle-btn').addEventListener('click', () => {
+      gameState.isVR = !gameState.isVR;
+      
+      if (gameState.isVR) {
+        document.getElementById('mono-crosshair').classList.add('hidden');
+        document.getElementById('stereo-crosshairs').classList.remove('hidden');
+        document.getElementById('hud-overlay').classList.add('hidden');
+        document.getElementById('stereo-hud').classList.remove('hidden');
+        // Auto-request full screen for mobile VR immersion
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen();
+        }
+      } else {
+        document.getElementById('mono-crosshair').classList.remove('hidden');
+        document.getElementById('stereo-crosshairs').classList.add('hidden');
+        document.getElementById('hud-overlay').classList.remove('hidden');
+        document.getElementById('stereo-hud').classList.add('hidden');
+      }
+    });
+
+    // START GAME EVENT
+    document.getElementById('start-game-btn').addEventListener('click', () => {
+      document.getElementById('menu-overlay').classList.add('hidden');
+      gameState.isStarted = true;
+    });
+
+    // WINDOW RESIZE HANDLER
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // START ANIMATION LOOP
+    window.onload = function() {
+      animate();
+    };
+  </script>
 </body>
 </html>
+```
