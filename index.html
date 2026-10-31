@@ -2,1086 +2,977 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visual Harmony Synth - AI Camera to Music</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Tone.js for Web Audio Synthesis -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <!-- TensorFlow.js and Pose Detection Models -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@3.20.0/dist/tf-core.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@3.20.0/dist/tf-converter.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@3.20.0/dist/tf-backend-webgl.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.0.0/dist/pose-detection.min.js"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        cyber: {
-                            black: '#080911',
-                            dark: '#0f1123',
-                            card: '#161936',
-                            accent: '#00f0ff',
-                            purple: '#7000ff',
-                            pink: '#ff0055',
-                            gold: '#ffb700',
-                            green: '#00ff66'
-                        }
-                    },
-                    fontFamily: {
-                        orbitron: ['Orbitron', 'sans-serif'],
-                        rajdhani: ['Rajdhani', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        body {
-            background-color: #080911;
-            color: #e2e8f0;
-            font-family: 'Rajdhani', sans-serif;
-            overflow-x: hidden;
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f1123;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #7000ff;
-            border-radius: 3px;
-        }
-
-        /* Glowing Effects */
-        .glow-accent {
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
-        }
-        .glow-purple {
-            box-shadow: 0 0 15px rgba(112, 0, 255, 0.4);
-        }
-        .text-glow {
-            text-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
-        }
-
-        /* Glassmorphism card */
-        .glass-panel {
-            background: rgba(22, 25, 54, 0.75);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(0, 240, 255, 0.15);
-        }
-
-        /* Slider Custom Styling */
-        input[type=range] {
-            -webkit-appearance: none;
-            background: #0f1123;
-            border-radius: 6px;
-            height: 6px;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            background: #00f0ff;
-            cursor: pointer;
-            box-shadow: 0 0 10px #00f0ff;
-        }
-
-        .grid-cell-active {
-            box-shadow: inset 0 0 15px rgba(0, 240, 255, 0.8);
-            border-color: #00f0ff;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motion Soundwave - Interactive Kinetic Music Studio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background-color: #05070f;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+    .font-orbitron {
+      font-family: 'Orbitron', sans-serif;
+    }
+    .glass-panel {
+      background: rgba(13, 18, 36, 0.65);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+    }
+    .glow-magenta {
+      box-shadow: 0 0 15px rgba(236, 72, 153, 0.4);
+    }
+    .text-glow-cyan {
+      text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+    }
+    .text-glow-pink {
+      text-shadow: 0 0 10px rgba(236, 72, 153, 0.6);
+    }
+    /* Custom Range Slider */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      height: 6px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #06b6d4;
+      cursor: pointer;
+      box-shadow: 0 0 10px #06b6d4;
+      transition: transform 0.1s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between">
+<body class="min-h-screen flex flex-col justify-between p-4 md:p-6 text-slate-100">
 
-    <!-- Top Navigation Header -->
-    <header class="glass-panel sticky top-0 z-50 border-b border-cyber-accent/20 px-4 py-3">
-        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-cyber-purple to-cyber-accent flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-cyber-purple/50">
-                    <i class="fa-solid font-orbitron">V</i>
-                </div>
-                <div>
-                    <h1 class="font-orbitron text-xl md:text-2xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyber-accent via-white to-cyber-purple">
-                        VISUAL HARMONY SYNTH
-                    </h1>
-                    <p class="text-xs text-cyan-400/80 tracking-widest font-mono">REAL-TIME CAMERA MOTION TO MUSIC ENGINE</p>
-                </div>
-            </div>
+  <!-- TOP BAR / HEADER -->
+  <header class="w-full glass-panel rounded-2xl p-4 mb-4 flex flex-wrap justify-between items-center gap-4">
+    <div class="flex items-center space-x-3">
+      <div class="p-3 bg-gradient-to-tr from-cyan-500 to-pink-500 rounded-xl shadow-lg glow-cyan">
+        <i data-lucide="activity" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl md:text-3xl font-extrabold tracking-wider font-orbitron bg-gradient-to-r from-cyan-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+          KINETIC SYNTH
+        </h1>
+        <p class="text-xs text-slate-400">Gesture & Motion Reactive Audio Bender</p>
+      </div>
+    </div>
 
-            <!-- Start / Audio Engine Toggle -->
-            <div class="flex items-center space-x-3">
-                <button id="audio-start-btn" class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyber-purple to-cyber-accent font-orbitron text-sm font-bold tracking-wider hover:opacity-90 transition-all transform active:scale-95 glow-accent flex items-center gap-2">
-                    <i class="fa-solid fa-power-off"></i>
-                    <span>START AUDIO ENGINE</span>
-                </button>
-                <div id="status-badge" class="px-3 py-1.5 rounded-full bg-red-900/40 border border-red-500/40 text-red-400 text-xs font-mono flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                    <span>AUDIO OFFLINE</span>
-                </div>
-            </div>
-        </div>
-    </header>
+    <!-- Master Action Controls -->
+    <div class="flex flex-wrap items-center gap-3">
+      <button id="toggleCameraBtn" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-600/30 border border-cyan-500/50 hover:bg-cyan-500/50 text-cyan-200 font-semibold transition-all duration-300">
+        <i data-lucide="camera" class="w-4 h-4"></i>
+        <span>Start Camera</span>
+      </button>
 
-    <!-- Main Container -->
-    <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <button id="toggleAudioBtn" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600/30 border border-pink-500/50 hover:bg-pink-500/50 text-pink-200 font-semibold transition-all duration-300">
+        <i data-lucide="volume-2" class="w-4 h-4"></i>
+        <span>Enable Audio Engine</span>
+      </button>
+    </div>
+  </header>
 
-        <!-- Left / Top Column: Camera Viewport & Overlay Visualizer -->
-        <div class="lg:col-span-7 flex flex-col gap-4">
-            
-            <!-- Video & Canvas Container -->
-            <div class="glass-panel rounded-2xl p-4 relative overflow-hidden flex flex-col justify-center items-center shadow-2xl">
-                <!-- Overlay Header Status -->
-                <div class="w-full flex justify-between items-center mb-3 px-1">
-                    <div class="flex items-center gap-2 text-xs font-mono text-cyan-400">
-                        <i class="fa-solid fa-eye animate-pulse"></i>
-                        <span id="tracker-mode-label">MODE: POSE & MOTION TRACKING</span>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span id="fps-counter" class="text-xs font-mono text-slate-400">FPS: 0</span>
-                        <span id="detection-status" class="text-xs font-mono text-emerald-400">MODEL LOADING...</span>
-                    </div>
-                </div>
+  <!-- MAIN STUDIO LAYOUT -->
+  <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
 
-                <!-- Video Viewport -->
-                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-cyber-black border border-cyber-accent/30 flex items-center justify-center shadow-inner">
-                    <!-- Hidden HTML Video Element -->
-                    <video id="webcam" class="hidden" playsinline muted></video>
-                    
-                    <!-- Main Interactive Canvas -->
-                    <canvas id="output-canvas" class="w-full h-full object-cover rounded-xl"></canvas>
-
-                    <!-- Initial Overlay Prompt -->
-                    <div id="camera-placeholder" class="absolute inset-0 bg-cyber-black/90 flex flex-col items-center justify-center gap-4 p-6 text-center z-10">
-                        <i class="fa-solid fa-video-slash text-5xl text-cyber-accent/50"></i>
-                        <div>
-                            <h3 class="font-orbitron text-lg font-bold text-white mb-1">Camera Feed Inactive</h3>
-                            <p class="text-sm text-slate-400 max-w-md">Enable your camera to trigger melodic notes, synth chords, and rhythm through body motion, colors, and gestures.</p>
-                        </div>
-                        <button id="enable-cam-btn" class="px-6 py-2.5 rounded-lg bg-cyber-accent text-cyber-black font-orbitron font-bold text-sm hover:bg-white transition-all glow-accent flex items-center gap-2">
-                            <i class="fa-solid fa-camera"></i> ENABLE CAMERA
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Live Audio Visualizer Waveform / Frequency Bar -->
-                <div class="w-full mt-4 bg-cyber-black/60 rounded-lg p-2 border border-cyber-purple/30">
-                    <canvas id="audio-vis-canvas" class="w-full h-12 rounded"></canvas>
-                </div>
-            </div>
-
-            <!-- Quick Trigger Grid Display -->
-            <div class="glass-panel rounded-2xl p-4">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-orbitron text-sm font-bold text-cyan-300 flex items-center gap-2">
-                        <i class="fa-solid fa-cubes"></i> SYNTH TRIGGER SPATIAL ZONES
-                    </h3>
-                    <span class="text-xs text-slate-400 font-mono">Move hands or body into grid regions</span>
-                </div>
-                <!-- 4x2 Virtual Spatial Trigger Matrix -->
-                <div id="trigger-grid" class="grid grid-cols-4 gap-2 h-20">
-                    <!-- Dynamic Grid Buttons -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Column: AI Model Controls & Sound Synthesizer Settings -->
-        <div class="lg:col-span-5 flex flex-col gap-6">
-            
-            <!-- Controls Panel Tabs / Modes -->
-            <div class="glass-panel rounded-2xl p-5 flex flex-col gap-5">
-                
-                <!-- Section 1: Vision Model & Analysis Settings -->
-                <div class="border-b border-cyber-accent/20 pb-4">
-                    <h3 class="font-orbitron text-md font-bold text-cyber-accent mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-microchip"></i> VISION MODEL & DETECTION
-                    </h3>
-                    
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                            <label class="block text-xs font-mono text-slate-400 mb-1">DETECTION ENGINE</label>
-                            <select id="detection-mode-select" class="w-full bg-cyber-dark border border-cyber-accent/30 rounded-lg px-3 py-2 text-sm text-cyan-300 focus:outline-none focus:border-cyber-accent font-mono">
-                                <option value="pose">Pose Detection (Hands/Body)</option>
-                                <option value="motion">Grid Optical Motion</option>
-                                <option value="color">RGB Color Tracking</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-mono text-slate-400 mb-1">MOTION SENSITIVITY</label>
-                            <input type="range" id="sensitivity-slider" min="10" max="90" value="45" class="w-full mt-2">
-                        </div>
-                    </div>
-
-                    <div class="flex items-center justify-between text-xs text-slate-300">
-                        <span>Show Skeleton Overlay</span>
-                        <input type="checkbox" id="toggle-skeleton" checked class="accent-cyan-400 w-4 h-4 cursor-pointer">
-                    </div>
-                </div>
-
-                <!-- Section 2: Musical Scale & Harmony Synth Config -->
-                <div class="border-b border-cyber-accent/20 pb-4">
-                    <h3 class="font-orbitron text-md font-bold text-cyber-purple mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-music"></i> SCALES & INSTRUMENT SYNTH
-                    </h3>
-
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                            <label class="block text-xs font-mono text-slate-400 mb-1">MUSICAL SCALE</label>
-                            <select id="scale-select" class="w-full bg-cyber-dark border border-cyber-purple/40 rounded-lg px-3 py-2 text-sm text-purple-300 focus:outline-none focus:border-cyber-purple font-mono">
-                                <option value="pentatonic">Minor Pentatonic</option>
-                                <option value="major">Major Scale</option>
-                                <option value="minor">Natural Minor</option>
-                                <option value="dorian">Dorian Mode</option>
-                                <option value="japanese">InSen (Japanese)</option>
-                                <option value="blues">Blues Scale</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-mono text-slate-400 mb-1">SYNTH INSTRUMENT</label>
-                            <select id="instrument-select" class="w-full bg-cyber-dark border border-cyber-purple/40 rounded-lg px-3 py-2 text-sm text-purple-300 focus:outline-none focus:border-cyber-purple font-mono">
-                                <option value="poly">Polyphonic Synth</option>
-                                <option value="fm">FM Crystal Synth</option>
-                                <option value="am">AM Vintage Synth</option>
-                                <option value="duo">Duo Lead Synth</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-mono text-slate-400 mb-1">BASE ROOT NOTE</label>
-                            <select id="root-note-select" class="w-full bg-cyber-dark border border-cyber-purple/40 rounded-lg px-3 py-2 text-sm text-purple-300 focus:outline-none focus:border-cyber-purple font-mono">
-                                <option value="C">C</option>
-                                <option value="D">D</option>
-                                <option value="E">E</option>
-                                <option value="F">F</option>
-                                <option value="G">G</option>
-                                <option value="A" selected>A</option>
-                                <option value="B">B</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-mono text-slate-400 mb-1">OCTAVE RANGE</label>
-                            <select id="octave-select" class="w-full bg-cyber-dark border border-cyber-purple/40 rounded-lg px-3 py-2 text-sm text-purple-300 focus:outline-none focus:border-cyber-purple font-mono">
-                                <option value="3">Octave 3 (Bass/Mid)</option>
-                                <option value="4" selected>Octave 4 (Mid/High)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 3: Rhythmic & Audio Effects Control -->
-                <div>
-                    <h3 class="font-orbitron text-md font-bold text-pink-400 mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-sliders"></i> AUDIO EFFECTS & TEMPO
-                    </h3>
-
-                    <div class="space-y-3">
-                        <div>
-                            <div class="flex justify-between text-xs font-mono text-slate-400 mb-1">
-                                <span>REVERB & SPACE</span>
-                                <span id="reverb-val">40%</span>
-                            </div>
-                            <input type="range" id="reverb-slider" min="0" max="100" value="40" class="w-full">
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between text-xs font-mono text-slate-400 mb-1">
-                                <span>PING-PONG DELAY</span>
-                                <span id="delay-val">30%</span>
-                            </div>
-                            <input type="range" id="delay-slider" min="0" max="100" value="30" class="w-full">
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between text-xs font-mono text-slate-400 mb-1">
-                                <span>RHYTHM TEMPO (BPM)</span>
-                                <span id="bpm-val">120 BPM</span>
-                            </div>
-                            <input type="range" id="bpm-slider" min="60" max="180" value="120" class="w-full">
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Real-time Tracked Notes Display Badge -->
-            <div class="glass-panel rounded-2xl p-4 flex items-center justify-between border border-pink-500/20">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400">
-                        <i class="fa-solid fa-compact-disc animate-spin"></i>
-                    </div>
-                    <div>
-                        <div class="text-xs font-mono text-slate-400">CURRENT HARMONIC OUTPUT</div>
-                        <div id="active-note-display" class="font-orbitron text-lg font-bold text-pink-400">WAITING FOR MOTION...</div>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <span id="trigger-count" class="text-xs font-mono text-cyan-400">TRIGGERS: 0</span>
-                </div>
-            </div>
-
-        </div>
-
-    </main>
-
-    <!-- Footer -->
-    <footer class="glass-panel border-t border-cyber-accent/10 py-3 text-center text-xs text-slate-500 font-mono">
-        Visual Harmony Synth &bull; Powered by TensorFlow.js, PoseDetection & Tone.js Web Audio Engine
-    </footer>
-
-    <!-- Main JavaScript Application Logic -->
-    <script>
-        /**
-         * VISUAL HARMONY SYNTH - APPLICATION ARCHITECTURE
-         * 1. Vision Module: Camera access & TensorFlow.js PoseDetection / Canvas Pixel Motion Tracking.
-         * 2. Music Synthesizer Engine: Tone.js polyphonic instruments, FX loops, pitch mapping.
-         * 3. Spatial Trigger Matrix: Maps visual position/keypoints to musical notes.
-         * 4. UI / Visualizer: Canvas rendering, dynamic visual particles, audio waveform visualizer.
-         */
-
-        // Global Application State
-        const state = {
-            audioStarted: false,
-            cameraActive: false,
-            detector: null,
-            detectionMode: 'pose', // 'pose', 'motion', 'color'
-            sensitivity: 45,
-            showSkeleton: true,
-            currentScale: 'pentatonic',
-            instrumentType: 'poly',
-            rootNote: 'A',
-            octave: 4,
-            bpm: 120,
-            reverbAmount: 0.4,
-            delayAmount: 0.3,
-            lastPlayedNotes: [],
-            triggerCount: 0,
-            fps: 0,
-            lastFrameTime: performance.now(),
-            gridCols: 4,
-            gridRows: 2,
-            activeGridCells: new Set(),
-            previousFrameData: null,
-            particles: []
-        };
-
-        // Musical Scales Definition (Interval offsets from root note)
-        const SCALES = {
-            pentatonic: [0, 3, 5, 7, 10, 12, 15, 17],
-            major: [0, 2, 4, 5, 7, 9, 11, 12],
-            minor: [0, 2, 3, 5, 7, 8, 10, 12],
-            dorian: [0, 2, 3, 5, 7, 9, 10, 12],
-            japanese: [0, 1, 5, 7, 8, 12, 13, 17],
-            blues: [0, 3, 5, 6, 7, 10, 12, 15]
-        };
-
-        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-
-        // DOM Elements References
-        const video = document.getElementById('webcam');
-        const canvas = document.getElementById('output-canvas');
-        const ctx = canvas.getContext('2d');
-        const visCanvas = document.getElementById('audio-vis-canvas');
-        const visCtx = visCanvas.getContext('2d');
-
-        const audioStartBtn = document.getElementById('audio-start-btn');
-        const statusBadge = document.getElementById('status-badge');
-        const enableCamBtn = document.getElementById('enable-cam-btn');
-        const cameraPlaceholder = document.getElementById('camera-placeholder');
-        const detectionStatus = document.getElementById('detection-status');
-        const fpsCounter = document.getElementById('fps-counter');
-        const triggerGridEl = document.getElementById('trigger-grid');
-        const activeNoteDisplay = document.getElementById('active-note-display');
-        const triggerCountEl = document.getElementById('trigger-count');
-
-        // Tone.js Audio Objects
-        let synth = null;
-        let reverb = null;
-        let delay = null;
-        let analyzer = null;
-        let drumSynth = null;
-
-        // -------------------------------------------------------------
-        // 1. SOUND & AUDIO SYNTHESIS ENGINE (TONE.JS)
-        // -------------------------------------------------------------
+    <!-- LEFT / CENTER: CAMERA & MOTION TRACKING CANVAS (8 COLS) -->
+    <section class="lg:col-span-8 flex flex-col space-y-4">
+      <div class="relative w-full h-[380px] sm:h-[480px] md:h-[540px] glass-panel rounded-2xl overflow-hidden flex items-center justify-center border border-slate-700/50">
         
-        async function initAudioEngine() {
-            if (state.audioStarted) return;
+        <!-- Hidden video source -->
+        <video id="webcam" class="hidden" playsinline muted></video>
 
-            try {
-                // Start Audio Context
-                await Tone.start();
-                
-                // Initialize FX Chain
-                reverb = new Tone.Reverb({ decay: 3, wet: state.reverbAmount }).toDestination();
-                await reverb.generate();
+        <!-- Main Tracking Canvas -->
+        <canvas id="motionCanvas" class="w-full h-full object-cover"></canvas>
 
-                delay = new Tone.PingPongDelay({
-                    delayTime: "8n",
-                    feedback: 0.3,
-                    wet: state.delayAmount
-                }).connect(reverb);
+        <!-- Offscreen Canvas for Frame Differencing -->
+        <canvas id="diffCanvas" class="hidden"></canvas>
 
-                analyzer = new Tone.FFT(32);
+        <!-- Overlay HUD Info -->
+        <div class="absolute top-4 left-4 pointer-events-none flex flex-col gap-1">
+          <div class="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-cyan-500/30 text-xs text-cyan-300">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span>MOTION ENERGY: <span id="motionEnergyVal" class="font-bold text-white">0%</span></span>
+          </div>
+          <div class="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-purple-500/30 text-xs text-purple-300">
+            <span>POSITION (X,Y): <span id="motionPosVal" class="font-bold text-white">0.50, 0.50</span></span>
+          </div>
+        </div>
 
-                // Create Instrument
-                createSynthInstrument();
+        <!-- Hotzone Trigger Badges overlay -->
+        <div class="absolute top-4 right-4 flex gap-2 pointer-events-none">
+          <div id="hzBass" class="px-3 py-1 bg-slate-900/80 border border-slate-700 rounded-lg text-xs font-semibold text-slate-400 transition-all">PITCH + LOWER</div>
+          <div id="hzFX" class="px-3 py-1 bg-slate-900/80 border border-slate-700 rounded-lg text-xs font-semibold text-slate-400 transition-all">FILTER OPEN</div>
+          <div id="hzLead" class="px-3 py-1 bg-slate-900/80 border border-slate-700 rounded-lg text-xs font-semibold text-slate-400 transition-all">STRIKE ZONE</div>
+        </div>
 
-                // Percussion for dynamic accent hits
-                drumSynth = new Tone.MembraneSynth({
-                    pitchDecay: 0.05,
-                    octaves: 4,
-                    oscillator: { type: "sine" }
-                }).connect(reverb);
+        <!-- Overlay when video is not active -->
+        <div id="cameraPrompt" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 p-6 text-center z-10 transition-opacity duration-500">
+          <div class="p-4 bg-slate-900/90 rounded-full border border-cyan-500/30 mb-4 animate-bounce">
+            <i data-lucide="video-off" class="w-10 h-10 text-cyan-400"></i>
+          </div>
+          <h2 class="text-xl font-orbitron font-bold text-slate-200 mb-2">Camera Tracking Offline</h2>
+          <p class="text-sm text-slate-400 max-w-md mb-6">Click <span class="text-cyan-400 font-semibold">"Start Camera"</span> above to enable pixel-motion tracking. Move your hands, arms, or body to modulate audio in real time!</p>
+        </div>
+      </div>
 
-                Tone.Transport.bpm.value = state.bpm;
-                Tone.Transport.start();
+      <!-- AUDIO SPECTRUM & WAVEFORM VISUALIZER -->
+      <div class="glass-panel rounded-2xl p-4 h-32 flex flex-col justify-between relative overflow-hidden">
+        <div class="flex justify-between items-center text-xs text-slate-400 mb-1 z-10">
+          <span class="flex items-center gap-1.5"><i data-lucide="waves" class="w-4 h-4 text-pink-400"></i> REALTIME AUDIO SPECTRUM & MODULATION</span>
+          <span id="activePresetBadge" class="text-cyan-400 font-orbitron">PRESET: THEREMIN ETHER</span>
+        </div>
+        <canvas id="audioVisualizer" class="w-full h-full absolute inset-0 rounded-2xl opacity-80 pointer-events-none"></canvas>
+      </div>
+    </section>
 
-                state.audioStarted = true;
+    <!-- RIGHT: SOUND ENGINE & FX CONTROLS (4 COLS) -->
+    <section class="lg:col-span-4 flex flex-col space-y-4">
+      
+      <!-- MODE & PRESET SELECTOR -->
+      <div class="glass-panel rounded-2xl p-4 space-y-4">
+        <h3 class="text-sm font-orbitron text-slate-300 tracking-wider flex items-center gap-2">
+          <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i> SOUND MODES & PRESETS
+        </h3>
+        
+        <div class="grid grid-cols-3 gap-2">
+          <button data-mode="synth" class="mode-btn px-3 py-2 text-xs font-semibold rounded-xl border border-cyan-500/40 bg-cyan-500/20 text-cyan-200 hover:bg-cyan-500/30 active">
+            Synth
+          </button>
+          <button data-mode="drums" class="mode-btn px-3 py-2 text-xs font-semibold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-400 hover:bg-slate-700">
+            Beats
+          </button>
+          <button data-mode="audioTrack" class="mode-btn px-3 py-2 text-xs font-semibold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-400 hover:bg-slate-700">
+            Custom Track
+          </button>
+        </div>
 
-                // Update UI Status
-                statusBadge.className = "px-3 py-1.5 rounded-full bg-emerald-900/40 border border-emerald-500/40 text-emerald-400 text-xs font-mono flex items-center gap-2";
-                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>AUDIO ACTIVE</span>`;
-                audioStartBtn.classList.add("opacity-50", "pointer-events-none");
-                audioStartBtn.querySelector('span').innerText = "AUDIO ENGINE READY";
+        <!-- Preset Selector Dropdown -->
+        <div class="flex flex-col space-y-1">
+          <label class="text-xs text-slate-400">Audio Preset</label>
+          <select id="presetSelect" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
+            <option value="theremin">Theremin Ether (Ambient Pitch & Reverb)</option>
+            <option value="cyberbass">Cybernetic Bass Bend (Aggressive Cutoff)</option>
+            <option value="harp">Ambient Kinetic Harp (Polyphonic Swells)</option>
+            <option value="glitch">Glitch Machine (Bitcrush & Mod Delay)</option>
+          </select>
+        </div>
 
-                // Play intro melody cascade
-                playIntroArpeggio();
+        <!-- Custom Track Uploader (Hidden by default, shown in Audio Track Mode) -->
+        <div id="trackUploadContainer" class="hidden flex-col space-y-2 pt-2 border-t border-slate-800">
+          <label class="text-xs text-slate-300 font-semibold flex items-center gap-1.5">
+            <i data-lucide="upload" class="w-3.5 h-3.5 text-pink-400"></i> Upload MP3 / Audio Loop
+          </label>
+          <input type="file" id="audioFileInput" accept="audio/*" class="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-pink-600/30 file:text-pink-300 hover:file:bg-pink-500/40 cursor-pointer"/>
+          <p class="text-[10px] text-slate-500">Move vertically to pitch-bend track, horizontally for filter cutoff.</p>
+        </div>
+      </div>
 
-            } catch (err) {
-                console.error("Audio Initialization Error:", err);
-            }
+      <!-- MOTION PARAMETER MAPPINGS & FX READOUT -->
+      <div class="glass-panel rounded-2xl p-4 space-y-4 flex-grow flex flex-col justify-between">
+        <h3 class="text-sm font-orbitron text-slate-300 tracking-wider flex items-center gap-2">
+          <i data-lucide="cpu" class="w-4 h-4 text-pink-400"></i> LIVE AUDIO MODULATION
+        </h3>
+
+        <div class="space-y-3">
+          <!-- Pitch / Frequency Readout -->
+          <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-400 flex items-center gap-1"><i data-lucide="arrow-up-down" class="w-3 h-3 text-cyan-400"></i> Pitch Bend (Y-Axis)</span>
+              <span id="pitchValDisplay" class="text-cyan-400 font-mono">440 Hz (A4)</span>
+            </div>
+            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div id="pitchMeter" class="bg-gradient-to-r from-cyan-500 to-blue-500 h-full w-1/2 transition-all duration-75"></div>
+            </div>
+          </div>
+
+          <!-- Cutoff Filter Readout -->
+          <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-400 flex items-center gap-1"><i data-lucide="arrow-left-right" class="w-3 h-3 text-pink-400"></i> Lowpass Filter (X-Axis)</span>
+              <span id="cutoffValDisplay" class="text-pink-400 font-mono">1200 Hz</span>
+            </div>
+            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div id="cutoffMeter" class="bg-gradient-to-r from-pink-500 to-purple-500 h-full w-1/2 transition-all duration-75"></div>
+            </div>
+          </div>
+
+          <!-- Motion Intensity / Distortion & Reverb -->
+          <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-400 flex items-center gap-1"><i data-lucide="zap" class="w-3 h-3 text-yellow-400"></i> FX Depth (Motion Velocity)</span>
+              <span id="fxValDisplay" class="text-yellow-400 font-mono">20%</span>
+            </div>
+            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div id="fxMeter" class="bg-gradient-to-r from-yellow-500 to-red-500 h-full w-1/5 transition-all duration-75"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FINE-TUNING CONTROLS -->
+        <div class="pt-2 border-t border-slate-800 space-y-3">
+          <h4 class="text-xs font-orbitron text-slate-400">MOTION CALIBRATION</h4>
+          
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs text-slate-400">
+              <span>Sensitivity</span>
+              <span id="sensVal">1.5x</span>
+            </div>
+            <input type="range" id="sensitivitySlider" min="0.5" max="3.0" step="0.1" value="1.5" class="w-full">
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs text-slate-400">
+              <span>Noise Gate Threshold</span>
+              <span id="threshVal">12</span>
+            </div>
+            <input type="range" id="thresholdSlider" min="5" max="40" step="1" value="12" class="w-full">
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="mt-4 glass-panel rounded-xl p-3 text-center text-xs text-slate-500 flex justify-between items-center flex-wrap gap-2">
+    <span>Web Audio API & Pixel Optical Motion Tracking Engine</span>
+    <span class="text-slate-400">Stand back & raise your arms to play air theremin or bend beat loops!</span>
+  </footer>
+
+  <!-- JS LOGIC ENGINE -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // ==========================================
+    // GLOBAL STATE & SYSTEM CONSTANTS
+    // ==========================================
+    const state = {
+      isCameraActive: false,
+      isAudioActive: false,
+      soundMode: 'synth', // 'synth', 'drums', 'audioTrack'
+      preset: 'theremin',
+      sensitivity: 1.5,
+      threshold: 12,
+      motionEnergy: 0,
+      centerX: 0.5,
+      centerY: 0.5,
+      lastCenterX: 0.5,
+      lastCenterY: 0.5,
+      velocity: 0,
+      particles: []
+    };
+
+    // DOM Elements
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('motionCanvas');
+    const ctx = canvas.getContext('2d');
+    const diffCanvas = document.getElementById('diffCanvas');
+    const diffCtx = diffCanvas.getContext('2d', { willReadFrequently: true });
+    
+    const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+    const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+    const cameraPrompt = document.getElementById('cameraPrompt');
+
+    const sensitivitySlider = document.getElementById('sensitivitySlider');
+    const thresholdSlider = document.getElementById('thresholdSlider');
+    const sensValDisplay = document.getElementById('sensVal');
+    const threshValDisplay = document.getElementById('threshVal');
+
+    const pitchValDisplay = document.getElementById('pitchValDisplay');
+    const cutoffValDisplay = document.getElementById('cutoffValDisplay');
+    const fxValDisplay = document.getElementById('fxValDisplay');
+    const pitchMeter = document.getElementById('pitchMeter');
+    const cutoffMeter = document.getElementById('cutoffMeter');
+    const fxMeter = document.getElementById('fxMeter');
+    const motionEnergyVal = document.getElementById('motionEnergyVal');
+    const motionPosVal = document.getElementById('motionPosVal');
+
+    const presetSelect = document.getElementById('presetSelect');
+    const activePresetBadge = document.getElementById('activePresetBadge');
+    const trackUploadContainer = document.getElementById('trackUploadContainer');
+    const audioFileInput = document.getElementById('audioFileInput');
+
+    // Hotzone HUD overlays
+    const hzBass = document.getElementById('hzBass');
+    const hzFX = document.getElementById('hzFX');
+    const hzLead = document.getElementById('hzLead');
+
+    // ==========================================
+    // AUDIO ENGINE (WEB AUDIO API)
+    // ==========================================
+    let audioCtx = null;
+    let masterGain = null;
+    let biquadFilter = null;
+    let delayNode = null;
+    let delayFeedback = null;
+    let waveShaperNode = null;
+    let analyserNode = null;
+
+    // Audio Track Player Nodes
+    let audioBuffer = null;
+    let audioSourceNode = null;
+    let isTrackPlaying = false;
+
+    // Synth Oscillators & Beat Generators
+    let synthOsc1 = null;
+    let synthOsc2 = null;
+    let synthGain = null;
+    let drumLoopInterval = null;
+
+    function initAudioEngine() {
+      if (audioCtx) return;
+
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+
+      // Master Gain
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+
+      // Lowpass Filter Node
+      biquadFilter = audioCtx.createBiquadFilter();
+      biquadFilter.type = 'lowpass';
+      biquadFilter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+      biquadFilter.Q.setValueAtTime(4, audioCtx.currentTime);
+
+      // Delay FX Node
+      delayNode = audioCtx.createDelay();
+      delayNode.delayTime.setValueAtTime(0.25, audioCtx.currentTime);
+      delayFeedback = audioCtx.createGain();
+      delayFeedback.gain.setValueAtTime(0.35, audioCtx.currentTime);
+
+      // Feedback Loop Setup
+      delayNode.connect(delayFeedback);
+      delayFeedback.connect(delayNode);
+
+      // Distortion WaveShaper
+      waveShaperNode = audioCtx.createWaveShaper();
+      waveShaperNode.curve = makeDistortionCurve(0);
+
+      // Analyser Node for Visualizer
+      analyserNode = audioCtx.createAnalyser();
+      analyserNode.fftSize = 256;
+
+      // Routing Engine Audio Pipeline
+      // Source -> Filter -> Waveshaper -> Master -> Delay -> Analyser -> Output
+      biquadFilter.connect(waveShaperNode);
+      waveShaperNode.connect(masterGain);
+
+      masterGain.connect(delayNode);
+      delayNode.connect(masterGain);
+
+      masterGain.connect(analyserNode);
+      analyserNode.connect(audioCtx.destination);
+
+      setupSynthNodes();
+      startAudioVisualizer();
+    }
+
+    function setupSynthNodes() {
+      if (!audioCtx) return;
+
+      synthGain = audioCtx.createGain();
+      synthGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+
+      synthOsc1 = audioCtx.createOscillator();
+      synthOsc2 = audioCtx.createOscillator();
+
+      synthOsc1.type = 'sawtooth';
+      synthOsc2.type = 'sine';
+
+      synthOsc1.frequency.setValueAtTime(440, audioCtx.currentTime);
+      synthOsc2.frequency.setValueAtTime(220, audioCtx.currentTime);
+
+      synthOsc1.connect(synthGain);
+      synthOsc2.connect(synthGain);
+      synthGain.connect(biquadFilter);
+
+      synthOsc1.start();
+      synthOsc2.start();
+    }
+
+    function makeDistortionCurve(amount) {
+      const k = typeof amount === 'number' ? amount : 0;
+      const n_samples = 44100;
+      const curve = new Float32Array(n_samples);
+      const deg = Math.PI / 180;
+      for (let i = 0; i < n_samples; ++i) {
+        const x = (i * 2) / n_samples - 1;
+        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+      }
+      return curve;
+    }
+
+    // ==========================================
+    // AUDIO PARAMETER BENDING & MOTION REACTIVITY
+    // ==========================================
+    function updateAudioFromMotion(x, y, intensity) {
+      if (!audioCtx || !state.isAudioActive) return;
+
+      // Invert Y so moving HANDS UP (low pixel Y) produces HIGHER PITCH
+      const normY = 1.0 - Math.max(0, Math.min(1, y));
+      const normX = Math.max(0, Math.min(1, x));
+
+      // 1. Pitch Bending (Vertical Position - Y)
+      // Range: ~100Hz (Low Bass) to 1200Hz (High Lead)
+      const baseFreq = 110 * Math.pow(2, normY * 3); // 3 Octave range
+      if (synthOsc1 && synthOsc2) {
+        synthOsc1.frequency.setTargetAtTime(baseFreq, audioCtx.currentTime, 0.05);
+        synthOsc2.frequency.setTargetAtTime(baseFreq * 0.5, audioCtx.currentTime, 0.05);
+      }
+
+      // If playing custom audio track, pitch/speed bend playbackRate (0.5x to 2.0x)
+      if (audioSourceNode && state.soundMode === 'audioTrack') {
+        const playbackRate = 0.5 + normY * 1.5;
+        audioSourceNode.playbackRate.setTargetAtTime(playbackRate, audioCtx.currentTime, 0.05);
+      }
+
+      // 2. Filter Cutoff Modulation (Horizontal Position - X)
+      // Range: 200Hz to 8000Hz
+      const cutoffFreq = 200 + Math.pow(normX, 2) * 7800;
+      biquadFilter.frequency.setTargetAtTime(cutoffFreq, audioCtx.currentTime, 0.05);
+
+      // 3. Motion Intensity FX Bending (Distortion, Delay & Synth Volume Envelope)
+      const clampedIntensity = Math.min(1, intensity * state.sensitivity);
+
+      // Volume swells with motion
+      const targetGain = Math.max(0.05, Math.min(0.6, clampedIntensity * 0.8));
+      if (synthGain) {
+        synthGain.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.08);
+      }
+
+      // Spatial Delay Feedback & Distortion adjustment
+      delayFeedback.gain.setTargetAtTime(0.2 + clampedIntensity * 0.5, audioCtx.currentTime, 0.1);
+      waveShaperNode.curve = makeDistortionCurve(clampedIntensity * 30);
+
+      // UI Readouts Update
+      pitchValDisplay.innerText = `${Math.round(baseFreq)} Hz`;
+      pitchMeter.style.width = `${Math.min(100, normY * 100)}%`;
+
+      cutoffValDisplay.innerText = `${Math.round(cutoffFreq)} Hz`;
+      cutoffMeter.style.width = `${Math.min(100, normX * 100)}%`;
+
+      const fxPercent = Math.round(clampedIntensity * 100);
+      fxValDisplay.innerText = `${fxPercent}%`;
+      fxMeter.style.width = `${fxPercent}%`;
+
+      motionEnergyVal.innerText = `${fxPercent}%`;
+      motionPosVal.innerText = `${normX.toFixed(2)}, ${normY.toFixed(2)}`;
+
+      // Highlight Active Hotzones based on position
+      highlightHotzones(normX, normY, clampedIntensity);
+    }
+
+    function highlightHotzones(x, y, intensity) {
+      // Clear zone states
+      [hzBass, hzFX, hzLead].forEach(el => {
+        el.className = "px-3 py-1 bg-slate-900/80 border border-slate-700 rounded-lg text-xs font-semibold text-slate-400 transition-all";
+      });
+
+      if (y > 0.7) {
+        hzBass.className = "px-3 py-1 bg-cyan-600/50 border border-cyan-400 rounded-lg text-xs font-semibold text-cyan-200 glow-cyan transition-all";
+      }
+      if (x > 0.7) {
+        hzFX.className = "px-3 py-1 bg-pink-600/50 border border-pink-400 rounded-lg text-xs font-semibold text-pink-200 glow-magenta transition-all";
+      }
+      if (intensity > 0.4) {
+        hzLead.className = "px-3 py-1 bg-purple-600/50 border border-purple-400 rounded-lg text-xs font-semibold text-purple-200 transition-all";
+      }
+    }
+
+    // ==========================================
+    // PROCEDURAL BEATS & SOUND MODES
+    // ==========================================
+    function setSoundMode(mode) {
+      state.soundMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        if (btn.getAttribute('data-mode') === mode) {
+          btn.className = "mode-btn px-3 py-2 text-xs font-semibold rounded-xl border border-cyan-500/40 bg-cyan-500/20 text-cyan-200 hover:bg-cyan-500/30 active";
+        } else {
+          btn.className = "mode-btn px-3 py-2 text-xs font-semibold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-400 hover:bg-slate-700";
+        }
+      });
+
+      if (mode === 'audioTrack') {
+        trackUploadContainer.classList.remove('hidden');
+        trackUploadContainer.classList.add('flex');
+      } else {
+        trackUploadContainer.classList.add('hidden');
+        trackUploadContainer.classList.remove('flex');
+      }
+
+      if (mode === 'drums') {
+        startDrumMachine();
+      } else {
+        stopDrumMachine();
+      }
+    }
+
+    function startDrumMachine() {
+      stopDrumMachine();
+      if (!audioCtx) return;
+
+      let step = 0;
+      drumLoopInterval = setInterval(() => {
+        if (!state.isAudioActive) return;
+
+        // Simple procedural synth beat
+        const now = audioCtx.currentTime;
+        
+        // Kick on beat 0 & 2
+        if (step % 2 === 0) {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.frequency.setValueAtTime(130, now);
+          osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.15);
+          gain.gain.setValueAtTime(0.8, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.connect(gain);
+          gain.connect(biquadFilter);
+          osc.start(now);
+          osc.stop(now + 0.15);
         }
 
-        function createSynthInstrument() {
-            if (synth) synth.dispose();
-
-            const commonOptions = {
-                volume: -6
-            };
-
-            switch (state.instrumentType) {
-                case 'fm':
-                    synth = new Tone.PolySynth(Tone.FMSynth, {
-                        harmonicity: 2,
-                        modulationIndex: 3,
-                        oscillator: { type: 'sine' },
-                        envelope: { attack: 0.02, decay: 0.2, sustain: 0.5, release: 0.8 }
-                    });
-                    break;
-                case 'am':
-                    synth = new Tone.PolySynth(Tone.AMSynth, {
-                        harmonicity: 1.5,
-                        oscillator: { type: 'triangle' },
-                        envelope: { attack: 0.05, decay: 0.3, sustain: 0.6, release: 1 }
-                    });
-                    break;
-                case 'duo':
-                    synth = new Tone.PolySynth(Tone.DuoSynth, {
-                        vibratoAmount: 0.5,
-                        vibratoRate: 5,
-                        harmonicity: 1.5
-                    });
-                    break;
-                case 'poly':
-                default:
-                    synth = new Tone.PolySynth(Tone.Synth, {
-                        oscillator: { type: 'triangle' },
-                        envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.6 }
-                    });
-                    break;
-            }
-
-            // Connect synth to FX chain & Analyzer
-            synth.connect(delay);
-            synth.connect(analyzer);
+        // Hi-Hat on every step, accented by motion velocity
+        const hatNoise = audioCtx.createBufferSource();
+        const bufferSize = audioCtx.sampleRate * 0.04;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
         }
-
-        // Map Grid Cell / Coordinate to Pitch in Current Scale
-        function getPitchFromPosition(cellIndex, totalCells) {
-            const scaleOffsets = SCALES[state.currentScale];
-            const rootIndex = NOTE_NAMES.indexOf(state.rootNote);
-            
-            // Map cell to scale note
-            const scaleNote = scaleOffsets[cellIndex % scaleOffsets.length];
-            const octaveOffset = Math.floor(cellIndex / scaleOffsets.length);
-            const totalSemi = rootIndex + scaleNote + ((parseInt(state.octave) + octaveOffset) * 12);
-            
-            const noteName = NOTE_NAMES[totalSemi % 12];
-            const octaveNum = Math.floor(totalSemi / 12) - 1;
-            
-            return `${noteName}${octaveNum}`;
-        }
-
-        // Trigger Audio Note from Visual Activation
-        function triggerNoteFromGrid(cellIndex) {
-            if (!state.audioStarted || !synth) return;
-
-            const note = getPitchFromPosition(cellIndex, state.gridCols * state.gridRows);
-            const now = Tone.now();
-
-            try {
-                synth.triggerAttackRelease(note, "8n", now);
-                
-                // Occasional dynamic drum accent on top grid row triggers
-                if (cellIndex >= 4 && Math.random() > 0.6) {
-                    drumSynth.triggerAttackRelease("C1", "16n", now);
-                }
-
-                state.triggerCount++;
-                triggerCountEl.innerText = `TRIGGERS: ${state.triggerCount}`;
-                activeNoteDisplay.innerText = `NOTE: ${note}`;
-                state.lastPlayedNotes.push(note);
-                if (state.lastPlayedNotes.length > 5) state.lastPlayedNotes.shift();
-
-            } catch (e) {
-                // Ignore overlapping node trigger collisions
-            }
-        }
-
-        function playIntroArpeggio() {
-            const scale = SCALES[state.currentScale];
-            scale.slice(0, 5).forEach((val, idx) => {
-                const note = getPitchFromPosition(idx, 8);
-                synth.triggerAttackRelease(note, "16n", Tone.now() + idx * 0.1);
-            });
-        }
-
-        // -------------------------------------------------------------
-        // 2. TENSORFLOW.JS POSE DETECTION & VISION ANALYSIS
-        // -------------------------------------------------------------
-
-        async function initCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-                    audio: false
-                });
-                video.srcObject = stream;
-                await video.play();
-
-                state.cameraActive = true;
-                cameraPlaceholder.classList.add('hidden');
-
-                // Set Canvas dimensions to match video element
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 480;
-
-                // Load Pose Detection Model
-                loadVisionModel();
-
-            } catch (err) {
-                alert("Camera access denied or un-available. Please grant permissions.");
-                console.error("Camera Error:", err);
-            }
-        }
-
-        async function loadVisionModel() {
-            detectionStatus.innerText = "LOADING TF.JS POSE DETECTOR...";
-            try {
-                // Initialize MoveNet Pose Detector
-                const model = poseDetection.SupportedModels.MoveNet;
-                const detectorConfig = {
-                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING
-                };
-                state.detector = await poseDetection.createDetector(model, detectorConfig);
-                detectionStatus.innerText = "VISION MODEL ONLINE";
-                detectionStatus.className = "text-xs font-mono text-emerald-400";
-            } catch (err) {
-                console.warn("TF.js Pose Model failed to load, falling back to Canvas Motion Grid Mode:", err);
-                detectionStatus.innerText = "FALLBACK: OPTICAL MOTION MODE";
-                detectionStatus.className = "text-xs font-mono text-amber-400";
-                state.detectionMode = 'motion';
-                document.getElementById('detection-mode-select').value = 'motion';
-            }
-
-            // Start main processing loop
-            requestAnimationFrame(processVideoFrame);
-        }
-
-        // Main Video Processing Loop
-        async function processVideoFrame() {
-            // Calculate FPS
-            const now = performance.now();
-            const delta = now - state.lastFrameTime;
-            state.fps = Math.round(1000 / delta);
-            state.lastFrameTime = now;
-            fpsCounter.innerText = `FPS: ${state.fps}`;
-
-            if (video.readyState >= 2) {
-                // Draw current video frame to main canvas (mirrored)
-                ctx.save();
-                ctx.scale(-1, 1);
-                ctx.translate(-canvas.width, 0);
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                ctx.restore();
-
-                // Draw Grid Matrix Overlay
-                drawGridOverlay();
-
-                // Mode-based Vision Processing
-                if (state.detectionMode === 'pose' && state.detector) {
-                    await processPoseDetection();
-                } else if (state.detectionMode === 'motion') {
-                    processMotionGridDetection();
-                } else if (state.detectionMode === 'color') {
-                    processColorTracking();
-                }
-
-                // Render dynamic visual particles
-                updateAndDrawParticles();
-            }
-
-            // Render Audio Visualizer
-            renderAudioVisualizer();
-
-            requestAnimationFrame(processVideoFrame);
-        }
-
-        // Pose Detection Logic (Tracking wrists & keypoints)
-        async function processPoseDetection() {
-            try {
-                const poses = await state.detector.estimatePoses(canvas);
-                if (poses && poses.length > 0) {
-                    const pose = poses[0];
-                    
-                    if (state.showSkeleton) {
-                        drawPoseSkeleton(pose);
-                    }
-
-                    // Track Right and Left Wrists for music triggers
-                    const keypoints = pose.keypoints;
-                    const rightWrist = keypoints.find(k => k.name === 'right_wrist');
-                    const leftWrist = keypoints.find(k => k.name === 'left_wrist');
-                    const nose = keypoints.find(k => k.name === 'nose');
-
-                    const trackedPoints = [rightWrist, leftWrist, nose].filter(k => k && k.score > 0.3);
-
-                    const newlyActiveCells = new Set();
-
-                    trackedPoints.forEach((point) => {
-                        // Mirror point coordinates to align with mirrored display
-                        const mirroredX = canvas.width - point.x;
-                        const cellIndex = getCellIndexFromCoords(mirroredX, point.y);
-
-                        if (cellIndex !== -1) {
-                            newlyActiveCells.add(cellIndex);
-                            
-                            // Spawn particles at keypoint location
-                            createParticles(mirroredX, point.y, '#00f0ff');
-                        }
-                    });
-
-                    // Check for new triggers
-                    checkGridTriggers(newlyActiveCells);
-                }
-            } catch (e) {
-                console.error("Pose Estimation Error:", e);
-            }
-        }
-
-        // Optical Motion Detection using Canvas Pixel Differencing
-        function processMotionGridDetection() {
-            const width = canvas.width;
-            const height = canvas.height;
-            const frameData = ctx.getImageData(0, 0, width, height);
-            
-            if (!state.previousFrameData) {
-                state.previousFrameData = frameData;
-                return;
-            }
-
-            const current = frameData.data;
-            const prev = state.previousFrameData.data;
-            const threshold = (100 - state.sensitivity) * 2; // Sensitivity mapping
-
-            const cellMotionCounts = new Array(state.gridCols * state.gridRows).fill(0);
-            const colWidth = width / state.gridCols;
-            const rowHeight = height / state.gridRows;
-
-            // Sample pixels for motion diff
-            for (let y = 0; y < height; y += 12) {
-                for (let x = 0; x < width; x += 12) {
-                    const index = (y * width + x) * 4;
-                    const diff = Math.abs(current[index] - prev[index]) +
-                                 Math.abs(current[index + 1] - prev[index + 1]) +
-                                 Math.abs(current[index + 2] - prev[index + 2]);
-
-                    if (diff > threshold) {
-                        const col = Math.floor(x / colWidth);
-                        const row = Math.floor(y / rowHeight);
-                        const cellIdx = row * state.gridCols + col;
-                        cellMotionCounts[cellIdx]++;
-                    }
-                }
-            }
-
-            const newlyActiveCells = new Set();
-            const motionThresholdPixels = 15; // Min motion pixel triggers
-
-            cellMotionCounts.forEach((count, cellIdx) => {
-                if (count > motionThresholdPixels) {
-                    newlyActiveCells.add(cellIdx);
-                    
-                    // Center coords of cell for particle emission
-                    const col = cellIdx % state.gridCols;
-                    const row = Math.floor(cellIdx / state.gridCols);
-                    const cx = col * colWidth + colWidth / 2;
-                    const cy = row * rowHeight + rowHeight / 2;
-                    createParticles(cx, cy, '#ff0055');
-                }
-            });
-
-            checkGridTriggers(newlyActiveCells);
-            state.previousFrameData = frameData;
-        }
-
-        // Brightest Color Tracking Engine
-        function processColorTracking() {
-            const width = canvas.width;
-            const height = canvas.height;
-            const frameData = ctx.getImageData(0, 0, width, height).data;
-
-            let maxBrightness = 0;
-            let brightX = 0;
-            let brightY = 0;
-
-            for (let y = 0; y < height; y += 16) {
-                for (let x = 0; x < width; x += 16) {
-                    const idx = (y * width + x) * 4;
-                    const brightness = frameData[idx] + frameData[idx + 1] + frameData[idx + 2];
-                    if (brightness > maxBrightness) {
-                        maxBrightness = brightness;
-                        brightX = x;
-                        brightY = y;
-                    }
-                }
-            }
-
-            if (maxBrightness > 350) {
-                // Draw target tracker
-                ctx.strokeStyle = '#ffb700';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(brightX, brightY, 20, 0, Math.PI * 2);
-                ctx.stroke();
-
-                const cellIndex = getCellIndexFromCoords(brightX, brightY);
-                const newlyActiveCells = new Set();
-                if (cellIndex !== -1) newlyActiveCells.add(cellIndex);
-
-                checkGridTriggers(newlyActiveCells);
-                createParticles(brightX, brightY, '#ffb700');
-            }
-        }
-
-        // -------------------------------------------------------------
-        // 3. SPATIAL GRID & TRIGGER LOGIC
-        // -------------------------------------------------------------
-
-        function getCellIndexFromCoords(x, y) {
-            const colWidth = canvas.width / state.gridCols;
-            const rowHeight = canvas.height / state.gridRows;
-
-            const col = Math.floor(x / colWidth);
-            const row = Math.floor(y / rowHeight);
-
-            if (col >= 0 && col < state.gridCols && row >= 0 && row < state.gridRows) {
-                return row * state.gridCols + col;
-            }
-            return -1;
-        }
-
-        function checkGridTriggers(newlyActiveCells) {
-            // Compare active cells with previous frame state to trigger sound on enter
-            newlyActiveCells.forEach((cellIdx) => {
-                if (!state.activeGridCells.has(cellIdx)) {
-                    triggerNoteFromGrid(cellIdx);
-                }
-            });
-
-            state.activeGridCells = newlyActiveCells;
-            updateGridDOMUI();
-        }
-
-        function renderTriggerGridDOM() {
-            triggerGridEl.innerHTML = '';
-            const total = state.gridCols * state.gridRows;
-
-            for (let i = 0; i < total; i++) {
-                const noteName = getPitchFromPosition(i, total);
-                const cell = document.createElement('div');
-                cell.id = `grid-cell-${i}`;
-                cell.className = `glass-panel rounded-lg flex flex-col items-center justify-center border border-cyber-accent/20 transition-all text-xs font-mono cursor-pointer hover:border-cyber-accent`;
-                cell.innerHTML = `
-                    <span class="text-[10px] text-slate-500">ZONE ${i + 1}</span>
-                    <span class="font-bold text-cyan-300 font-orbitron">${noteName}</span>
-                `;
-                
-                // Allow manual click testing
-                cell.addEventListener('mousedown', () => {
-                    initAudioEngine();
-                    triggerNoteFromGrid(i);
-                    cell.classList.add('grid-cell-active');
-                    setTimeout(() => cell.classList.remove('grid-cell-active'), 200);
-                });
-
-                triggerGridEl.appendChild(cell);
-            }
-        }
-
-        function updateGridDOMUI() {
-            const total = state.gridCols * state.gridRows;
-            for (let i = 0; i < total; i++) {
-                const cellEl = document.getElementById(`grid-cell-${i}`);
-                if (cellEl) {
-                    if (state.activeGridCells.has(i)) {
-                        cellEl.classList.add('grid-cell-active', 'bg-cyber-accent/20');
-                    } else {
-                        cellEl.classList.remove('grid-cell-active', 'bg-cyber-accent/20');
-                    }
-                }
-            }
-        }
-
-        // -------------------------------------------------------------
-        // 4. CANVAS OVERLAYS & VISUALIZERS
-        // -------------------------------------------------------------
-
-        function drawGridOverlay() {
-            const width = canvas.width;
-            const height = canvas.height;
-            const colWidth = width / state.gridCols;
-            const rowHeight = height / state.gridRows;
-
-            ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
-            ctx.lineWidth = 1;
-
-            // Vertical lines
-            for (let c = 1; c < state.gridCols; c++) {
-                ctx.beginPath();
-                ctx.moveTo(c * colWidth, 0);
-                ctx.lineTo(c * colWidth, height);
-                ctx.stroke();
-            }
-
-            // Horizontal lines
-            for (let r = 1; r < state.gridRows; r++) {
-                ctx.beginPath();
-                ctx.moveTo(0, r * rowHeight);
-                ctx.lineTo(width, r * rowHeight);
-                ctx.stroke();
-            }
-
-            // Highlight Active Zones on Canvas
-            state.activeGridCells.forEach((cellIdx) => {
-                const col = cellIdx % state.gridCols;
-                const row = Math.floor(cellIdx / state.gridCols);
-                ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
-                ctx.fillRect(col * colWidth, row * rowHeight, colWidth, rowHeight);
-                ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(col * colWidth, row * rowHeight, colWidth, rowHeight);
-            });
-        }
-
-        function drawPoseSkeleton(pose) {
-            const keypoints = pose.keypoints;
-            
-            // Draw Points
-            keypoints.forEach((kp) => {
-                if (kp.score > 0.3) {
-                    const mirroredX = canvas.width - kp.x;
-                    ctx.fillStyle = '#7000ff';
-                    ctx.beginPath();
-                    ctx.arc(mirroredX, kp.y, 5, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = '#00f0ff';
-                    ctx.stroke();
-                }
-            });
-
-            // Keypoint bone connections
-            const adjacentPairs = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
-            adjacentPairs.forEach(([i, j]) => {
-                const kp1 = keypoints[i];
-                const kp2 = keypoints[j];
-                if (kp1.score > 0.3 && kp2.score > 0.3) {
-                    ctx.strokeStyle = 'rgba(112, 0, 255, 0.6)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(canvas.width - kp1.x, kp1.y);
-                    ctx.lineTo(canvas.width - kp2.x, kp2.y);
-                    ctx.stroke();
-                }
-            });
-        }
-
-        // Particle Trigger FX System
-        function createParticles(x, y, color) {
-            for (let i = 0; i < 4; i++) {
-                state.particles.push({
-                    x: x,
-                    y: y,
-                    vx: (Math.random() - 0.5) * 6,
-                    vy: (Math.random() - 0.5) * 6,
-                    radius: Math.random() * 4 + 2,
-                    alpha: 1.0,
-                    color: color
-                });
-            }
-        }
-
-        function updateAndDrawParticles() {
-            for (let i = state.particles.length - 1; i >= 0; i--) {
-                const p = state.particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.alpha -= 0.04;
-
-                if (p.alpha <= 0) {
-                    state.particles.splice(i, 1);
-                    continue;
-                }
-
-                ctx.save();
-                ctx.globalAlpha = p.alpha;
-                ctx.fillStyle = p.color;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            }
-        }
-
-        // Bottom Waveform Audio Visualizer
-        function renderAudioVisualizer() {
-            const w = visCanvas.width = visCanvas.clientWidth;
-            const h = visCanvas.height = visCanvas.clientHeight;
-            
-            visCtx.clearRect(0, 0, w, h);
-
-            if (!analyzer || !state.audioStarted) {
-                visCtx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
-                visCtx.beginPath();
-                visCtx.moveTo(0, h / 2);
-                visCtx.lineTo(w, h / 2);
-                visCtx.stroke();
-                return;
-            }
-
-            const values = analyzer.getValue();
-            const barWidth = w / values.length;
-
-            for (let i = 0; i < values.length; i++) {
-                const val = (values[i] + 140) * 0.8; // Normalized dB
-                const barHeight = Math.max(4, (val / 100) * h);
-
-                const grad = visCtx.createLinearGradient(0, h, 0, 0);
-                grad.addColorStop(0, '#7000ff');
-                grad.addColorStop(1, '#00f0ff');
-
-                visCtx.fillStyle = grad;
-                visCtx.fillRect(i * barWidth, h - barHeight, barWidth - 2, barHeight);
-            }
-        }
-
-        // -------------------------------------------------------------
-        // 5. EVENT LISTENERS & UI BINDINGS
-        // -------------------------------------------------------------
-
-        function setupEventListeners() {
-            // Audio Start Button
-            audioStartBtn.addEventListener('click', initAudioEngine);
-            enableCamBtn.addEventListener('click', () => {
-                initAudioEngine();
-                initCamera();
-            });
-
-            // Detection Mode Select
-            document.getElementById('detection-mode-select').addEventListener('change', (e) => {
-                state.detectionMode = e.target.value;
-                document.getElementById('tracker-mode-label').innerText = `MODE: ${e.target.value.toUpperCase()} TRACKING`;
-            });
-
-            // Sensitivity Slider
-            document.getElementById('sensitivity-slider').addEventListener('input', (e) => {
-                state.sensitivity = parseInt(e.target.value);
-            });
-
-            // Toggle Skeleton
-            document.getElementById('toggle-skeleton').addEventListener('change', (e) => {
-                state.showSkeleton = e.target.checked;
-            });
-
-            // Musical Scale Select
-            document.getElementById('scale-select').addEventListener('change', (e) => {
-                state.currentScale = e.target.value;
-                renderTriggerGridDOM();
-            });
-
-            // Instrument Select
-            document.getElementById('instrument-select').addEventListener('change', (e) => {
-                state.instrumentType = e.target.value;
-                if (state.audioStarted) createSynthInstrument();
-            });
-
-            // Root Note Select
-            document.getElementById('root-note-select').addEventListener('change', (e) => {
-                state.rootNote = e.target.value;
-                renderTriggerGridDOM();
-            });
-
-            // Octave Select
-            document.getElementById('octave-select').addEventListener('change', (e) => {
-                state.octave = parseInt(e.target.value);
-                renderTriggerGridDOM();
-            });
-
-            // Reverb Slider
-            document.getElementById('reverb-slider').addEventListener('input', (e) => {
-                const val = parseInt(e.target.value);
-                state.reverbAmount = val / 100;
-                document.getElementById('reverb-val').innerText = `${val}%`;
-                if (reverb) reverb.wet.value = state.reverbAmount;
-            });
-
-            // Delay Slider
-            document.getElementById('delay-slider').addEventListener('input', (e) => {
-                const val = parseInt(e.target.value);
-                state.delayAmount = val / 100;
-                document.getElementById('delay-val').innerText = `${val}%`;
-                if (delay) delay.wet.value = state.delayAmount;
-            });
-
-            // BPM Slider
-            document.getElementById('bpm-slider').addEventListener('input', (e) => {
-                state.bpm = parseInt(e.target.value);
-                document.getElementById('bpm-val').innerText = `${state.bpm} BPM`;
-                if (state.audioStarted) Tone.Transport.bpm.value = state.bpm;
-            });
-        }
-
-        // Initialize App on DOM Load
-        window.addEventListener('DOMContentLoaded', () => {
-            renderTriggerGridDOM();
-            setupEventListeners();
+        hatNoise.buffer = buffer;
+
+        const hatFilter = audioCtx.createBiquadFilter();
+        hatFilter.type = 'highpass';
+        hatFilter.frequency.value = 6000;
+
+        const hatGain = audioCtx.createGain();
+        const hatVol = 0.1 + state.velocity * 0.4;
+        hatGain.gain.setValueAtTime(hatVol, now);
+        hatGain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+
+        hatNoise.connect(hatFilter);
+        hatFilter.connect(hatGain);
+        hatGain.connect(biquadFilter);
+        hatNoise.start(now);
+
+        step = (step + 1) % 4;
+      }, 250);
+    }
+
+    function stopDrumMachine() {
+      if (drumLoopInterval) {
+        clearInterval(drumLoopInterval);
+        drumLoopInterval = null;
+      }
+    }
+
+    // Audio File Custom Track Reader
+    audioFileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      initAudioEngine();
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        audioCtx.decodeAudioData(evt.target.result, function(buffer) {
+          audioBuffer = buffer;
+          playCustomAudioTrack();
         });
+      };
+      reader.readAsArrayBuffer(file);
+    });
 
-    </script>
+    function playCustomAudioTrack() {
+      if (!audioCtx || !audioBuffer) return;
+
+      if (audioSourceNode) {
+        audioSourceNode.stop();
+      }
+
+      audioSourceNode = audioCtx.createBufferSource();
+      audioSourceNode.buffer = audioBuffer;
+      audioSourceNode.loop = true;
+      audioSourceNode.connect(biquadFilter);
+      audioSourceNode.start(0);
+      isTrackPlaying = true;
+    }
+
+    // ==========================================
+    // CAMERA & COMPUTER VISION MOTION TRACKING ENGINE
+    // ==========================================
+    async function initCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+          audio: false
+        });
+        video.srcObject = stream;
+        await video.play();
+
+        state.isCameraActive = true;
+        cameraPrompt.classList.add('opacity-0', 'pointer-events-none');
+        toggleCameraBtn.innerHTML = `<i data-lucide="video-off" class="w-4 h-4"></i><span>Stop Camera</span>`;
+        toggleCameraBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600/30 border border-red-500/50 hover:bg-red-500/50 text-red-200 font-semibold transition-all duration-300";
+        lucide.createIcons();
+
+        // Match canvas dimensions to video feed aspect ratio
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        diffCanvas.width = canvas.width / 4; // Downsampled for fast optical processing
+        diffCanvas.height = canvas.height / 4;
+
+        requestAnimationFrame(processMotionLoop);
+      } catch (err) {
+        console.error("Camera access error:", err);
+        alert("Unable to access live camera feed. Please allow camera permissions in your browser.");
+      }
+    }
+
+    function stopCamera() {
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+      }
+      state.isCameraActive = false;
+      cameraPrompt.classList.remove('opacity-0', 'pointer-events-none');
+      toggleCameraBtn.innerHTML = `<i data-lucide="camera" class="w-4 h-4"></i><span>Start Camera</span>`;
+      toggleCameraBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-600/30 border border-cyan-500/50 hover:bg-cyan-500/50 text-cyan-200 font-semibold transition-all duration-300";
+      lucide.createIcons();
+    }
+
+    let prevFrameData = null;
+
+    function processMotionLoop() {
+      if (!state.isCameraActive) return;
+
+      const dw = diffCanvas.width;
+      const dh = diffCanvas.height;
+
+      // Draw current video frame to downsampled offscreen canvas
+      diffCtx.save();
+      // Mirror horizontal frame for intuitive user movement
+      diffCtx.scale(-1, 1);
+      diffCtx.drawImage(video, -dw, 0, dw, dh);
+      diffCtx.restore();
+
+      const currentFrame = diffCtx.getImageData(0, 0, dw, dh);
+      const currData = currentFrame.data;
+
+      let totalMotionPixels = 0;
+      let sumX = 0;
+      let sumY = 0;
+
+      if (prevFrameData) {
+        const threshold = state.threshold;
+
+        // Frame Differencing Pixel Analysis Loop
+        for (let i = 0; i < currData.length; i += 4) {
+          const rDiff = Math.abs(currData[i] - prevFrameData[i]);
+          const gDiff = Math.abs(currData[i + 1] - prevFrameData[i + 1]);
+          const bDiff = Math.abs(currData[i + 2] - prevFrameData[i + 2]);
+
+          const diff = (rDiff + gDiff + bDiff) / 3;
+
+          if (diff > threshold) {
+            totalMotionPixels++;
+            const pixelIndex = i / 4;
+            const x = pixelIndex % dw;
+            const y = Math.floor(pixelIndex / dw);
+
+            sumX += x;
+            sumY += y;
+          }
+        }
+      }
+
+      // Save frame copy for next diff iteration
+      prevFrameData = new Uint8ClampedArray(currData);
+
+      // Compute Center of Motion Gravity (Mass Centroid)
+      if (totalMotionPixels > 10) {
+        const targetX = (sumX / totalMotionPixels) / dw;
+        const targetY = (sumY / totalMotionPixels) / dh;
+
+        // Smooth movement centroid using exponential smoothing (lerp)
+        state.centerX += (targetX - state.centerX) * 0.35;
+        state.centerY += (targetY - state.centerY) * 0.35;
+
+        // Calculate motion velocity
+        const dx = state.centerX - state.lastCenterX;
+        const dy = state.centerY - state.lastCenterY;
+        state.velocity = Math.sqrt(dx * dx + dy * dy);
+
+        state.lastCenterX = state.centerX;
+        state.lastCenterY = state.centerY;
+      }
+
+      const totalPixels = dw * dh;
+      state.motionEnergy = Math.min(1.0, (totalMotionPixels / (totalPixels * 0.15)));
+
+      // Render Visual Motion Layer (Camera Feed + Vector Trails + Motion Heat Particles)
+      renderMotionCanvas();
+
+      // Trigger Audio Bending update
+      updateAudioFromMotion(state.centerX, state.centerY, state.motionEnergy);
+
+      requestAnimationFrame(processMotionLoop);
+    }
+
+    // ==========================================
+    // VISUAL CANVAS GRAPHICS & PARTICLE ENGINE
+    // ==========================================
+    function renderMotionCanvas() {
+      const cw = canvas.width;
+      const ch = canvas.height;
+
+      // Draw Mirrored Camera Background Feed
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -cw, 0, cw, ch);
+      ctx.restore();
+
+      // Darken webcam slightly for high contrast glowing visual overlays
+      ctx.fillStyle = 'rgba(5, 7, 15, 0.45)';
+      ctx.fillRect(0, 0, cw, ch);
+
+      // Draw Grid / Cyber Target Lines
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cw / 2, 0); ctx.lineTo(cw / 2, ch);
+      ctx.moveTo(0, ch / 2); ctx.lineTo(cw, ch / 2);
+      ctx.stroke();
+
+      // Spawn Motion Reactive Particles on movement
+      if (state.motionEnergy > 0.05) {
+        const px = state.centerX * cw;
+        const py = state.centerY * ch;
+
+        for (let i = 0; i < Math.floor(state.motionEnergy * 6); i++) {
+          state.particles.push({
+            x: px + (Math.random() - 0.5) * 40,
+            y: py + (Math.random() - 0.5) * 40,
+            vx: (Math.random() - 0.5) * 4,
+            vy: (Math.random() - 0.5) * 4,
+            radius: Math.random() * 6 + 2,
+            color: Math.random() > 0.5 ? '#06b6d4' : '#ec4899',
+            alpha: 1.0
+          });
+        }
+      }
+
+      // Update and Draw Particles
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.025;
+
+        if (p.alpha <= 0) {
+          state.particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = p.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1.0;
+      }
+
+      // Draw Kinetic Motion Tracking Core Node
+      if (state.isCameraActive) {
+        const nodeX = state.centerX * cw;
+        const nodeY = state.centerY * ch;
+
+        // Outer Pulsing Glow
+        ctx.beginPath();
+        ctx.arc(nodeX, nodeY, 30 + state.motionEnergy * 40, 0, Math.PI * 2);
+        ctx.strokeStyle = state.motionEnergy > 0.3 ? 'rgba(236, 72, 153, 0.6)' : 'rgba(6, 182, 212, 0.5)';
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = state.motionEnergy > 0.3 ? '#ec4899' : '#06b6d4';
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Inner Motion Core
+        ctx.beginPath();
+        ctx.arc(nodeX, nodeY, 12, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        // Crosshair Coordinates HUD Tag
+        ctx.fillStyle = '#06b6d4';
+        ctx.font = '12px Orbitron';
+        ctx.fillText(`PITCH & FILTER CORE`, nodeX + 20, nodeY - 10);
+      }
+    }
+
+    // ==========================================
+    // AUDIO SPECTRUM VISUALIZER CANVAS
+    // ==========================================
+    function startAudioVisualizer() {
+      const visCanvas = document.getElementById('audioVisualizer');
+      const visCtx = visCanvas.getContext('2d');
+
+      function drawVis() {
+        requestAnimationFrame(drawVis);
+
+        visCanvas.width = visCanvas.clientWidth;
+        visCanvas.height = visCanvas.clientHeight;
+
+        const w = visCanvas.width;
+        const h = visCanvas.height;
+
+        visCtx.clearRect(0, 0, w, h);
+
+        if (!analyserNode || !state.isAudioActive) {
+          // Draw idle flatline
+          visCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+          visCtx.beginPath();
+          visCtx.moveTo(0, h / 2);
+          visCtx.lineTo(w, h / 2);
+          visCtx.stroke();
+          return;
+        }
+
+        const bufferLength = analyserNode.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyserNode.getByteFrequencyData(dataArray);
+
+        const barWidth = (w / bufferLength) * 2.5;
+        let barX = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+          const barHeight = (dataArray[i] / 255) * h;
+
+          const gradient = visCtx.createLinearGradient(0, h, 0, 0);
+          gradient.addColorStop(0, 'rgba(6, 182, 212, 0.2)');
+          gradient.addColorStop(0.5, 'rgba(236, 72, 153, 0.6)');
+          gradient.addColorStop(1, 'rgba(168, 85, 247, 0.9)');
+
+          visCtx.fillStyle = gradient;
+          visCtx.fillRect(barX, h - barHeight, barWidth, barHeight);
+
+          barX += barWidth + 1;
+        }
+      }
+
+      drawVis();
+    }
+
+    // ==========================================
+    // UI EVENT LISTENERS & PRESETS
+    // ==========================================
+    toggleCameraBtn.addEventListener('click', () => {
+      if (state.isCameraActive) {
+        stopCamera();
+      } else {
+        initCamera();
+      }
+    });
+
+    toggleAudioBtn.addEventListener('click', () => {
+      initAudioEngine();
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      state.isAudioActive = !state.isAudioActive;
+
+      if (state.isAudioActive) {
+        toggleAudioBtn.innerHTML = `<i data-lucide="volume-x" class="w-4 h-4"></i><span>Mute Audio</span>`;
+        toggleAudioBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600/40 border border-purple-400 hover:bg-purple-500/50 text-purple-100 font-semibold glow-magenta transition-all duration-300";
+      } else {
+        toggleAudioBtn.innerHTML = `<i data-lucide="volume-2" class="w-4 h-4"></i><span>Enable Audio Engine</span>`;
+        toggleAudioBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600/30 border border-pink-500/50 hover:bg-pink-500/50 text-pink-200 font-semibold transition-all duration-300";
+      }
+      lucide.createIcons();
+    });
+
+    // Sound Mode Buttons
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const mode = e.target.getAttribute('data-mode');
+        setSoundMode(mode);
+      });
+    });
+
+    // Preset Selection
+    presetSelect.addEventListener('change', (e) => {
+      state.preset = e.target.value;
+      activePresetBadge.innerText = `PRESET: ${e.target.options[e.target.selectedIndex].text.toUpperCase()}`;
+
+      if (!synthOsc1 || !synthOsc2) return;
+
+      if (state.preset === 'theremin') {
+        synthOsc1.type = 'sine';
+        synthOsc2.type = 'sine';
+        biquadFilter.Q.value = 8;
+      } else if (state.preset === 'cyberbass') {
+        synthOsc1.type = 'sawtooth';
+        synthOsc2.type = 'square';
+        biquadFilter.Q.value = 14;
+      } else if (state.preset === 'harp') {
+        synthOsc1.type = 'triangle';
+        synthOsc2.type = 'sine';
+        biquadFilter.Q.value = 4;
+      } else if (state.preset === 'glitch') {
+        synthOsc1.type = 'square';
+        synthOsc2.type = 'sawtooth';
+        biquadFilter.Q.value = 18;
+      }
+    });
+
+    // Sliders
+    sensitivitySlider.addEventListener('input', (e) => {
+      state.sensitivity = parseFloat(e.target.value);
+      sensValDisplay.innerText = `${state.sensitivity.toFixed(1)}x`;
+    });
+
+    thresholdSlider.addEventListener('input', (e) => {
+      state.threshold = parseInt(e.target.value);
+      threshValDisplay.innerText = state.threshold;
+    });
+
+    // Canvas Auto-Resizing listener
+    window.addEventListener('resize', () => {
+      if (video.videoWidth) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        diffCanvas.width = canvas.width / 4;
+        diffCanvas.height = canvas.height / 4;
+      }
+    });
+  </script>
 </body>
 </html>
