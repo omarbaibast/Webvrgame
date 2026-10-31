@@ -2,1120 +2,1086 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>VoxelVR Shooter - Multiplayer Mobile VR</title>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Harmony Synth - AI Camera to Music</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tone.js for Web Audio Synthesis -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- TensorFlow.js and Pose Detection Models -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@3.20.0/dist/tf-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@3.20.0/dist/tf-converter.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@3.20.0/dist/tf-backend-webgl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.0.0/dist/pose-detection.min.js"></script>
 
-  <!-- Three.js Library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- Three.js VRButton module helper script -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/VRButton.js"></script>
-  <!-- PeerJS for WebRTC Multiplayer -->
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            black: '#080911',
+                            dark: '#0f1123',
+                            card: '#161936',
+                            accent: '#00f0ff',
+                            purple: '#7000ff',
+                            pink: '#ff0055',
+                            gold: '#ffb700',
+                            green: '#00ff66'
+                        }
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        rajdhani: ['Rajdhani', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
 
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background-color: #05050a;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    #canvas-container {
-      width: 100vw;
-      height: 100vh;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
-    }
-    /* Mono Crosshair */
-    .crosshair {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      z-index: 10;
-    }
-    /* Touch UI Virtual Joysticks */
-    .touch-zone {
-      position: absolute;
-      bottom: 20px;
-      width: 120px;
-      height: 120px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      z-index: 20;
-      backdrop-filter: blur(4px);
-      touch-action: none;
-    }
-    #stick-left { left: 20px; }
-    #stick-right { right: 20px; }
-    .stick-knob {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 50px;
-      height: 50px;
-      margin-top: -25px;
-      margin-left: -25px;
-      background: rgba(0, 240, 255, 0.5);
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
-      pointer-events: none;
-    }
-    /* Neon Glow UI */
-    .neon-border {
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-      border: 1px solid rgba(0, 240, 255, 0.4);
-    }
-    .neon-text {
-      text-shadow: 0 0 8px rgba(0, 240, 255, 0.8);
-    }
-  </style>
+    <style>
+        body {
+            background-color: #080911;
+            color: #e2e8f0;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f1123;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #7000ff;
+            border-radius: 3px;
+        }
+
+        /* Glowing Effects */
+        .glow-accent {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+        .glow-purple {
+            box-shadow: 0 0 15px rgba(112, 0, 255, 0.4);
+        }
+        .text-glow {
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
+        }
+
+        /* Glassmorphism card */
+        .glass-panel {
+            background: rgba(22, 25, 54, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 240, 255, 0.15);
+        }
+
+        /* Slider Custom Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: #0f1123;
+            border-radius: 6px;
+            height: 6px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #00f0ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00f0ff;
+        }
+
+        .grid-cell-active {
+            box-shadow: inset 0 0 15px rgba(0, 240, 255, 0.8);
+            border-color: #00f0ff;
+        }
+    </style>
 </head>
-<body class="text-white overflow-hidden select-none">
+<body class="min-h-screen flex flex-col justify-between">
 
-  <!-- Three.js Canvas Container -->
-  <div id="canvas-container"></div>
+    <!-- Top Navigation Header -->
+    <header class="glass-panel sticky top-0 z-50 border-b border-cyber-accent/20 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-cyber-purple to-cyber-accent flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-cyber-purple/50">
+                    <i class="fa-solid font-orbitron">V</i>
+                </div>
+                <div>
+                    <h1 class="font-orbitron text-xl md:text-2xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyber-accent via-white to-cyber-purple">
+                        VISUAL HARMONY SYNTH
+                    </h1>
+                    <p class="text-xs text-cyan-400/80 tracking-widest font-mono">REAL-TIME CAMERA MOTION TO MUSIC ENGINE</p>
+                </div>
+            </div>
 
-  <!-- MONO CROSSHAIR -->
-  <div id="mono-crosshair" class="crosshair flex items-center justify-center">
-    <div class="w-3 h-3 border-2 border-cyan-400 rounded-full bg-cyan-400/30"></div>
-  </div>
-
-  <!-- STEREO CROSSHAIRS (For VR Cardboard Mode) -->
-  <div id="stereo-crosshairs" class="hidden">
-    <div class="stereo-crosshair-left flex items-center justify-center">
-      <div class="w-3 h-3 border-2 border-cyan-400 rounded-full bg-cyan-400/30"></div>
-    </div>
-    <div class="stereo-crosshair-right flex items-center justify-center">
-      <div class="w-3 h-3 border-2 border-cyan-400 rounded-full bg-cyan-400/30"></div>
-    </div>
-  </div>
-
-  <!-- HUD overlay (Single Screen) -->
-  <div id="hud-overlay" class="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none z-10">
-    <div class="bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-cyan-500/30 flex items-center space-x-4">
-      <div>
-        <div class="text-xs text-cyan-400 font-semibold tracking-wider uppercase">Health</div>
-        <div class="w-32 bg-slate-800 h-3 rounded-full overflow-hidden mt-1 border border-slate-700">
-          <div id="health-bar" class="bg-gradient-to-r from-red-500 to-cyan-400 h-full w-full transition-all duration-200"></div>
+            <!-- Start / Audio Engine Toggle -->
+            <div class="flex items-center space-x-3">
+                <button id="audio-start-btn" class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyber-purple to-cyber-accent font-orbitron text-sm font-bold tracking-wider hover:opacity-90 transition-all transform active:scale-95 glow-accent flex items-center gap-2">
+                    <i class="fa-solid fa-power-off"></i>
+                    <span>START AUDIO ENGINE</span>
+                </button>
+                <div id="status-badge" class="px-3 py-1.5 rounded-full bg-red-900/40 border border-red-500/40 text-red-400 text-xs font-mono flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    <span>AUDIO OFFLINE</span>
+                </div>
+            </div>
         </div>
-      </div>
-      <div>
-        <div class="text-xs text-cyan-400 font-semibold tracking-wider uppercase">Score</div>
-        <div id="score-val" class="text-xl font-bold text-white neon-text">0</div>
-      </div>
-    </div>
-    /* Controller & VR Quick Status */
-    <div class="bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-xl border border-cyan-500/30 flex items-center space-x-3 text-xs">
-      <div id="gamepad-status" class="flex items-center text-gray-400">
-        <i class="fa-solid fa-gamepad mr-1.5 text-base"></i>
-        <span id="gamepad-text">No Gamepad</span>
-      </div>
-      <div id="vr-button-container" class="pointer-events-auto"></div>
-      <button id="vr-toggle-btn" class="pointer-events-auto bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg font-semibold flex items-center transition shadow-lg shadow-cyan-500/30">
-        <i class="fa-solid fa-vr-cardboard mr-1.5"></i> Cardboard VR
-      </button>
-    </div>
-  </div>
+    </header>
 
-  <!-- DUAL HUD Overlay for Stereo/VR Mode -->
-  <div id="stereo-hud" class="hidden absolute top-0 left-0 w-full h-full pointer-events-none z-10 flex">
-    <!-- Left Eye HUD -->
-    <div class="w-1/2 h-full p-6 flex justify-between items-start scale-90 transform origin-top-left">
-      <div class="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/30 flex items-center space-x-4">
-        <div>
-          <div class="text-[10px] text-cyan-400 font-bold">HEALTH</div>
-          <div class="w-20 bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
-            <div id="health-bar-l" class="bg-cyan-400 h-full w-full"></div>
-          </div>
-        </div>
-        <div>
-          <div class="text-[10px] text-cyan-400 font-bold">SCORE</div>
-          <div id="score-val-l" class="text-sm font-bold">0</div>
-        </div>
-      </div>
-      <!-- Center eye marker for VR align -->
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 border-2 border-cyan-400/80 rounded-full bg-cyan-400/20"></div>
-    </div>
-    <!-- Right Eye HUD -->
-    <div class="w-1/2 h-full p-6 flex justify-between items-start scale-90 transform origin-top-left">
-      <div class="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/30 flex items-center space-x-4">
-        <div>
-          <div class="text-[10px] text-cyan-400 font-bold">HEALTH</div>
-          <div class="w-20 bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
-            <div id="health-bar-r" class="bg-cyan-400 h-full w-full"></div>
-          </div>
-        </div>
-        <div>
-          <div class="text-[10px] text-cyan-400 font-bold">SCORE</div>
-          <div id="score-val-r" class="text-sm font-bold">0</div>
-        </div>
-      </div>
-      <!-- Center eye marker for VR align -->
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 border-2 border-cyan-400/80 rounded-full bg-cyan-400/20"></div>
-    </div>
-  </div>
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-  <!-- Touch On-Screen Controls (For mobile without gamepad) -->
-  <div id="touch-controls" class="block">
-    <div id="stick-left" class="touch-zone">
-      <div id="knob-left" class="stick-knob"></div>
-    </div>
-    <div id="stick-right" class="touch-zone">
-      <div id="knob-right" class="stick-knob"></div>
-    </div>
-    <button id="fire-btn" class="absolute bottom-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-red-600/80 border-2 border-red-400 rounded-full flex items-center justify-center text-white text-xl z-20 active:scale-95 transition shadow-lg shadow-red-500/50 pointer-events-auto">
-      <i class="fa-solid fa-crosshairs"></i>
-    </button>
-  </div>
+        <!-- Left / Top Column: Camera Viewport & Overlay Visualizer -->
+        <div class="lg:col-span-7 flex flex-col gap-4">
+            
+            <!-- Video & Canvas Container -->
+            <div class="glass-panel rounded-2xl p-4 relative overflow-hidden flex flex-col justify-center items-center shadow-2xl">
+                <!-- Overlay Header Status -->
+                <div class="w-full flex justify-between items-center mb-3 px-1">
+                    <div class="flex items-center gap-2 text-xs font-mono text-cyan-400">
+                        <i class="fa-solid fa-eye animate-pulse"></i>
+                        <span id="tracker-mode-label">MODE: POSE & MOTION TRACKING</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="fps-counter" class="text-xs font-mono text-slate-400">FPS: 0</span>
+                        <span id="detection-status" class="text-xs font-mono text-emerald-400">MODEL LOADING...</span>
+                    </div>
+                </div>
 
-  <!-- Lobby & Room Menu Overlay -->
-  <div id="menu-overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center z-50 p-4">
-    <div class="max-w-md w-full bg-slate-900 border border-cyan-500/30 rounded-2xl p-6 shadow-2xl space-y-6 neon-border">
-      
-      <div class="text-center space-y-2">
-        <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-500 tracking-wider uppercase">
-          Voxel VR Shooter
-        </h1>
-        <p class="text-slate-400 text-sm">3D Procedural Mobile VR Arena with WebRTC Multiplayer</p>
-      </div>
+                <!-- Video Viewport -->
+                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-cyber-black border border-cyber-accent/30 flex items-center justify-center shadow-inner">
+                    <!-- Hidden HTML Video Element -->
+                    <video id="webcam" class="hidden" playsinline muted></video>
+                    
+                    <!-- Main Interactive Canvas -->
+                    <canvas id="output-canvas" class="w-full h-full object-cover rounded-xl"></canvas>
 
-      <!-- Controls Info & Status -->
-      <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-xs space-y-2 text-slate-300">
-        <div class="flex items-center justify-between text-cyan-400 font-semibold border-b border-slate-800 pb-1">
-          <span><i class="fa-solid fa-vr-cardboard mr-1"></i> Google Cardboard / Gyro Setup</span>
-        </div>
-        <p>• <b>Cardboard VR:</b> Tap VR button to activate stereoscopic split-screen & gyro tracking.</p>
-        <p>• <b>Gyroscope:</b> Move phone head orientation in 360° space.</p>
-        <p>• <b>Gamepad:</b> L-Stick Move, R-Stick/Gyro Aim, RT/A Fire, L2 Jump.</p>
-      </div>
+                    <!-- Initial Overlay Prompt -->
+                    <div id="camera-placeholder" class="absolute inset-0 bg-cyber-black/90 flex flex-col items-center justify-center gap-4 p-6 text-center z-10">
+                        <i class="fa-solid fa-video-slash text-5xl text-cyber-accent/50"></i>
+                        <div>
+                            <h3 class="font-orbitron text-lg font-bold text-white mb-1">Camera Feed Inactive</h3>
+                            <p class="text-sm text-slate-400 max-w-md">Enable your camera to trigger melodic notes, synth chords, and rhythm through body motion, colors, and gestures.</p>
+                        </div>
+                        <button id="enable-cam-btn" class="px-6 py-2.5 rounded-lg bg-cyber-accent text-cyber-black font-orbitron font-bold text-sm hover:bg-white transition-all glow-accent flex items-center gap-2">
+                            <i class="fa-solid fa-camera"></i> ENABLE CAMERA
+                        </button>
+                    </div>
+                </div>
 
-      <!-- Multiplayer Section -->
-      <div class="space-y-4 pt-2">
-        <div class="text-sm font-semibold text-slate-200 flex items-center">
-          <i class="fa-solid fa-network-wired text-cyan-400 mr-2"></i> PeerJS Multiplayer Lobby
+                <!-- Live Audio Visualizer Waveform / Frequency Bar -->
+                <div class="w-full mt-4 bg-cyber-black/60 rounded-lg p-2 border border-cyber-purple/30">
+                    <canvas id="audio-vis-canvas" class="w-full h-12 rounded"></canvas>
+                </div>
+            </div>
+
+            <!-- Quick Trigger Grid Display -->
+            <div class="glass-panel rounded-2xl p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-orbitron text-sm font-bold text-cyan-300 flex items-center gap-2">
+                        <i class="fa-solid fa-cubes"></i> SYNTH TRIGGER SPATIAL ZONES
+                    </h3>
+                    <span class="text-xs text-slate-400 font-mono">Move hands or body into grid regions</span>
+                </div>
+                <!-- 4x2 Virtual Spatial Trigger Matrix -->
+                <div id="trigger-grid" class="grid grid-cols-4 gap-2 h-20">
+                    <!-- Dynamic Grid Buttons -->
+                </div>
+            </div>
         </div>
 
-        <div class="flex flex-col gap-3">
-          <!-- Create Room -->
-          <div class="flex items-center space-x-2">
-            <button id="host-btn" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white py-2.5 px-4 rounded-xl font-bold transition shadow-lg shadow-cyan-600/30 flex items-center justify-center">
-              <i class="fa-solid fa-tower-broadcast mr-2"></i> Host Room
-            </button>
-          </div>
-
-          <!-- Room ID Display -->
-          <div id="room-id-box" class="hidden bg-slate-950 p-3 rounded-xl border border-cyan-500/50 flex items-center justify-between">
-            <span class="text-xs text-slate-400">ROOM CODE:</span>
-            <span id="my-room-id" class="font-mono text-cyan-400 font-bold select-all">-----</span>
-            <button id="copy-room-btn" class="text-xs bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700">Copy</button>
-          </div>
-
-          <!-- Join Room Input -->
-          <div class="flex space-x-2">
-            <input type="text" id="join-room-input" placeholder="Enter Room Code..." class="flex-1 bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2 text-sm text-white focus:outline-none transition">
-            <button id="join-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl font-bold transition flex items-center justify-center">
-              Join
-            </button>
-          </div>
-          <div id="net-status" class="text-xs text-center text-slate-400 h-4">Not connected to peers</div>
-        </div>
-      </div>
-
-      <!-- Start Game Solo / Ready Button -->
-      <button id="start-game-btn" class="w-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white py-3 rounded-xl font-extrabold text-lg transition shadow-xl shadow-cyan-500/20 uppercase tracking-wider">
-        Enter Battle Arena
-      </button>
-
-    </div>
-  </div>
-
-  <!-- Game Over Screen -->
-  <div id="game-over-modal" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center z-50 p-4">
-    <div class="max-w-sm w-full bg-slate-900 border border-red-500/30 rounded-2xl p-6 text-center space-y-4 neon-border">
-      <h2 class="text-3xl font-black text-red-500 tracking-wider">SYSTEM DESTROYED</h2>
-      <p class="text-slate-400 text-sm">Your voxel avatar was defeated in combat!</p>
-      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-        <div class="text-xs text-slate-500">FINAL SCORE</div>
-        <div id="final-score" class="text-3xl font-extrabold text-cyan-400">0</div>
-      </div>
-      <button id="respawn-btn" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-600/30 transition">
-        RESPAWN AVATAR
-      </button>
-    </div>
-  </div>
-
-  <!-- MAIN SCRIPT -->
-  <script>
-    // --- GLOBAL CONSTANTS & GAME STATE ---
-    const VOXEL_SIZE = 1;
-    const WORLD_SIZE = 32;
-    const PLAYER_HEIGHT = 1.6;
-    
-    let gameState = {
-      isStarted: false,
-      isVR: false,
-      score: 0,
-      health: 100,
-      maxHealth: 100
-    };
-
-    // Device Orientation / Gyro scope variables
-    let gyroEnabled = false;
-    const gyroQuaternion = new THREE.Quaternion();
-    const euler = new THREE.Euler(0, 0, 0, 'YXZ');
-
-    // Controls input states
-    const inputs = {
-      moveX: 0,
-      moveY: 0,
-      lookX: 0,
-      lookY: 0,
-      shooting: false
-    };
-
-    // --- THREE.JS SETUP ---
-    const container = document.getElementById('canvas-container');
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x05050f);
-    scene.fog = new THREE.FogExp2(0x05050f, 0.035);
-
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    
-    // Enable WebXR on Three.js Renderer
-    renderer.xr.enabled = true;
-    container.appendChild(renderer.domElement);
-
-    // Append standard Three.js VRButton
-    const vrBtnContainer = document.getElementById('vr-button-container');
-    if (typeof VRButton !== 'undefined') {
-      const xrVRButton = VRButton.createButton(renderer);
-      xrVRButton.style.position = 'static';
-      xrVRButton.style.padding = '6px 12px';
-      xrVRButton.style.fontSize = '12px';
-      xrVRButton.style.borderRadius = '0.5rem';
-      xrVRButton.style.background = '#0284c7';
-      xrVRButton.style.border = 'none';
-      xrVRButton.style.color = '#fff';
-      xrVRButton.style.fontWeight = '600';
-      xrVRButton.style.cursor = 'pointer';
-      vrBtnContainer.appendChild(xrVRButton);
-    }
-
-    // WebXR Controllers / Gamepad Event Listening
-    const controller1 = renderer.xr.getController(0);
-    controller1.addEventListener('selectstart', shootLaser);
-    scene.add(controller1);
-
-    const controller2 = renderer.xr.getController(1);
-    controller2.addEventListener('selectstart', shootLaser);
-    scene.add(controller2);
-
-    // --- CARDBOARD STEREOSCOPIC & BARREL DISTORTION SHADER SETUP ---
-    const leftCamera = new THREE.PerspectiveCamera(75, (window.innerWidth / 2) / window.innerHeight, 0.1, 1000);
-    const rightCamera = new THREE.PerspectiveCamera(75, (window.innerWidth / 2) / window.innerHeight, 0.1, 1000);
-    const eyeSeparation = 0.064; // Standard IPD in meters
-
-    // Off-screen render targets for stereo eyes
-    const renderTargetL = new THREE.WebGLRenderTarget(window.innerWidth / 2, window.innerHeight);
-    const renderTargetR = new THREE.WebGLRenderTarget(window.innerWidth / 2, window.innerHeight);
-
-    // Barrel Distortion Post-Processing Scene
-    const distortionScene = new THREE.Scene();
-    const distortionCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
-    const barrelDistortionShader = {
-      uniforms: {
-        'tDiffuse': { value: null },
-        'distortion': { value: new THREE.Vector2(0.22, 0.22) }
-      },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform sampler2D tDiffuse;
-        uniform vec2 distortion;
-        varying vec2 vUv;
-
-        void main() {
-          vec2 p = vUv * 2.0 - 1.0;
-          float r2 = p.x * p.x + p.y * p.y;
-          vec2 newUv = (p * (1.0 + distortion.x * r2 + distortion.y * r2 * r2)) * 0.5 + 0.5;
-
-          if (newUv.x < 0.0 || newUv.x > 1.0 || newUv.y < 0.0 || newUv.y > 1.0) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-          } else {
-            gl_FragColor = texture2D(tDiffuse, newUv);
-          }
-        }
-      `
-    };
-
-    const distortionMaterialL = new THREE.ShaderMaterial({
-      uniforms: THREE.UniformsUtils.clone(barrelDistortionShader.uniforms),
-      vertexShader: barrelDistortionShader.vertexShader,
-      fragmentShader: barrelDistortionShader.fragmentShader
-    });
-    const distortionMaterialR = distortionMaterialL.clone();
-
-    const planeGeo = new THREE.PlaneGeometry(1, 2);
-    const planeL = new THREE.Mesh(planeGeo, distortionMaterialL);
-    planeL.position.x = -0.5;
-    const planeR = new THREE.Mesh(planeGeo, distortionMaterialR);
-    planeR.position.x = 0.5;
-    distortionScene.add(planeL, planeR);
-
-    // Camera Rig Container for Smooth Movement
-    const playerRig = new THREE.Group();
-    playerRig.position.set(0, 5, 0);
-    scene.add(playerRig);
-    playerRig.add(camera);
-    camera.position.set(0, PLAYER_HEIGHT, 0);
-
-    // Dynamic Head group inside Camera for Gyro Rotation
-    const headGroup = new THREE.Group();
-    camera.add(headGroup);
-
-    // Ambient & Directional Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    scene.add(ambientLight);
-
-    const dirLight = new THREE.DirectionalLight(0x00f0ff, 0.8);
-    dirLight.position.set(20, 40, 20);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    scene.add(dirLight);
-
-    const gridPointLight = new THREE.PointLight(0xff0055, 1, 30);
-    gridPointLight.position.set(0, 5, 0);
-    scene.add(gridPointLight);
-
-    // --- PROCEDURAL VOXEL TERRAIN GENERATION (InstancedMesh for Performance) ---
-    const voxelGeometry = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
-    
-    // Grid Material with Voxel Style
-    const voxelMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1e1e2f,
-      roughness: 0.6,
-      metalness: 0.2,
-    });
-
-    // We generate a heightmap terrain using simplified sine combination
-    function getTerrainHeight(x, z) {
-      const scale1 = 0.1;
-      const scale2 = 0.05;
-      let h = Math.sin(x * scale1) * Math.cos(z * scale1) * 3;
-      h += Math.sin(x * scale2 + 2) * Math.sin(z * scale2) * 4;
-      return Math.floor(h);
-    }
-
-    // Build Voxel Mesh Grid
-    let totalVoxels = WORLD_SIZE * WORLD_SIZE * 6; // Max voxels depth
-    const instancedVoxelMesh = new THREE.InstancedMesh(voxelGeometry, voxelMaterial, totalVoxels);
-    instancedVoxelMesh.castShadow = true;
-    instancedVoxelMesh.receiveShadow = true;
-
-    const dummyMatrix = new THREE.Matrix4();
-    const voxelColors = [new THREE.Color(0x1a1a2e), new THREE.Color(0x16213e), new THREE.Color(0x0f3460)];
-    let instanceIdx = 0;
-
-    for (let x = -WORLD_SIZE / 2; x < WORLD_SIZE / 2; x++) {
-      for (let z = -WORLD_SIZE / 2; z < WORLD_SIZE / 2; z++) {
-        const height = getTerrainHeight(x, z);
-        for (let y = -3; y <= height; y++) {
-          dummyMatrix.setPosition(x * VOXEL_SIZE, y * VOXEL_SIZE, z * VOXEL_SIZE);
-          instancedVoxelMesh.setMatrixAt(instanceIdx, dummyMatrix);
-          
-          // Slight color variation based on depth/height
-          const color = voxelColors[Math.abs(y) % voxelColors.length];
-          instancedVoxelMesh.setColorAt(instanceIdx, color);
-          
-          instanceIdx++;
-        }
-      }
-    }
-    instancedVoxelMesh.count = instanceIdx;
-    instancedVoxelMesh.instanceMatrix.needsUpdate = true;
-    if (instancedVoxelMesh.instanceColor) instancedVoxelMesh.instanceColor.needsUpdate = true;
-    scene.add(instancedVoxelMesh);
-
-    // Decorative Glowing Cyber Voxel Pillars
-    const pillarGeo = new THREE.BoxGeometry(1, 1, 1);
-    const pillarMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, wireframe: true });
-    for (let i = 0; i < 8; i++) {
-      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-      const px = (Math.random() - 0.5) * (WORLD_SIZE - 4);
-      const pz = (Math.random() - 0.5) * (WORLD_SIZE - 4);
-      const py = getTerrainHeight(px, pz) + 2;
-      pillar.position.set(px, py, pz);
-      pillar.scale.set(1, 4, 1);
-      scene.add(pillar);
-    }
-
-    // --- GAME ENTITIES & ARRAYS ---
-    const projectiles = [];
-    const enemies = [];
-    const particleSystems = [];
-    const remotePlayers = {}; // WebRTC peers
-
-    // Weapon mesh mounted on camera
-    const weaponGroup = new THREE.Group();
-    const gunBody = new THREE.Mesh(
-      new THREE.BoxGeometry(0.12, 0.15, 0.4),
-      new THREE.MeshStandardMaterial({ color: 0x222233, roughness: 0.3 })
-    );
-    const gunBarrel = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.03, 0.03, 0.3),
-      new THREE.MeshBasicMaterial({ color: 0x00f0ff })
-    );
-    gunBarrel.rotation.x = Math.PI / 2;
-    gunBarrel.position.set(0, 0.02, -0.2);
-    weaponGroup.add(gunBody, gunBarrel);
-    weaponGroup.position.set(0.2, -0.2, -0.4);
-    headGroup.add(weaponGroup);
-
-    // --- DEVICE ORIENTATION GYROSCOPE tracking ---
-    function setupDeviceOrientation() {
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission().then(response => {
-          if (response === 'granted') {
-            window.addEventListener('deviceorientation', handleOrientation, true);
-            gyroEnabled = true;
-          }
-        }).catch(console.error);
-      } else {
-        window.addEventListener('deviceorientation', handleOrientation, true);
-        gyroEnabled = true;
-      }
-    }
-
-    function handleOrientation(event) {
-      if (!event.alpha && !event.beta && !event.gamma) return;
-      
-      const alpha = THREE.MathUtils.degToRad(event.alpha || 0);
-      const beta = THREE.MathUtils.degToRad(event.beta || 0);
-      const gamma = THREE.MathUtils.degToRad(event.gamma || 0);
-
-      euler.set(beta, alpha, -gamma, 'YXZ');
-      gyroQuaternion.setFromEuler(euler);
-
-      // Adjust for screen orientation offset
-      const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
-      const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
-      gyroQuaternion.multiply(q1);
-
-      const q0 = new THREE.Quaternion();
-      q0.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -orient);
-      gyroQuaternion.multiply(q0);
-
-      headGroup.quaternion.copy(gyroQuaternion);
-    }
-
-    // --- PROJECTILES & LASERS ---
-    let lastShotTime = 0;
-    const SHOOT_COOLDOWN = 180; // ms
-
-    function shootLaser() {
-      const now = Date.now();
-      if (now - lastShotTime < SHOOT_COOLDOWN) return;
-      lastShotTime = now;
-
-      // Projectile Mesh
-      const pGeo = new THREE.SphereGeometry(0.08, 8, 8);
-      const pMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-      const pMesh = new THREE.Mesh(pGeo, pMat);
-
-      // Get forward vector from head direction
-      const dir = new THREE.Vector3();
-      headGroup.getWorldDirection(dir);
-
-      // Start position at gun tip
-      const startPos = new THREE.Vector3();
-      weaponGroup.getWorldPosition(startPos);
-
-      pMesh.position.copy(startPos);
-      scene.add(pMesh);
-
-      projectiles.push({
-        mesh: pMesh,
-        direction: dir.clone(),
-        speed: 1.2,
-        life: 60,
-        isLocal: true
-      });
-
-      // Recoil animation
-      weaponGroup.position.z = -0.3;
-
-      // Sync shot to WebRTC peers
-      broadcastNetworkData({
-        type: 'shoot',
-        pos: { x: startPos.x, y: startPos.y, z: startPos.z },
-        dir: { x: dir.x, y: dir.y, z: dir.z }
-      });
-    }
-
-    // --- VOXEL ENEMY SYSTEM ---
-    function createVoxelEnemyMesh() {
-      const group = new THREE.Group();
-      
-      // Voxel Body
-      const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055, roughness: 0.4 });
-      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-      
-      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), bodyMat);
-      torso.position.y = 0.4;
-      group.add(torso);
-
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), bodyMat);
-      head.position.y = 1.05;
-      group.add(head);
-
-      const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), eyeMat);
-      eyeL.position.set(-0.15, 1.1, -0.26);
-      const eyeR = eyeL.clone();
-      eyeR.position.x = 0.15;
-      group.add(eyeL, eyeR);
-
-      group.castShadow = true;
-      return group;
-    }
-
-    function spawnEnemy() {
-      if (enemies.length >= 10 || !gameState.isStarted) return;
-
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 15 + Math.random() * 10;
-      const x = playerRig.position.x + Math.cos(angle) * dist;
-      const z = playerRig.position.z + Math.sin(angle) * dist;
-      const y = getTerrainHeight(x, z) + 0.5;
-
-      const mesh = createVoxelEnemyMesh();
-      mesh.position.set(x, y, z);
-      scene.add(mesh);
-
-      enemies.push({
-        mesh: mesh,
-        health: 3,
-        speed: 0.04 + Math.random() * 0.02
-      });
-    }
-
-    // Enemy Spawner Interval
-    setInterval(spawnEnemy, 2500);
-
-    // --- VOXEL EXPLOSION PARTICLES ---
-    function createVoxelExplosion(pos, colorHex = 0xff0055) {
-      const count = 12;
-      const pGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
-      const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
-
-      for (let i = 0; i < count; i++) {
-        const pMesh = new THREE.Mesh(pGeo, pMat);
-        pMesh.position.copy(pos);
-
-        const vel = new THREE.Vector3(
-          (Math.random() - 0.5) * 0.2,
-          Math.random() * 0.2,
-          (Math.random() - 0.5) * 0.2
-        );
-
-        scene.add(pMesh);
-        particleSystems.push({
-          mesh: pMesh,
-          vel: vel,
-          life: 25
-        });
-      }
-    }
-
-    // --- GAMEPAD SUPPORT (navigator.getGamepads) ---
-    let gamepadIndex = null;
-
-    window.addEventListener("gamepadconnected", (e) => {
-      gamepadIndex = e.gamepad.index;
-      document.getElementById('gamepad-status').className = 'flex items-center text-green-400 font-semibold';
-      document.getElementById('gamepad-text').innerText = 'Gamepad Ready';
-    });
-
-    window.addEventListener("gamepaddisconnected", () => {
-      gamepadIndex = null;
-      document.getElementById('gamepad-status').className = 'flex items-center text-gray-400';
-      document.getElementById('gamepad-text').innerText = 'No Gamepad';
-    });
-
-    function pollGamepad() {
-      if (gamepadIndex === null) return;
-      const gamepads = navigator.getGamepads();
-      const gp = gamepads[gamepadIndex];
-      if (!gp) return;
-
-      // Analog Sticks Deadzone handling
-      const deadzone = 0.15;
-      
-      // Left Stick -> Movement (Axes 0, 1)
-      const lx = gp.axes[0];
-      const ly = gp.axes[1];
-      inputs.moveX = Math.abs(lx) > deadzone ? lx : 0;
-      inputs.moveY = Math.abs(ly) > deadzone ? ly : 0;
-
-      // Right Stick -> Rotation Look (Axes 2, 3 or 3, 4 depending on OS)
-      const rx = gp.axes[2] !== undefined && Math.abs(gp.axes[2]) > deadzone ? gp.axes[2] : (gp.axes[3] || 0);
-      const ry = gp.axes[3] !== undefined && Math.abs(gp.axes[3]) > deadzone ? gp.axes[3] : (gp.axes[4] || 0);
-      inputs.lookX = Math.abs(rx) > deadzone ? rx * 0.04 : 0;
-      inputs.lookY = Math.abs(ry) > deadzone ? ry * 0.03 : 0;
-
-      // Buttons -> Right Trigger (Axis 5 or Button 7/5) or Button 0 (A/X) for Shooting
-      const fireButton = gp.buttons[0]?.pressed || gp.buttons[7]?.pressed || gp.buttons[5]?.pressed;
-      if (fireButton) {
-        shootLaser();
-      }
-    }
-
-    // --- TOUCH JOYSTICKS CONTROLS ---
-    function setupTouchJoystick(stickId, knobId, onMove) {
-      const stick = document.getElementById(stickId);
-      const knob = document.getElementById(knobId);
-      let touchId = null;
-      let startX = 0, startY = 0;
-
-      stick.addEventListener('touchstart', (e) => {
-        if (touchId !== null) return;
-        const touch = e.changedTouches[0];
-        touchId = touch.identifier;
-        const rect = stick.getBoundingClientRect();
-        startX = rect.left + rect.width / 2;
-        startY = rect.top + rect.height / 2;
-      });
-
-      window.addEventListener('touchmove', (e) => {
-        if (touchId === null) return;
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          if (e.changedTouches[i].identifier === touchId) {
-            const touch = e.changedTouches[i];
-            const dx = touch.clientX - startX;
-            const dy = touch.clientY - startY;
-            const dist = Math.min(Math.hypot(dx, dy), 40);
-            const angle = Math.atan2(dy, dx);
-
-            const knX = Math.cos(angle) * dist;
-            const knY = Math.sin(angle) * dist;
-            knob.style.transform = `translate(${knX}px, ${knY}px)`;
-
-            onMove(knX / 40, knY / 40);
-          }
-        }
-      });
-
-      const resetStick = (e) => {
-        if (touchId === null) return;
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          if (e.changedTouches[i].identifier === touchId) {
-            touchId = null;
-            knob.style.transform = `translate(0px, 0px)`;
-            onMove(0, 0);
-          }
-        }
-      };
-
-      window.addEventListener('touchend', resetStick);
-      window.addEventListener('touchcancel', resetStick);
-    }
-
-    setupTouchJoystick('stick-left', 'knob-left', (x, y) => {
-      inputs.moveX = x;
-      inputs.moveY = y;
-    });
-
-    setupTouchJoystick('stick-right', 'knob-right', (x, y) => {
-      inputs.lookX = x * 0.05;
-      inputs.lookY = y * 0.03;
-    });
-
-    document.getElementById('fire-btn').addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      shootLaser();
-    });
-
-    // --- PEERJS WEBRTC MULTIPLAYER NETWORK ---
-    let peer = null;
-    let connections = [];
-    let isHost = false;
-
-    function initPeerJS() {
-      // Create random peer ID
-      peer = new Peer();
-
-      peer.on('open', (id) => {
-        document.getElementById('net-status').innerText = 'Connected to Network (ID: ' + id.substring(0, 5) + ')';
-      });
-
-      peer.on('connection', (conn) => {
-        setupConnection(conn);
-      });
-
-      peer.on('error', (err) => {
-        console.error("PeerJS Error:", err);
-        document.getElementById('net-status').innerText = 'Net Error: ' + err.type;
-      });
-    }
-
-    function setupConnection(conn) {
-      connections.push(conn);
-      document.getElementById('net-status').innerText = 'Peer Connected! Total: ' + connections.length;
-
-      conn.on('data', (data) => {
-        handleNetworkMessage(conn.peer, data);
-      });
-
-      conn.on('close', () => {
-        removeRemotePlayer(conn.peer);
-        connections = connections.filter(c => c !== conn);
-        document.getElementById('net-status').innerText = 'Peer Left. Total: ' + connections.length;
-      });
-    }
-
-    function createRemotePlayerMesh() {
-      const group = new THREE.Group();
-      const headMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff });
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), headMat);
-      head.position.y = 1.4;
-      const gun = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.4), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-      gun.position.set(0.3, 1.2, -0.3);
-      group.add(head, gun);
-      scene.add(group);
-      return group;
-    }
-
-    function removeRemotePlayer(peerId) {
-      if (remotePlayers[peerId]) {
-        scene.remove(remotePlayers[peerId].mesh);
-        delete remotePlayers[peerId];
-      }
-    }
-
-    function handleNetworkMessage(peerId, data) {
-      if (data.type === 'transform') {
-        if (!remotePlayers[peerId]) {
-          remotePlayers[peerId] = {
-            mesh: createRemotePlayerMesh()
-          };
-        }
-        remotePlayers[peerId].mesh.position.set(data.pos.x, data.pos.y, data.pos.z);
-        remotePlayers[peerId].mesh.rotation.set(data.rot.x, data.rot.y, data.rot.z);
-      } else if (data.type === 'shoot') {
-        // Spawn laser from peer position
-        const pGeo = new THREE.SphereGeometry(0.08, 8, 8);
-        const pMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-        const pMesh = new THREE.Mesh(pGeo, pMat);
-        pMesh.position.set(data.pos.x, data.pos.y, data.pos.z);
-        scene.add(pMesh);
-
-        projectiles.push({
-          mesh: pMesh,
-          direction: new THREE.Vector3(data.dir.x, data.dir.y, data.dir.z),
-          speed: 1.2,
-          life: 60,
-          isLocal: false
-        });
-      }
-    }
-
-    function broadcastNetworkData(data) {
-      connections.forEach(conn => {
-        if (conn.open) {
-          conn.send(data);
-        }
-      });
-    }
-
-    // Host Room
-    document.getElementById('host-btn').addEventListener('click', () => {
-      if (!peer || !peer.id) return;
-      isHost = true;
-      document.getElementById('room-id-box').classList.remove('hidden');
-      document.getElementById('my-room-id').innerText = peer.id;
-    });
-
-    // Copy Room ID
-    document.getElementById('copy-room-btn').addEventListener('click', () => {
-      const roomCode = document.getElementById('my-room-id').innerText;
-      navigator.clipboard.writeText(roomCode);
-      document.getElementById('copy-room-btn').innerText = 'Copied!';
-      setTimeout(() => { document.getElementById('copy-room-btn').innerText = 'Copy'; }, 2000);
-    });
-
-    // Join Room
-    document.getElementById('join-btn').addEventListener('click', () => {
-      const targetId = document.getElementById('join-room-input').value.trim();
-      if (!targetId || !peer) return;
-      const conn = peer.connect(targetId);
-      conn.on('open', () => {
-        setupConnection(conn);
-      });
-    });
-
-    initPeerJS();
-
-    // --- GAMEPLAY & CAMERA ROTATION LOGIC ---
-    let pitch = 0;
-    let yaw = 0;
-
-    function updatePlayerMovement() {
-      // Rotate Rig & Camera via Gamepad Stick / Touch when gyro isn't actively rotating yaw
-      if (inputs.lookX !== 0 || inputs.lookY !== 0) {
-        yaw -= inputs.lookX;
-        pitch -= inputs.lookY;
-        pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch));
-
-        playerRig.rotation.y = yaw;
-        if (!gyroEnabled) {
-          headGroup.rotation.x = pitch;
-        }
-      }
-
-      // Smooth gun positioning return after recoil
-      weaponGroup.position.z += (-0.4 - weaponGroup.position.z) * 0.15;
-
-      // Movement relative to Player Facing Angle
-      if (inputs.moveX !== 0 || inputs.moveY !== 0) {
-        const speed = 0.12;
-        const moveVec = new THREE.Vector3(inputs.moveX, 0, inputs.moveY);
-        moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-
-        playerRig.position.x += moveVec.x * speed;
-        playerRig.position.z += moveVec.z * speed;
-
-        // Keep inside terrain boundary
-        const maxB = (WORLD_SIZE / 2) - 1;
-        playerRig.position.x = Math.max(-maxB, Math.min(maxB, playerRig.position.x));
-        playerRig.position.z = Math.max(-maxB, Math.min(maxB, playerRig.position.z));
-
-        // Adjust terrain collision height smoothly
-        const groundY = getTerrainHeight(playerRig.position.x, playerRig.position.z) + 1;
-        playerRig.position.y += (groundY - playerRig.position.y) * 0.2;
-      }
-
-      // Sync position across WebRTC network
-      if (gameState.isStarted) {
-        const headRot = new THREE.Euler().setFromQuaternion(headGroup.quaternion);
-        broadcastNetworkData({
-          type: 'transform',
-          pos: { x: playerRig.position.x, y: playerRig.position.y, z: playerRig.position.z },
-          rot: { x: headRot.x, y: playerRig.rotation.y + headRot.y, z: headRot.z }
-        });
-      }
-    }
-
-    // --- CARDBOARD STEREOSCOPIC RENDER LOOP ---
-    function renderStereoVR() {
-      const halfWidth = window.innerWidth / 2;
-      const height = window.innerHeight;
-
-      // Update Stereo Left/Right eye cameras from center head camera
-      leftCamera.aspect = halfWidth / height;
-      leftCamera.fov = camera.fov;
-      leftCamera.updateProjectionMatrix();
-
-      rightCamera.aspect = halfWidth / height;
-      rightCamera.fov = camera.fov;
-      rightCamera.updateProjectionMatrix();
-
-      // Position Left & Right eye offset
-      leftCamera.position.copy(camera.position);
-      rightCamera.position.copy(camera.position);
-
-      leftCamera.translateX(-eyeSeparation / 2);
-      rightCamera.translateX(eyeSeparation / 2);
-
-      leftCamera.quaternion.copy(camera.quaternion).multiply(headGroup.quaternion);
-      rightCamera.quaternion.copy(camera.quaternion).multiply(headGroup.quaternion);
-
-      // Render Left Eye to Off-Screen Target
-      renderer.setRenderTarget(renderTargetL);
-      renderer.clear();
-      renderer.render(scene, leftCamera);
-
-      // Render Right Eye to Off-Screen Target
-      renderer.setRenderTarget(renderTargetR);
-      renderer.clear();
-      renderer.render(scene, rightCamera);
-
-      // Pass texture targets to Barrel Distortion Shaders
-      distortionMaterialL.uniforms.tDiffuse.value = renderTargetL.texture;
-      distortionMaterialR.uniforms.tDiffuse.value = renderTargetR.texture;
-
-      // Render Barrel Distorted Quad to Screen Viewport
-      renderer.setRenderTarget(null);
-      renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-      renderer.setScissorTest(false);
-      renderer.render(distortionScene, distortionCamera);
-    }
-
-    // --- MAIN GAME LOOP ---
-    function animate() {
-      if (gameState.isStarted) {
-        pollGamepad();
-        updatePlayerMovement();
-
-        // Check WebXR Controller stick inputs if in WebXR session
-        if (renderer.xr.isPresenting) {
-          const session = renderer.xr.getSession();
-          if (session && session.inputSources) {
-            for (const source of session.inputSources) {
-              if (source.gamepad) {
-                const gp = source.gamepad;
-                // Stick inputs on WebXR controllers
-                if (gp.axes && gp.axes.length >= 4) {
-                  if (Math.abs(gp.axes[2]) > 0.15) inputs.moveX = gp.axes[2];
-                  if (Math.abs(gp.axes[3]) > 0.15) inputs.moveY = gp.axes[3];
-                  if (Math.abs(gp.axes[0]) > 0.15) inputs.lookX = gp.axes[0] * 0.04;
-                }
-              }
-            }
-          }
-        }
-
-        // 1. Update Projectiles
-        for (let i = projectiles.length - 1; i >= 0; i--) {
-          const p = projectiles[i];
-          p.mesh.position.addScaledVector(p.direction, p.speed);
-          p.life--;
-
-          // Hit detection with Enemies
-          let hit = false;
-          for (let j = enemies.length - 1; j >= 0; j--) {
-            const e = enemies[j];
-            if (p.mesh.position.distanceTo(e.mesh.position) < 0.9) {
-              hit = true;
-              e.health--;
-
-              createVoxelExplosion(p.mesh.position, 0x00ffff);
-
-              if (e.health <= 0) {
-                createVoxelExplosion(e.mesh.position, 0xff0055);
-                scene.remove(e.mesh);
-                enemies.splice(j, 1);
+        <!-- Right Column: AI Model Controls & Sound Synthesizer Settings -->
+        <div class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- Controls Panel Tabs / Modes -->
+            <div class="glass-panel rounded-2xl p-5 flex flex-col gap-5">
                 
-                if (p.isLocal) {
-                  gameState.score += 100;
-                  updateScoreUI();
-                }
-              }
-              break;
-            }
-          }
+                <!-- Section 1: Vision Model & Analysis Settings -->
+                <div class="border-b border-cyber-accent/20 pb-4">
+                    <h3 class="font-orbitron text-md font-bold text-cyber-accent mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-microchip"></i> VISION MODEL & DETECTION
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">DETECTION ENGINE</label>
+                            <select id="detection-mode-select" class="w-full bg-cyber-dark border border-cyber-accent/30 rounded-lg px-3 py-2 text-sm text-cyan-300 focus:outline-none focus:border-cyber-accent font-mono">
+                                <option value="pose">Pose Detection (Hands/Body)</option>
+                                <option value="motion">Grid Optical Motion</option>
+                                <option value="color">RGB Color Tracking</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">MOTION SENSITIVITY</label>
+                            <input type="range" id="sensitivity-slider" min="10" max="90" value="45" class="w-full mt-2">
+                        </div>
+                    </div>
 
-          if (hit || p.life <= 0) {
-            scene.remove(p.mesh);
-            projectiles.splice(i, 1);
-          }
-        }
+                    <div class="flex items-center justify-between text-xs text-slate-300">
+                        <span>Show Skeleton Overlay</span>
+                        <input type="checkbox" id="toggle-skeleton" checked class="accent-cyan-400 w-4 h-4 cursor-pointer">
+                    </div>
+                </div>
 
-        // 2. Update Enemies Movement & Damage
-        for (let i = 0; i < enemies.length; i++) {
-          const e = enemies[i];
-          const dir = new THREE.Vector3().subVectors(playerRig.position, e.mesh.position);
-          dir.y = 0;
-          dir.normalize();
+                <!-- Section 2: Musical Scale & Harmony Synth Config -->
+                <div class="border-b border-cyber-accent/20 pb-4">
+                    <h3 class="font-orbitron text-md font-bold text-cyber-purple mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-music"></i> SCALES & INSTRUMENT SYNTH
+                    </h3>
 
-          e.mesh.position.addScaledVector(dir, e.speed);
-          e.mesh.lookAt(playerRig.position.x, e.mesh.position.y, playerRig.position.z);
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">MUSICAL SCALE</label>
+                            <select id="scale-select" class="w-full bg-cyber-dark border border-cyber-purple/40 rounded-lg px-3 py-2 text-sm text-purple-300 focus:outline-none focus:border-cyber-purple font-mono">
+                                <option value="pentatonic">Minor Pentatonic</option>
+                                <option value="major">Major Scale</option>
+                                <option value="minor">Natural Minor</option>
+                                <option value="dorian">Dorian Mode</option>
+                                <option value="japanese">InSen (Japanese)</option>
+                                <option value="blues">Blues Scale</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">SYNTH INSTRUMENT</label>
+                            <select id="instrument-select" class="w-full bg-cyber-dark border border-cyber-purple/40 rounded-lg px-3 py-2 text-sm text-purple-300 focus:outline-none focus:border-cyber-purple font-mono">
+                                <option value="poly">Polyphonic Synth</option>
+                                <option value="fm">FM Crystal Synth</option>
+                                <option value="am">AM Vintage Synth</option>
+                                <option value="duo">Duo Lead Synth</option>
+                            </select>
+                        </div>
+                    </div>
 
-          if (e.mesh.position.distanceTo(playerRig.position) < 1.1) {
-            damagePlayer(0.5);
-          }
-        }
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">BASE ROOT NOTE</label>
+                            <select id="root-note-select" class="w-full bg-cyber-dark border border-cyber-purple/40 rounded-lg px-3 py-2 text-sm text-purple-300 focus:outline-none focus:border-cyber-purple font-mono">
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                                <option value="E">E</option>
+                                <option value="F">F</option>
+                                <option value="G">G</option>
+                                <option value="A" selected>A</option>
+                                <option value="B">B</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">OCTAVE RANGE</label>
+                            <select id="octave-select" class="w-full bg-cyber-dark border border-cyber-purple/40 rounded-lg px-3 py-2 text-sm text-purple-300 focus:outline-none focus:border-cyber-purple font-mono">
+                                <option value="3">Octave 3 (Bass/Mid)</option>
+                                <option value="4" selected>Octave 4 (Mid/High)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
-        // 3. Update Voxel Particles
-        for (let i = particleSystems.length - 1; i >= 0; i--) {
-          const pt = particleSystems[i];
-          pt.mesh.position.add(pt.vel);
-          pt.life--;
-          pt.mesh.scale.multiplyScalar(0.92);
+                <!-- Section 3: Rhythmic & Audio Effects Control -->
+                <div>
+                    <h3 class="font-orbitron text-md font-bold text-pink-400 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders"></i> AUDIO EFFECTS & TEMPO
+                    </h3>
 
-          if (pt.life <= 0) {
-            scene.remove(pt.mesh);
-            particleSystems.splice(i, 1);
-          }
-        }
-      }
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-xs font-mono text-slate-400 mb-1">
+                                <span>REVERB & SPACE</span>
+                                <span id="reverb-val">40%</span>
+                            </div>
+                            <input type="range" id="reverb-slider" min="0" max="100" value="40" class="w-full">
+                        </div>
 
-      // Render Scene
-      if (gameState.isVR && !renderer.xr.isPresenting) {
-        renderStereoVR();
-      } else {
-        renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-        renderer.setScissorTest(false);
-        renderer.render(scene, camera);
-      }
-    }
+                        <div>
+                            <div class="flex justify-between text-xs font-mono text-slate-400 mb-1">
+                                <span>PING-PONG DELAY</span>
+                                <span id="delay-val">30%</span>
+                            </div>
+                            <input type="range" id="delay-slider" min="0" max="100" value="30" class="w-full">
+                        </div>
 
-    // Three.js WebXR Animation Loop
-    renderer.setAnimationLoop(animate);
+                        <div>
+                            <div class="flex justify-between text-xs font-mono text-slate-400 mb-1">
+                                <span>RHYTHM TEMPO (BPM)</span>
+                                <span id="bpm-val">120 BPM</span>
+                            </div>
+                            <input type="range" id="bpm-slider" min="60" max="180" value="120" class="w-full">
+                        </div>
+                    </div>
+                </div>
 
-    // --- VR CARDBOARD TOGGLE ---
-    document.getElementById('vr-toggle-btn').addEventListener('click', () => {
-      gameState.isVR = !gameState.isVR;
-      setupDeviceOrientation();
-      
-      if (gameState.isVR) {
-        document.getElementById('mono-crosshair').classList.add('hidden');
-        document.getElementById('hud-overlay').classList.add('hidden');
-        document.getElementById('touch-controls').classList.add('hidden');
-        document.getElementById('stereo-hud').classList.remove('hidden');
+            </div>
+
+            <!-- Real-time Tracked Notes Display Badge -->
+            <div class="glass-panel rounded-2xl p-4 flex items-center justify-between border border-pink-500/20">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400">
+                        <i class="fa-solid fa-compact-disc animate-spin"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-mono text-slate-400">CURRENT HARMONIC OUTPUT</div>
+                        <div id="active-note-display" class="font-orbitron text-lg font-bold text-pink-400">WAITING FOR MOTION...</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span id="trigger-count" class="text-xs font-mono text-cyan-400">TRIGGERS: 0</span>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-panel border-t border-cyber-accent/10 py-3 text-center text-xs text-slate-500 font-mono">
+        Visual Harmony Synth &bull; Powered by TensorFlow.js, PoseDetection & Tone.js Web Audio Engine
+    </footer>
+
+    <!-- Main JavaScript Application Logic -->
+    <script>
+        /**
+         * VISUAL HARMONY SYNTH - APPLICATION ARCHITECTURE
+         * 1. Vision Module: Camera access & TensorFlow.js PoseDetection / Canvas Pixel Motion Tracking.
+         * 2. Music Synthesizer Engine: Tone.js polyphonic instruments, FX loops, pitch mapping.
+         * 3. Spatial Trigger Matrix: Maps visual position/keypoints to musical notes.
+         * 4. UI / Visualizer: Canvas rendering, dynamic visual particles, audio waveform visualizer.
+         */
+
+        // Global Application State
+        const state = {
+            audioStarted: false,
+            cameraActive: false,
+            detector: null,
+            detectionMode: 'pose', // 'pose', 'motion', 'color'
+            sensitivity: 45,
+            showSkeleton: true,
+            currentScale: 'pentatonic',
+            instrumentType: 'poly',
+            rootNote: 'A',
+            octave: 4,
+            bpm: 120,
+            reverbAmount: 0.4,
+            delayAmount: 0.3,
+            lastPlayedNotes: [],
+            triggerCount: 0,
+            fps: 0,
+            lastFrameTime: performance.now(),
+            gridCols: 4,
+            gridRows: 2,
+            activeGridCells: new Set(),
+            previousFrameData: null,
+            particles: []
+        };
+
+        // Musical Scales Definition (Interval offsets from root note)
+        const SCALES = {
+            pentatonic: [0, 3, 5, 7, 10, 12, 15, 17],
+            major: [0, 2, 4, 5, 7, 9, 11, 12],
+            minor: [0, 2, 3, 5, 7, 8, 10, 12],
+            dorian: [0, 2, 3, 5, 7, 9, 10, 12],
+            japanese: [0, 1, 5, 7, 8, 12, 13, 17],
+            blues: [0, 3, 5, 6, 7, 10, 12, 15]
+        };
+
+        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        // DOM Elements References
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('output-canvas');
+        const ctx = canvas.getContext('2d');
+        const visCanvas = document.getElementById('audio-vis-canvas');
+        const visCtx = visCanvas.getContext('2d');
+
+        const audioStartBtn = document.getElementById('audio-start-btn');
+        const statusBadge = document.getElementById('status-badge');
+        const enableCamBtn = document.getElementById('enable-cam-btn');
+        const cameraPlaceholder = document.getElementById('camera-placeholder');
+        const detectionStatus = document.getElementById('detection-status');
+        const fpsCounter = document.getElementById('fps-counter');
+        const triggerGridEl = document.getElementById('trigger-grid');
+        const activeNoteDisplay = document.getElementById('active-note-display');
+        const triggerCountEl = document.getElementById('trigger-count');
+
+        // Tone.js Audio Objects
+        let synth = null;
+        let reverb = null;
+        let delay = null;
+        let analyzer = null;
+        let drumSynth = null;
+
+        // -------------------------------------------------------------
+        // 1. SOUND & AUDIO SYNTHESIS ENGINE (TONE.JS)
+        // -------------------------------------------------------------
         
-        if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen();
+        async function initAudioEngine() {
+            if (state.audioStarted) return;
+
+            try {
+                // Start Audio Context
+                await Tone.start();
+                
+                // Initialize FX Chain
+                reverb = new Tone.Reverb({ decay: 3, wet: state.reverbAmount }).toDestination();
+                await reverb.generate();
+
+                delay = new Tone.PingPongDelay({
+                    delayTime: "8n",
+                    feedback: 0.3,
+                    wet: state.delayAmount
+                }).connect(reverb);
+
+                analyzer = new Tone.FFT(32);
+
+                // Create Instrument
+                createSynthInstrument();
+
+                // Percussion for dynamic accent hits
+                drumSynth = new Tone.MembraneSynth({
+                    pitchDecay: 0.05,
+                    octaves: 4,
+                    oscillator: { type: "sine" }
+                }).connect(reverb);
+
+                Tone.Transport.bpm.value = state.bpm;
+                Tone.Transport.start();
+
+                state.audioStarted = true;
+
+                // Update UI Status
+                statusBadge.className = "px-3 py-1.5 rounded-full bg-emerald-900/40 border border-emerald-500/40 text-emerald-400 text-xs font-mono flex items-center gap-2";
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>AUDIO ACTIVE</span>`;
+                audioStartBtn.classList.add("opacity-50", "pointer-events-none");
+                audioStartBtn.querySelector('span').innerText = "AUDIO ENGINE READY";
+
+                // Play intro melody cascade
+                playIntroArpeggio();
+
+            } catch (err) {
+                console.error("Audio Initialization Error:", err);
+            }
         }
-      } else {
-        document.getElementById('mono-crosshair').classList.remove('hidden');
-        document.getElementById('hud-overlay').classList.remove('hidden');
-        document.getElementById('touch-controls').classList.remove('hidden');
-        document.getElementById('stereo-hud').classList.add('hidden');
-      }
-    });
 
-    // START GAME EVENT
-    document.getElementById('start-game-btn').addEventListener('click', () => {
-      document.getElementById('menu-overlay').classList.add('hidden');
-      gameState.isStarted = true;
-    });
+        function createSynthInstrument() {
+            if (synth) synth.dispose();
 
-    // WINDOW RESIZE HANDLER
-    window.addEventListener('resize', () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
+            const commonOptions = {
+                volume: -6
+            };
 
-      renderTargetL.setSize(width / 2, height);
-      renderTargetR.setSize(width / 2, height);
-      renderer.setSize(width, height);
-    });
-  </script>
+            switch (state.instrumentType) {
+                case 'fm':
+                    synth = new Tone.PolySynth(Tone.FMSynth, {
+                        harmonicity: 2,
+                        modulationIndex: 3,
+                        oscillator: { type: 'sine' },
+                        envelope: { attack: 0.02, decay: 0.2, sustain: 0.5, release: 0.8 }
+                    });
+                    break;
+                case 'am':
+                    synth = new Tone.PolySynth(Tone.AMSynth, {
+                        harmonicity: 1.5,
+                        oscillator: { type: 'triangle' },
+                        envelope: { attack: 0.05, decay: 0.3, sustain: 0.6, release: 1 }
+                    });
+                    break;
+                case 'duo':
+                    synth = new Tone.PolySynth(Tone.DuoSynth, {
+                        vibratoAmount: 0.5,
+                        vibratoRate: 5,
+                        harmonicity: 1.5
+                    });
+                    break;
+                case 'poly':
+                default:
+                    synth = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: 'triangle' },
+                        envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.6 }
+                    });
+                    break;
+            }
+
+            // Connect synth to FX chain & Analyzer
+            synth.connect(delay);
+            synth.connect(analyzer);
+        }
+
+        // Map Grid Cell / Coordinate to Pitch in Current Scale
+        function getPitchFromPosition(cellIndex, totalCells) {
+            const scaleOffsets = SCALES[state.currentScale];
+            const rootIndex = NOTE_NAMES.indexOf(state.rootNote);
+            
+            // Map cell to scale note
+            const scaleNote = scaleOffsets[cellIndex % scaleOffsets.length];
+            const octaveOffset = Math.floor(cellIndex / scaleOffsets.length);
+            const totalSemi = rootIndex + scaleNote + ((parseInt(state.octave) + octaveOffset) * 12);
+            
+            const noteName = NOTE_NAMES[totalSemi % 12];
+            const octaveNum = Math.floor(totalSemi / 12) - 1;
+            
+            return `${noteName}${octaveNum}`;
+        }
+
+        // Trigger Audio Note from Visual Activation
+        function triggerNoteFromGrid(cellIndex) {
+            if (!state.audioStarted || !synth) return;
+
+            const note = getPitchFromPosition(cellIndex, state.gridCols * state.gridRows);
+            const now = Tone.now();
+
+            try {
+                synth.triggerAttackRelease(note, "8n", now);
+                
+                // Occasional dynamic drum accent on top grid row triggers
+                if (cellIndex >= 4 && Math.random() > 0.6) {
+                    drumSynth.triggerAttackRelease("C1", "16n", now);
+                }
+
+                state.triggerCount++;
+                triggerCountEl.innerText = `TRIGGERS: ${state.triggerCount}`;
+                activeNoteDisplay.innerText = `NOTE: ${note}`;
+                state.lastPlayedNotes.push(note);
+                if (state.lastPlayedNotes.length > 5) state.lastPlayedNotes.shift();
+
+            } catch (e) {
+                // Ignore overlapping node trigger collisions
+            }
+        }
+
+        function playIntroArpeggio() {
+            const scale = SCALES[state.currentScale];
+            scale.slice(0, 5).forEach((val, idx) => {
+                const note = getPitchFromPosition(idx, 8);
+                synth.triggerAttackRelease(note, "16n", Tone.now() + idx * 0.1);
+            });
+        }
+
+        // -------------------------------------------------------------
+        // 2. TENSORFLOW.JS POSE DETECTION & VISION ANALYSIS
+        // -------------------------------------------------------------
+
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+                    audio: false
+                });
+                video.srcObject = stream;
+                await video.play();
+
+                state.cameraActive = true;
+                cameraPlaceholder.classList.add('hidden');
+
+                // Set Canvas dimensions to match video element
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+
+                // Load Pose Detection Model
+                loadVisionModel();
+
+            } catch (err) {
+                alert("Camera access denied or un-available. Please grant permissions.");
+                console.error("Camera Error:", err);
+            }
+        }
+
+        async function loadVisionModel() {
+            detectionStatus.innerText = "LOADING TF.JS POSE DETECTOR...";
+            try {
+                // Initialize MoveNet Pose Detector
+                const model = poseDetection.SupportedModels.MoveNet;
+                const detectorConfig = {
+                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING
+                };
+                state.detector = await poseDetection.createDetector(model, detectorConfig);
+                detectionStatus.innerText = "VISION MODEL ONLINE";
+                detectionStatus.className = "text-xs font-mono text-emerald-400";
+            } catch (err) {
+                console.warn("TF.js Pose Model failed to load, falling back to Canvas Motion Grid Mode:", err);
+                detectionStatus.innerText = "FALLBACK: OPTICAL MOTION MODE";
+                detectionStatus.className = "text-xs font-mono text-amber-400";
+                state.detectionMode = 'motion';
+                document.getElementById('detection-mode-select').value = 'motion';
+            }
+
+            // Start main processing loop
+            requestAnimationFrame(processVideoFrame);
+        }
+
+        // Main Video Processing Loop
+        async function processVideoFrame() {
+            // Calculate FPS
+            const now = performance.now();
+            const delta = now - state.lastFrameTime;
+            state.fps = Math.round(1000 / delta);
+            state.lastFrameTime = now;
+            fpsCounter.innerText = `FPS: ${state.fps}`;
+
+            if (video.readyState >= 2) {
+                // Draw current video frame to main canvas (mirrored)
+                ctx.save();
+                ctx.scale(-1, 1);
+                ctx.translate(-canvas.width, 0);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
+
+                // Draw Grid Matrix Overlay
+                drawGridOverlay();
+
+                // Mode-based Vision Processing
+                if (state.detectionMode === 'pose' && state.detector) {
+                    await processPoseDetection();
+                } else if (state.detectionMode === 'motion') {
+                    processMotionGridDetection();
+                } else if (state.detectionMode === 'color') {
+                    processColorTracking();
+                }
+
+                // Render dynamic visual particles
+                updateAndDrawParticles();
+            }
+
+            // Render Audio Visualizer
+            renderAudioVisualizer();
+
+            requestAnimationFrame(processVideoFrame);
+        }
+
+        // Pose Detection Logic (Tracking wrists & keypoints)
+        async function processPoseDetection() {
+            try {
+                const poses = await state.detector.estimatePoses(canvas);
+                if (poses && poses.length > 0) {
+                    const pose = poses[0];
+                    
+                    if (state.showSkeleton) {
+                        drawPoseSkeleton(pose);
+                    }
+
+                    // Track Right and Left Wrists for music triggers
+                    const keypoints = pose.keypoints;
+                    const rightWrist = keypoints.find(k => k.name === 'right_wrist');
+                    const leftWrist = keypoints.find(k => k.name === 'left_wrist');
+                    const nose = keypoints.find(k => k.name === 'nose');
+
+                    const trackedPoints = [rightWrist, leftWrist, nose].filter(k => k && k.score > 0.3);
+
+                    const newlyActiveCells = new Set();
+
+                    trackedPoints.forEach((point) => {
+                        // Mirror point coordinates to align with mirrored display
+                        const mirroredX = canvas.width - point.x;
+                        const cellIndex = getCellIndexFromCoords(mirroredX, point.y);
+
+                        if (cellIndex !== -1) {
+                            newlyActiveCells.add(cellIndex);
+                            
+                            // Spawn particles at keypoint location
+                            createParticles(mirroredX, point.y, '#00f0ff');
+                        }
+                    });
+
+                    // Check for new triggers
+                    checkGridTriggers(newlyActiveCells);
+                }
+            } catch (e) {
+                console.error("Pose Estimation Error:", e);
+            }
+        }
+
+        // Optical Motion Detection using Canvas Pixel Differencing
+        function processMotionGridDetection() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const frameData = ctx.getImageData(0, 0, width, height);
+            
+            if (!state.previousFrameData) {
+                state.previousFrameData = frameData;
+                return;
+            }
+
+            const current = frameData.data;
+            const prev = state.previousFrameData.data;
+            const threshold = (100 - state.sensitivity) * 2; // Sensitivity mapping
+
+            const cellMotionCounts = new Array(state.gridCols * state.gridRows).fill(0);
+            const colWidth = width / state.gridCols;
+            const rowHeight = height / state.gridRows;
+
+            // Sample pixels for motion diff
+            for (let y = 0; y < height; y += 12) {
+                for (let x = 0; x < width; x += 12) {
+                    const index = (y * width + x) * 4;
+                    const diff = Math.abs(current[index] - prev[index]) +
+                                 Math.abs(current[index + 1] - prev[index + 1]) +
+                                 Math.abs(current[index + 2] - prev[index + 2]);
+
+                    if (diff > threshold) {
+                        const col = Math.floor(x / colWidth);
+                        const row = Math.floor(y / rowHeight);
+                        const cellIdx = row * state.gridCols + col;
+                        cellMotionCounts[cellIdx]++;
+                    }
+                }
+            }
+
+            const newlyActiveCells = new Set();
+            const motionThresholdPixels = 15; // Min motion pixel triggers
+
+            cellMotionCounts.forEach((count, cellIdx) => {
+                if (count > motionThresholdPixels) {
+                    newlyActiveCells.add(cellIdx);
+                    
+                    // Center coords of cell for particle emission
+                    const col = cellIdx % state.gridCols;
+                    const row = Math.floor(cellIdx / state.gridCols);
+                    const cx = col * colWidth + colWidth / 2;
+                    const cy = row * rowHeight + rowHeight / 2;
+                    createParticles(cx, cy, '#ff0055');
+                }
+            });
+
+            checkGridTriggers(newlyActiveCells);
+            state.previousFrameData = frameData;
+        }
+
+        // Brightest Color Tracking Engine
+        function processColorTracking() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const frameData = ctx.getImageData(0, 0, width, height).data;
+
+            let maxBrightness = 0;
+            let brightX = 0;
+            let brightY = 0;
+
+            for (let y = 0; y < height; y += 16) {
+                for (let x = 0; x < width; x += 16) {
+                    const idx = (y * width + x) * 4;
+                    const brightness = frameData[idx] + frameData[idx + 1] + frameData[idx + 2];
+                    if (brightness > maxBrightness) {
+                        maxBrightness = brightness;
+                        brightX = x;
+                        brightY = y;
+                    }
+                }
+            }
+
+            if (maxBrightness > 350) {
+                // Draw target tracker
+                ctx.strokeStyle = '#ffb700';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(brightX, brightY, 20, 0, Math.PI * 2);
+                ctx.stroke();
+
+                const cellIndex = getCellIndexFromCoords(brightX, brightY);
+                const newlyActiveCells = new Set();
+                if (cellIndex !== -1) newlyActiveCells.add(cellIndex);
+
+                checkGridTriggers(newlyActiveCells);
+                createParticles(brightX, brightY, '#ffb700');
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 3. SPATIAL GRID & TRIGGER LOGIC
+        // -------------------------------------------------------------
+
+        function getCellIndexFromCoords(x, y) {
+            const colWidth = canvas.width / state.gridCols;
+            const rowHeight = canvas.height / state.gridRows;
+
+            const col = Math.floor(x / colWidth);
+            const row = Math.floor(y / rowHeight);
+
+            if (col >= 0 && col < state.gridCols && row >= 0 && row < state.gridRows) {
+                return row * state.gridCols + col;
+            }
+            return -1;
+        }
+
+        function checkGridTriggers(newlyActiveCells) {
+            // Compare active cells with previous frame state to trigger sound on enter
+            newlyActiveCells.forEach((cellIdx) => {
+                if (!state.activeGridCells.has(cellIdx)) {
+                    triggerNoteFromGrid(cellIdx);
+                }
+            });
+
+            state.activeGridCells = newlyActiveCells;
+            updateGridDOMUI();
+        }
+
+        function renderTriggerGridDOM() {
+            triggerGridEl.innerHTML = '';
+            const total = state.gridCols * state.gridRows;
+
+            for (let i = 0; i < total; i++) {
+                const noteName = getPitchFromPosition(i, total);
+                const cell = document.createElement('div');
+                cell.id = `grid-cell-${i}`;
+                cell.className = `glass-panel rounded-lg flex flex-col items-center justify-center border border-cyber-accent/20 transition-all text-xs font-mono cursor-pointer hover:border-cyber-accent`;
+                cell.innerHTML = `
+                    <span class="text-[10px] text-slate-500">ZONE ${i + 1}</span>
+                    <span class="font-bold text-cyan-300 font-orbitron">${noteName}</span>
+                `;
+                
+                // Allow manual click testing
+                cell.addEventListener('mousedown', () => {
+                    initAudioEngine();
+                    triggerNoteFromGrid(i);
+                    cell.classList.add('grid-cell-active');
+                    setTimeout(() => cell.classList.remove('grid-cell-active'), 200);
+                });
+
+                triggerGridEl.appendChild(cell);
+            }
+        }
+
+        function updateGridDOMUI() {
+            const total = state.gridCols * state.gridRows;
+            for (let i = 0; i < total; i++) {
+                const cellEl = document.getElementById(`grid-cell-${i}`);
+                if (cellEl) {
+                    if (state.activeGridCells.has(i)) {
+                        cellEl.classList.add('grid-cell-active', 'bg-cyber-accent/20');
+                    } else {
+                        cellEl.classList.remove('grid-cell-active', 'bg-cyber-accent/20');
+                    }
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 4. CANVAS OVERLAYS & VISUALIZERS
+        // -------------------------------------------------------------
+
+        function drawGridOverlay() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const colWidth = width / state.gridCols;
+            const rowHeight = height / state.gridRows;
+
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
+            ctx.lineWidth = 1;
+
+            // Vertical lines
+            for (let c = 1; c < state.gridCols; c++) {
+                ctx.beginPath();
+                ctx.moveTo(c * colWidth, 0);
+                ctx.lineTo(c * colWidth, height);
+                ctx.stroke();
+            }
+
+            // Horizontal lines
+            for (let r = 1; r < state.gridRows; r++) {
+                ctx.beginPath();
+                ctx.moveTo(0, r * rowHeight);
+                ctx.lineTo(width, r * rowHeight);
+                ctx.stroke();
+            }
+
+            // Highlight Active Zones on Canvas
+            state.activeGridCells.forEach((cellIdx) => {
+                const col = cellIdx % state.gridCols;
+                const row = Math.floor(cellIdx / state.gridCols);
+                ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
+                ctx.fillRect(col * colWidth, row * rowHeight, colWidth, rowHeight);
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(col * colWidth, row * rowHeight, colWidth, rowHeight);
+            });
+        }
+
+        function drawPoseSkeleton(pose) {
+            const keypoints = pose.keypoints;
+            
+            // Draw Points
+            keypoints.forEach((kp) => {
+                if (kp.score > 0.3) {
+                    const mirroredX = canvas.width - kp.x;
+                    ctx.fillStyle = '#7000ff';
+                    ctx.beginPath();
+                    ctx.arc(mirroredX, kp.y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#00f0ff';
+                    ctx.stroke();
+                }
+            });
+
+            // Keypoint bone connections
+            const adjacentPairs = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
+            adjacentPairs.forEach(([i, j]) => {
+                const kp1 = keypoints[i];
+                const kp2 = keypoints[j];
+                if (kp1.score > 0.3 && kp2.score > 0.3) {
+                    ctx.strokeStyle = 'rgba(112, 0, 255, 0.6)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(canvas.width - kp1.x, kp1.y);
+                    ctx.lineTo(canvas.width - kp2.x, kp2.y);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // Particle Trigger FX System
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 4; i++) {
+                state.particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    radius: Math.random() * 4 + 2,
+                    alpha: 1.0,
+                    color: color
+                });
+            }
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                const p = state.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.04;
+
+                if (p.alpha <= 0) {
+                    state.particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Bottom Waveform Audio Visualizer
+        function renderAudioVisualizer() {
+            const w = visCanvas.width = visCanvas.clientWidth;
+            const h = visCanvas.height = visCanvas.clientHeight;
+            
+            visCtx.clearRect(0, 0, w, h);
+
+            if (!analyzer || !state.audioStarted) {
+                visCtx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+                visCtx.beginPath();
+                visCtx.moveTo(0, h / 2);
+                visCtx.lineTo(w, h / 2);
+                visCtx.stroke();
+                return;
+            }
+
+            const values = analyzer.getValue();
+            const barWidth = w / values.length;
+
+            for (let i = 0; i < values.length; i++) {
+                const val = (values[i] + 140) * 0.8; // Normalized dB
+                const barHeight = Math.max(4, (val / 100) * h);
+
+                const grad = visCtx.createLinearGradient(0, h, 0, 0);
+                grad.addColorStop(0, '#7000ff');
+                grad.addColorStop(1, '#00f0ff');
+
+                visCtx.fillStyle = grad;
+                visCtx.fillRect(i * barWidth, h - barHeight, barWidth - 2, barHeight);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 5. EVENT LISTENERS & UI BINDINGS
+        // -------------------------------------------------------------
+
+        function setupEventListeners() {
+            // Audio Start Button
+            audioStartBtn.addEventListener('click', initAudioEngine);
+            enableCamBtn.addEventListener('click', () => {
+                initAudioEngine();
+                initCamera();
+            });
+
+            // Detection Mode Select
+            document.getElementById('detection-mode-select').addEventListener('change', (e) => {
+                state.detectionMode = e.target.value;
+                document.getElementById('tracker-mode-label').innerText = `MODE: ${e.target.value.toUpperCase()} TRACKING`;
+            });
+
+            // Sensitivity Slider
+            document.getElementById('sensitivity-slider').addEventListener('input', (e) => {
+                state.sensitivity = parseInt(e.target.value);
+            });
+
+            // Toggle Skeleton
+            document.getElementById('toggle-skeleton').addEventListener('change', (e) => {
+                state.showSkeleton = e.target.checked;
+            });
+
+            // Musical Scale Select
+            document.getElementById('scale-select').addEventListener('change', (e) => {
+                state.currentScale = e.target.value;
+                renderTriggerGridDOM();
+            });
+
+            // Instrument Select
+            document.getElementById('instrument-select').addEventListener('change', (e) => {
+                state.instrumentType = e.target.value;
+                if (state.audioStarted) createSynthInstrument();
+            });
+
+            // Root Note Select
+            document.getElementById('root-note-select').addEventListener('change', (e) => {
+                state.rootNote = e.target.value;
+                renderTriggerGridDOM();
+            });
+
+            // Octave Select
+            document.getElementById('octave-select').addEventListener('change', (e) => {
+                state.octave = parseInt(e.target.value);
+                renderTriggerGridDOM();
+            });
+
+            // Reverb Slider
+            document.getElementById('reverb-slider').addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                state.reverbAmount = val / 100;
+                document.getElementById('reverb-val').innerText = `${val}%`;
+                if (reverb) reverb.wet.value = state.reverbAmount;
+            });
+
+            // Delay Slider
+            document.getElementById('delay-slider').addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                state.delayAmount = val / 100;
+                document.getElementById('delay-val').innerText = `${val}%`;
+                if (delay) delay.wet.value = state.delayAmount;
+            });
+
+            // BPM Slider
+            document.getElementById('bpm-slider').addEventListener('input', (e) => {
+                state.bpm = parseInt(e.target.value);
+                document.getElementById('bpm-val').innerText = `${state.bpm} BPM`;
+                if (state.audioStarted) Tone.Transport.bpm.value = state.bpm;
+            });
+        }
+
+        // Initialize App on DOM Load
+        window.addEventListener('DOMContentLoaded', () => {
+            renderTriggerGridDOM();
+            setupEventListeners();
+        });
+
+    </script>
 </body>
 </html>
