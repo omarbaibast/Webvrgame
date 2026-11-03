@@ -2,977 +2,497 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Motion Soundwave - Interactive Kinetic Music Studio</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Rajdhani', sans-serif;
-      background-color: #05070f;
-      color: #e2e8f0;
-      overflow-x: hidden;
-    }
-    .font-orbitron {
-      font-family: 'Orbitron', sans-serif;
-    }
-    .glass-panel {
-      background: rgba(13, 18, 36, 0.65);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    }
-    .glow-cyan {
-      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
-    }
-    .glow-magenta {
-      box-shadow: 0 0 15px rgba(236, 72, 153, 0.4);
-    }
-    .text-glow-cyan {
-      text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
-    }
-    .text-glow-pink {
-      text-shadow: 0 0 10px rgba(236, 72, 153, 0.6);
-    }
-    /* Custom Range Slider */
-    input[type=range] {
-      -webkit-appearance: none;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      height: 6px;
-    }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      height: 18px;
-      width: 18px;
-      border-radius: 50%;
-      background: #06b6d4;
-      cursor: pointer;
-      box-shadow: 0 0 10px #06b6d4;
-      transition: transform 0.1s ease;
-    }
-    input[type=range]::-webkit-slider-thumb:hover {
-      transform: scale(1.2);
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Vector Alignment Gamepad App</title>
+    <!-- Tailwind CSS for UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls for camera manipulation -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0b0f19;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        /* Custom Glowing & Retro Cyber UI effects */
+        .neon-border {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4), inset 0 0 15px rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(96, 165, 250, 0.5);
+        }
+        .neon-text-blue {
+            text-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
+        }
+        .neon-text-green {
+            text-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+        }
+        .point-flash {
+            animation: pulse-flash 0.5s cubic-bezier(0.4, 0, 0.6, 1);
+        }
+        @keyframes pulse-flash {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 1.15; transform: scale(1.05); filter: brightness(1.5); }
+        }
+    </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between p-4 md:p-6 text-slate-100">
+<body class="text-slate-100">
 
-  <!-- TOP BAR / HEADER -->
-  <header class="w-full glass-panel rounded-2xl p-4 mb-4 flex flex-wrap justify-between items-center gap-4">
-    <div class="flex items-center space-x-3">
-      <div class="p-3 bg-gradient-to-tr from-cyan-500 to-pink-500 rounded-xl shadow-lg glow-cyan">
-        <i data-lucide="activity" class="w-6 h-6 text-white"></i>
-      </div>
-      <div>
-        <h1 class="text-2xl md:text-3xl font-extrabold tracking-wider font-orbitron bg-gradient-to-r from-cyan-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-          KINETIC SYNTH
-        </h1>
-        <p class="text-xs text-slate-400">Gesture & Motion Reactive Audio Bender</p>
-      </div>
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container" class="absolute inset-0"></div>
+
+    <!-- UI Overlay HUD -->
+    <div class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 md:p-6">
+        
+        <!-- Top Bar: Header & Score -->
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4 w-full max-w-7xl mx-auto">
+            
+            <!-- Game Title & Controller Status -->
+            <div class="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl neon-border pointer-events-auto flex items-center gap-4 w-full md:w-auto">
+                <div id="controller-icon-container" class="text-3xl text-rose-500 transition-colors duration-300">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wider text-blue-400 uppercase neon-text-blue">Vector Alignment</h1>
+                    <p id="gamepad-status" class="text-xs text-slate-400 font-mono">Status: Disconnected (Use Keyboard)</p>
+                </div>
+            </div>
+
+            <!-- Score Dashboard -->
+            <div id="score-card" class="bg-slate-900/80 backdrop-blur-md px-6 py-3 rounded-xl neon-border pointer-events-auto flex items-center justify-between gap-6 w-full md:w-auto transition-all duration-300">
+                <div class="text-left">
+                    <div class="text-xs text-slate-400 uppercase font-semibold tracking-widest">Points Scored</div>
+                    <div id="score-val" class="text-3xl font-extrabold text-emerald-400 font-mono neon-text-green">0</div>
+                </div>
+                <button id="reset-score-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-lg border border-slate-600 active:scale-95 transition pointer-events-auto">
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Alert Flash Indicator (Triggered on Dot Product ~ 1.0) -->
+        <div id="point-alert" class="self-center bg-emerald-500/20 border border-emerald-400/80 backdrop-blur-md px-8 py-3 rounded-full text-emerald-300 font-bold text-lg tracking-widest uppercase opacity-0 transition-opacity duration-200 pointer-events-none flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.5)]">
+            <i class="fa-solid fa-bolt text-emerald-400"></i> Vectors Aligned! +1 Point
+        </div>
+
+        <!-- Bottom Bar: Telemetry & Controls Info -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full max-w-7xl mx-auto">
+            
+            <!-- Sphere 1 Data -->
+            <div class="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border border-cyan-500/30 pointer-events-auto">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-cyan-400 inline-block shadow-[0_0_8px_#22d3ee]"></span>
+                        Sphere 1 (Left Axis)
+                    </span>
+                    <span class="text-xs text-slate-400 font-mono">Stick / WASD</span>
+                </div>
+                <div class="font-mono text-xs text-slate-300 space-y-1 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+                    <div>World Dir X: <span id="s1-x" class="text-cyan-300 font-semibold">0.000</span></div>
+                    <div>World Dir Y: <span id="s1-y" class="text-cyan-300 font-semibold">0.000</span></div>
+                    <div>World Dir Z: <span id="s1-z" class="text-cyan-300 font-semibold">1.000</span></div>
+                </div>
+            </div>
+
+            <!-- Dot Product Telemetry -->
+            <div class="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border border-indigo-500/30 pointer-events-auto flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm font-bold text-indigo-400 uppercase tracking-wider">Vector Dot Product</span>
+                    <span id="alignment-pct" class="text-xs font-mono font-bold text-indigo-300">0.0%</span>
+                </div>
+                
+                <!-- Dot Product Value & Progress Bar -->
+                <div class="my-auto py-1">
+                    <div class="flex justify-between items-baseline mb-1">
+                        <span class="text-xs text-slate-400 font-mono">v1 · v2 =</span>
+                        <span id="dot-val" class="text-2xl font-mono font-extrabold text-white">0.0000</span>
+                    </div>
+                    <!-- Alignment Meter -->
+                    <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                        <div id="dot-bar" class="bg-gradient-to-r from-indigo-500 via-blue-400 to-emerald-400 h-full rounded-full transition-all duration-75 w-0"></div>
+                    </div>
+                </div>
+
+                <div class="text-[10px] text-slate-400 text-center font-mono mt-1">
+                    Target: Dot Product = 1.000 (Aligned)
+                </div>
+            </div>
+
+            <!-- Sphere 2 Data -->
+            <div class="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border border-rose-500/30 pointer-events-auto">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-rose-400 inline-block shadow-[0_0_8px_#fb7185]"></span>
+                        Sphere 2 (Right Axis)
+                    </span>
+                    <span class="text-xs text-slate-400 font-mono">Stick / IJKL</span>
+                </div>
+                <div class="font-mono text-xs text-slate-300 space-y-1 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+                    <div>World Dir X: <span id="s2-x" class="text-rose-300 font-semibold">0.000</span></div>
+                    <div>World Dir Y: <span id="s2-y" class="text-rose-300 font-semibold">0.000</span></div>
+                    <div>World Dir Z: <span id="s2-z" class="text-rose-300 font-semibold">1.000</span></div>
+                </div>
+            </div>
+
+        </div>
     </div>
 
-    <!-- Master Action Controls -->
-    <div class="flex flex-wrap items-center gap-3">
-      <button id="toggleCameraBtn" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-600/30 border border-cyan-500/50 hover:bg-cyan-500/50 text-cyan-200 font-semibold transition-all duration-300">
-        <i data-lucide="camera" class="w-4 h-4"></i>
-        <span>Start Camera</span>
-      </button>
-
-      <button id="toggleAudioBtn" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600/30 border border-pink-500/50 hover:bg-pink-500/50 text-pink-200 font-semibold transition-all duration-300">
-        <i data-lucide="volume-2" class="w-4 h-4"></i>
-        <span>Enable Audio Engine</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- MAIN STUDIO LAYOUT -->
-  <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
-
-    <!-- LEFT / CENTER: CAMERA & MOTION TRACKING CANVAS (8 COLS) -->
-    <section class="lg:col-span-8 flex flex-col space-y-4">
-      <div class="relative w-full h-[380px] sm:h-[480px] md:h-[540px] glass-panel rounded-2xl overflow-hidden flex items-center justify-center border border-slate-700/50">
+    <!-- Application Script -->
+    <script>
+        // --- 1. Scene & Engine Setup ---
+        const container = document.getElementById('canvas-container');
         
-        <!-- Hidden video source -->
-        <video id="webcam" class="hidden" playsinline muted></video>
-
-        <!-- Main Tracking Canvas -->
-        <canvas id="motionCanvas" class="w-full h-full object-cover"></canvas>
-
-        <!-- Offscreen Canvas for Frame Differencing -->
-        <canvas id="diffCanvas" class="hidden"></canvas>
-
-        <!-- Overlay HUD Info -->
-        <div class="absolute top-4 left-4 pointer-events-none flex flex-col gap-1">
-          <div class="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-cyan-500/30 text-xs text-cyan-300">
-            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-            <span>MOTION ENERGY: <span id="motionEnergyVal" class="font-bold text-white">0%</span></span>
-          </div>
-          <div class="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-purple-500/30 text-xs text-purple-300">
-            <span>POSITION (X,Y): <span id="motionPosVal" class="font-bold text-white">0.50, 0.50</span></span>
-          </div>
-        </div>
-
-        <!-- Hotzone Trigger Badges overlay -->
-        <div class="absolute top-4 right-4 flex gap-2 pointer-events-none">
-          <div id="hzBass" class="px-3 py-1 bg-slate-900/80 border border-slate-700 rounded-lg text-xs font-semibold text-slate-400 transition-all">PITCH + LOWER</div>
-          <div id="hzFX" class="px-3 py-1 bg-slate-900/80 border border-slate-700 rounded-lg text-xs font-semibold text-slate-400 transition-all">FILTER OPEN</div>
-          <div id="hzLead" class="px-3 py-1 bg-slate-900/80 border border-slate-700 rounded-lg text-xs font-semibold text-slate-400 transition-all">STRIKE ZONE</div>
-        </div>
-
-        <!-- Overlay when video is not active -->
-        <div id="cameraPrompt" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 p-6 text-center z-10 transition-opacity duration-500">
-          <div class="p-4 bg-slate-900/90 rounded-full border border-cyan-500/30 mb-4 animate-bounce">
-            <i data-lucide="video-off" class="w-10 h-10 text-cyan-400"></i>
-          </div>
-          <h2 class="text-xl font-orbitron font-bold text-slate-200 mb-2">Camera Tracking Offline</h2>
-          <p class="text-sm text-slate-400 max-w-md mb-6">Click <span class="text-cyan-400 font-semibold">"Start Camera"</span> above to enable pixel-motion tracking. Move your hands, arms, or body to modulate audio in real time!</p>
-        </div>
-      </div>
-
-      <!-- AUDIO SPECTRUM & WAVEFORM VISUALIZER -->
-      <div class="glass-panel rounded-2xl p-4 h-32 flex flex-col justify-between relative overflow-hidden">
-        <div class="flex justify-between items-center text-xs text-slate-400 mb-1 z-10">
-          <span class="flex items-center gap-1.5"><i data-lucide="waves" class="w-4 h-4 text-pink-400"></i> REALTIME AUDIO SPECTRUM & MODULATION</span>
-          <span id="activePresetBadge" class="text-cyan-400 font-orbitron">PRESET: THEREMIN ETHER</span>
-        </div>
-        <canvas id="audioVisualizer" class="w-full h-full absolute inset-0 rounded-2xl opacity-80 pointer-events-none"></canvas>
-      </div>
-    </section>
-
-    <!-- RIGHT: SOUND ENGINE & FX CONTROLS (4 COLS) -->
-    <section class="lg:col-span-4 flex flex-col space-y-4">
-      
-      <!-- MODE & PRESET SELECTOR -->
-      <div class="glass-panel rounded-2xl p-4 space-y-4">
-        <h3 class="text-sm font-orbitron text-slate-300 tracking-wider flex items-center gap-2">
-          <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i> SOUND MODES & PRESETS
-        </h3>
-        
-        <div class="grid grid-cols-3 gap-2">
-          <button data-mode="synth" class="mode-btn px-3 py-2 text-xs font-semibold rounded-xl border border-cyan-500/40 bg-cyan-500/20 text-cyan-200 hover:bg-cyan-500/30 active">
-            Synth
-          </button>
-          <button data-mode="drums" class="mode-btn px-3 py-2 text-xs font-semibold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-400 hover:bg-slate-700">
-            Beats
-          </button>
-          <button data-mode="audioTrack" class="mode-btn px-3 py-2 text-xs font-semibold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-400 hover:bg-slate-700">
-            Custom Track
-          </button>
-        </div>
-
-        <!-- Preset Selector Dropdown -->
-        <div class="flex flex-col space-y-1">
-          <label class="text-xs text-slate-400">Audio Preset</label>
-          <select id="presetSelect" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
-            <option value="theremin">Theremin Ether (Ambient Pitch & Reverb)</option>
-            <option value="cyberbass">Cybernetic Bass Bend (Aggressive Cutoff)</option>
-            <option value="harp">Ambient Kinetic Harp (Polyphonic Swells)</option>
-            <option value="glitch">Glitch Machine (Bitcrush & Mod Delay)</option>
-          </select>
-        </div>
-
-        <!-- Custom Track Uploader (Hidden by default, shown in Audio Track Mode) -->
-        <div id="trackUploadContainer" class="hidden flex-col space-y-2 pt-2 border-t border-slate-800">
-          <label class="text-xs text-slate-300 font-semibold flex items-center gap-1.5">
-            <i data-lucide="upload" class="w-3.5 h-3.5 text-pink-400"></i> Upload MP3 / Audio Loop
-          </label>
-          <input type="file" id="audioFileInput" accept="audio/*" class="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-pink-600/30 file:text-pink-300 hover:file:bg-pink-500/40 cursor-pointer"/>
-          <p class="text-[10px] text-slate-500">Move vertically to pitch-bend track, horizontally for filter cutoff.</p>
-        </div>
-      </div>
-
-      <!-- MOTION PARAMETER MAPPINGS & FX READOUT -->
-      <div class="glass-panel rounded-2xl p-4 space-y-4 flex-grow flex flex-col justify-between">
-        <h3 class="text-sm font-orbitron text-slate-300 tracking-wider flex items-center gap-2">
-          <i data-lucide="cpu" class="w-4 h-4 text-pink-400"></i> LIVE AUDIO MODULATION
-        </h3>
-
-        <div class="space-y-3">
-          <!-- Pitch / Frequency Readout -->
-          <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
-            <div class="flex justify-between text-xs">
-              <span class="text-slate-400 flex items-center gap-1"><i data-lucide="arrow-up-down" class="w-3 h-3 text-cyan-400"></i> Pitch Bend (Y-Axis)</span>
-              <span id="pitchValDisplay" class="text-cyan-400 font-mono">440 Hz (A4)</span>
-            </div>
-            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-              <div id="pitchMeter" class="bg-gradient-to-r from-cyan-500 to-blue-500 h-full w-1/2 transition-all duration-75"></div>
-            </div>
-          </div>
-
-          <!-- Cutoff Filter Readout -->
-          <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
-            <div class="flex justify-between text-xs">
-              <span class="text-slate-400 flex items-center gap-1"><i data-lucide="arrow-left-right" class="w-3 h-3 text-pink-400"></i> Lowpass Filter (X-Axis)</span>
-              <span id="cutoffValDisplay" class="text-pink-400 font-mono">1200 Hz</span>
-            </div>
-            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-              <div id="cutoffMeter" class="bg-gradient-to-r from-pink-500 to-purple-500 h-full w-1/2 transition-all duration-75"></div>
-            </div>
-          </div>
-
-          <!-- Motion Intensity / Distortion & Reverb -->
-          <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
-            <div class="flex justify-between text-xs">
-              <span class="text-slate-400 flex items-center gap-1"><i data-lucide="zap" class="w-3 h-3 text-yellow-400"></i> FX Depth (Motion Velocity)</span>
-              <span id="fxValDisplay" class="text-yellow-400 font-mono">20%</span>
-            </div>
-            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-              <div id="fxMeter" class="bg-gradient-to-r from-yellow-500 to-red-500 h-full w-1/5 transition-all duration-75"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- FINE-TUNING CONTROLS -->
-        <div class="pt-2 border-t border-slate-800 space-y-3">
-          <h4 class="text-xs font-orbitron text-slate-400">MOTION CALIBRATION</h4>
-          
-          <div class="space-y-1">
-            <div class="flex justify-between text-xs text-slate-400">
-              <span>Sensitivity</span>
-              <span id="sensVal">1.5x</span>
-            </div>
-            <input type="range" id="sensitivitySlider" min="0.5" max="3.0" step="0.1" value="1.5" class="w-full">
-          </div>
-
-          <div class="space-y-1">
-            <div class="flex justify-between text-xs text-slate-400">
-              <span>Noise Gate Threshold</span>
-              <span id="threshVal">12</span>
-            </div>
-            <input type="range" id="thresholdSlider" min="5" max="40" step="1" value="12" class="w-full">
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-  </main>
-
-  <!-- FOOTER -->
-  <footer class="mt-4 glass-panel rounded-xl p-3 text-center text-xs text-slate-500 flex justify-between items-center flex-wrap gap-2">
-    <span>Web Audio API & Pixel Optical Motion Tracking Engine</span>
-    <span class="text-slate-400">Stand back & raise your arms to play air theremin or bend beat loops!</span>
-  </footer>
-
-  <!-- JS LOGIC ENGINE -->
-  <script>
-    // Initialize Lucide Icons
-    lucide.createIcons();
-
-    // ==========================================
-    // GLOBAL STATE & SYSTEM CONSTANTS
-    // ==========================================
-    const state = {
-      isCameraActive: false,
-      isAudioActive: false,
-      soundMode: 'synth', // 'synth', 'drums', 'audioTrack'
-      preset: 'theremin',
-      sensitivity: 1.5,
-      threshold: 12,
-      motionEnergy: 0,
-      centerX: 0.5,
-      centerY: 0.5,
-      lastCenterX: 0.5,
-      lastCenterY: 0.5,
-      velocity: 0,
-      particles: []
-    };
-
-    // DOM Elements
-    const video = document.getElementById('webcam');
-    const canvas = document.getElementById('motionCanvas');
-    const ctx = canvas.getContext('2d');
-    const diffCanvas = document.getElementById('diffCanvas');
-    const diffCtx = diffCanvas.getContext('2d', { willReadFrequently: true });
-    
-    const toggleCameraBtn = document.getElementById('toggleCameraBtn');
-    const toggleAudioBtn = document.getElementById('toggleAudioBtn');
-    const cameraPrompt = document.getElementById('cameraPrompt');
-
-    const sensitivitySlider = document.getElementById('sensitivitySlider');
-    const thresholdSlider = document.getElementById('thresholdSlider');
-    const sensValDisplay = document.getElementById('sensVal');
-    const threshValDisplay = document.getElementById('threshVal');
-
-    const pitchValDisplay = document.getElementById('pitchValDisplay');
-    const cutoffValDisplay = document.getElementById('cutoffValDisplay');
-    const fxValDisplay = document.getElementById('fxValDisplay');
-    const pitchMeter = document.getElementById('pitchMeter');
-    const cutoffMeter = document.getElementById('cutoffMeter');
-    const fxMeter = document.getElementById('fxMeter');
-    const motionEnergyVal = document.getElementById('motionEnergyVal');
-    const motionPosVal = document.getElementById('motionPosVal');
-
-    const presetSelect = document.getElementById('presetSelect');
-    const activePresetBadge = document.getElementById('activePresetBadge');
-    const trackUploadContainer = document.getElementById('trackUploadContainer');
-    const audioFileInput = document.getElementById('audioFileInput');
-
-    // Hotzone HUD overlays
-    const hzBass = document.getElementById('hzBass');
-    const hzFX = document.getElementById('hzFX');
-    const hzLead = document.getElementById('hzLead');
-
-    // ==========================================
-    // AUDIO ENGINE (WEB AUDIO API)
-    // ==========================================
-    let audioCtx = null;
-    let masterGain = null;
-    let biquadFilter = null;
-    let delayNode = null;
-    let delayFeedback = null;
-    let waveShaperNode = null;
-    let analyserNode = null;
-
-    // Audio Track Player Nodes
-    let audioBuffer = null;
-    let audioSourceNode = null;
-    let isTrackPlaying = false;
-
-    // Synth Oscillators & Beat Generators
-    let synthOsc1 = null;
-    let synthOsc2 = null;
-    let synthGain = null;
-    let drumLoopInterval = null;
-
-    function initAudioEngine() {
-      if (audioCtx) return;
-
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AudioContext();
-
-      // Master Gain
-      masterGain = audioCtx.createGain();
-      masterGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-
-      // Lowpass Filter Node
-      biquadFilter = audioCtx.createBiquadFilter();
-      biquadFilter.type = 'lowpass';
-      biquadFilter.frequency.setValueAtTime(1200, audioCtx.currentTime);
-      biquadFilter.Q.setValueAtTime(4, audioCtx.currentTime);
-
-      // Delay FX Node
-      delayNode = audioCtx.createDelay();
-      delayNode.delayTime.setValueAtTime(0.25, audioCtx.currentTime);
-      delayFeedback = audioCtx.createGain();
-      delayFeedback.gain.setValueAtTime(0.35, audioCtx.currentTime);
-
-      // Feedback Loop Setup
-      delayNode.connect(delayFeedback);
-      delayFeedback.connect(delayNode);
-
-      // Distortion WaveShaper
-      waveShaperNode = audioCtx.createWaveShaper();
-      waveShaperNode.curve = makeDistortionCurve(0);
-
-      // Analyser Node for Visualizer
-      analyserNode = audioCtx.createAnalyser();
-      analyserNode.fftSize = 256;
-
-      // Routing Engine Audio Pipeline
-      // Source -> Filter -> Waveshaper -> Master -> Delay -> Analyser -> Output
-      biquadFilter.connect(waveShaperNode);
-      waveShaperNode.connect(masterGain);
-
-      masterGain.connect(delayNode);
-      delayNode.connect(masterGain);
-
-      masterGain.connect(analyserNode);
-      analyserNode.connect(audioCtx.destination);
-
-      setupSynthNodes();
-      startAudioVisualizer();
-    }
-
-    function setupSynthNodes() {
-      if (!audioCtx) return;
-
-      synthGain = audioCtx.createGain();
-      synthGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-
-      synthOsc1 = audioCtx.createOscillator();
-      synthOsc2 = audioCtx.createOscillator();
-
-      synthOsc1.type = 'sawtooth';
-      synthOsc2.type = 'sine';
-
-      synthOsc1.frequency.setValueAtTime(440, audioCtx.currentTime);
-      synthOsc2.frequency.setValueAtTime(220, audioCtx.currentTime);
-
-      synthOsc1.connect(synthGain);
-      synthOsc2.connect(synthGain);
-      synthGain.connect(biquadFilter);
-
-      synthOsc1.start();
-      synthOsc2.start();
-    }
-
-    function makeDistortionCurve(amount) {
-      const k = typeof amount === 'number' ? amount : 0;
-      const n_samples = 44100;
-      const curve = new Float32Array(n_samples);
-      const deg = Math.PI / 180;
-      for (let i = 0; i < n_samples; ++i) {
-        const x = (i * 2) / n_samples - 1;
-        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
-      }
-      return curve;
-    }
-
-    // ==========================================
-    // AUDIO PARAMETER BENDING & MOTION REACTIVITY
-    // ==========================================
-    function updateAudioFromMotion(x, y, intensity) {
-      if (!audioCtx || !state.isAudioActive) return;
-
-      // Invert Y so moving HANDS UP (low pixel Y) produces HIGHER PITCH
-      const normY = 1.0 - Math.max(0, Math.min(1, y));
-      const normX = Math.max(0, Math.min(1, x));
-
-      // 1. Pitch Bending (Vertical Position - Y)
-      // Range: ~100Hz (Low Bass) to 1200Hz (High Lead)
-      const baseFreq = 110 * Math.pow(2, normY * 3); // 3 Octave range
-      if (synthOsc1 && synthOsc2) {
-        synthOsc1.frequency.setTargetAtTime(baseFreq, audioCtx.currentTime, 0.05);
-        synthOsc2.frequency.setTargetAtTime(baseFreq * 0.5, audioCtx.currentTime, 0.05);
-      }
-
-      // If playing custom audio track, pitch/speed bend playbackRate (0.5x to 2.0x)
-      if (audioSourceNode && state.soundMode === 'audioTrack') {
-        const playbackRate = 0.5 + normY * 1.5;
-        audioSourceNode.playbackRate.setTargetAtTime(playbackRate, audioCtx.currentTime, 0.05);
-      }
-
-      // 2. Filter Cutoff Modulation (Horizontal Position - X)
-      // Range: 200Hz to 8000Hz
-      const cutoffFreq = 200 + Math.pow(normX, 2) * 7800;
-      biquadFilter.frequency.setTargetAtTime(cutoffFreq, audioCtx.currentTime, 0.05);
-
-      // 3. Motion Intensity FX Bending (Distortion, Delay & Synth Volume Envelope)
-      const clampedIntensity = Math.min(1, intensity * state.sensitivity);
-
-      // Volume swells with motion
-      const targetGain = Math.max(0.05, Math.min(0.6, clampedIntensity * 0.8));
-      if (synthGain) {
-        synthGain.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.08);
-      }
-
-      // Spatial Delay Feedback & Distortion adjustment
-      delayFeedback.gain.setTargetAtTime(0.2 + clampedIntensity * 0.5, audioCtx.currentTime, 0.1);
-      waveShaperNode.curve = makeDistortionCurve(clampedIntensity * 30);
-
-      // UI Readouts Update
-      pitchValDisplay.innerText = `${Math.round(baseFreq)} Hz`;
-      pitchMeter.style.width = `${Math.min(100, normY * 100)}%`;
-
-      cutoffValDisplay.innerText = `${Math.round(cutoffFreq)} Hz`;
-      cutoffMeter.style.width = `${Math.min(100, normX * 100)}%`;
-
-      const fxPercent = Math.round(clampedIntensity * 100);
-      fxValDisplay.innerText = `${fxPercent}%`;
-      fxMeter.style.width = `${fxPercent}%`;
-
-      motionEnergyVal.innerText = `${fxPercent}%`;
-      motionPosVal.innerText = `${normX.toFixed(2)}, ${normY.toFixed(2)}`;
-
-      // Highlight Active Hotzones based on position
-      highlightHotzones(normX, normY, clampedIntensity);
-    }
-
-    function highlightHotzones(x, y, intensity) {
-      // Clear zone states
-      [hzBass, hzFX, hzLead].forEach(el => {
-        el.className = "px-3 py-1 bg-slate-900/80 border border-slate-700 rounded-lg text-xs font-semibold text-slate-400 transition-all";
-      });
-
-      if (y > 0.7) {
-        hzBass.className = "px-3 py-1 bg-cyan-600/50 border border-cyan-400 rounded-lg text-xs font-semibold text-cyan-200 glow-cyan transition-all";
-      }
-      if (x > 0.7) {
-        hzFX.className = "px-3 py-1 bg-pink-600/50 border border-pink-400 rounded-lg text-xs font-semibold text-pink-200 glow-magenta transition-all";
-      }
-      if (intensity > 0.4) {
-        hzLead.className = "px-3 py-1 bg-purple-600/50 border border-purple-400 rounded-lg text-xs font-semibold text-purple-200 transition-all";
-      }
-    }
-
-    // ==========================================
-    // PROCEDURAL BEATS & SOUND MODES
-    // ==========================================
-    function setSoundMode(mode) {
-      state.soundMode = mode;
-      document.querySelectorAll('.mode-btn').forEach(btn => {
-        if (btn.getAttribute('data-mode') === mode) {
-          btn.className = "mode-btn px-3 py-2 text-xs font-semibold rounded-xl border border-cyan-500/40 bg-cyan-500/20 text-cyan-200 hover:bg-cyan-500/30 active";
-        } else {
-          btn.className = "mode-btn px-3 py-2 text-xs font-semibold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-400 hover:bg-slate-700";
-        }
-      });
-
-      if (mode === 'audioTrack') {
-        trackUploadContainer.classList.remove('hidden');
-        trackUploadContainer.classList.add('flex');
-      } else {
-        trackUploadContainer.classList.add('hidden');
-        trackUploadContainer.classList.remove('flex');
-      }
-
-      if (mode === 'drums') {
-        startDrumMachine();
-      } else {
-        stopDrumMachine();
-      }
-    }
-
-    function startDrumMachine() {
-      stopDrumMachine();
-      if (!audioCtx) return;
-
-      let step = 0;
-      drumLoopInterval = setInterval(() => {
-        if (!state.isAudioActive) return;
-
-        // Simple procedural synth beat
-        const now = audioCtx.currentTime;
-        
-        // Kick on beat 0 & 2
-        if (step % 2 === 0) {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.frequency.setValueAtTime(130, now);
-          osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.15);
-          gain.gain.setValueAtTime(0.8, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-          osc.connect(gain);
-          gain.connect(biquadFilter);
-          osc.start(now);
-          osc.stop(now + 0.15);
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0b0f19, 0.035);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2.5, 6.5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // Orbit controls for interactive camera viewing
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 + 0.1; // Don't allow going far below ground
+        controls.minDistance = 3;
+        controls.maxDistance = 12;
+
+        // --- Lighting ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 7);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        const cyanPointLight = new THREE.PointLight(0x00f0ff, 1.2, 10);
+        cyanPointLight.position.set(-2, 2, 2);
+        scene.add(cyanPointLight);
+
+        const magentaPointLight = new THREE.PointLight(0xff0055, 1.2, 10);
+        magentaPointLight.position.set(2, 2, 2);
+        scene.add(magentaPointLight);
+
+        // Grid Floor
+        const gridHelper = new THREE.GridHelper(20, 20, 0x3b82f6, 0x1e293b);
+        gridHelper.position.y = -1.2;
+        scene.add(gridHelper);
+
+        // --- 2. Sphere & Vector Creation ---
+        // Helper function to create sphere with visual grid/wireframe rolling cues
+        function createTexturedUnitSphere(colorHex, emissiveHex) {
+            const sphereGroup = new THREE.Group();
+
+            // Core translucent inner sphere
+            const sphereGeo = new THREE.SphereGeometry(1, 32, 32);
+            const sphereMat = new THREE.MeshStandardMaterial({
+                color: colorHex,
+                roughness: 0.2,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.55,
+                emissive: emissiveHex,
+                emissiveIntensity: 0.2
+            });
+            const coreMesh = new THREE.Mesh(sphereGeo, sphereMat);
+            coreMesh.castShadow = true;
+            coreMesh.receiveShadow = true;
+            sphereGroup.add(coreMesh);
+
+            // Wireframe Overlay to clearly indicate rolling motion
+            const wireframeGeo = new THREE.WireframeGeometry(sphereGeo);
+            const wireframeMat = new THREE.LineBasicMaterial({
+                color: colorHex,
+                transparent: true,
+                opacity: 0.35
+            });
+            const wireframeMesh = new THREE.LineSegments(wireframeGeo, wireframeMat);
+            sphereGroup.add(wireframeMesh);
+
+            // Equator and Meridian Rings for additional motion clarity
+            const ringGeo = new THREE.TorusGeometry(1.002, 0.012, 16, 64);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            
+            const ringX = new THREE.Mesh(ringGeo, ringMat);
+            const ringY = new THREE.Mesh(ringGeo, ringMat);
+            ringY.rotation.x = Math.PI / 2;
+            
+            sphereGroup.add(ringX);
+            sphereGroup.add(ringY);
+
+            return { group: sphereGroup, material: sphereMat };
         }
 
-        // Hi-Hat on every step, accented by motion velocity
-        const hatNoise = audioCtx.createBufferSource();
-        const bufferSize = audioCtx.sampleRate * 0.04;
-        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = Math.random() * 2 - 1;
-        }
-        hatNoise.buffer = buffer;
+        // Internal Unit Vector definition (Points initially along +Z axis: [0, 0, 1])
+        const internalVector1 = new THREE.Vector3(0, 0, 1);
+        const internalVector2 = new THREE.Vector3(0, 0, 1);
 
-        const hatFilter = audioCtx.createBiquadFilter();
-        hatFilter.type = 'highpass';
-        hatFilter.frequency.value = 6000;
+        // Create Sphere 1 (Cyan Theme, Positioned Left)
+        const s1Obj = createTexturedUnitSphere(0x06b6d4, 0x0891b2);
+        const sphere1 = s1Obj.group;
+        sphere1.position.set(-2, 0, 0);
+        scene.add(sphere1);
 
-        const hatGain = audioCtx.createGain();
-        const hatVol = 0.1 + state.velocity * 0.4;
-        hatGain.gain.setValueAtTime(hatVol, now);
-        hatGain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+        // ArrowHelper for Sphere 1 vector
+        const arrow1 = new THREE.ArrowHelper(
+            internalVector1.clone().normalize(),
+            new THREE.Vector3(0, 0, 0),
+            1.2, // Arrow length slightly extends out for visual flair
+            0x22d3ee,
+            0.25,
+            0.15
+        );
+        sphere1.add(arrow1);
 
-        hatNoise.connect(hatFilter);
-        hatFilter.connect(hatGain);
-        hatGain.connect(biquadFilter);
-        hatNoise.start(now);
+        // Create Sphere 2 (Rose/Red Theme, Positioned Right)
+        const s2Obj = createTexturedUnitSphere(0xf43f5e, 0xe11d48);
+        const sphere2 = s2Obj.group;
+        sphere2.position.set(2, 0, 0);
+        scene.add(sphere2);
 
-        step = (step + 1) % 4;
-      }, 250);
-    }
+        // ArrowHelper for Sphere 2 vector
+        const arrow2 = new THREE.ArrowHelper(
+            internalVector2.clone().normalize(),
+            new THREE.Vector3(0, 0, 0),
+            1.2,
+            0xfb7185,
+            0.25,
+            0.15
+        );
+        sphere2.add(arrow2);
 
-    function stopDrumMachine() {
-      if (drumLoopInterval) {
-        clearInterval(drumLoopInterval);
-        drumLoopInterval = null;
-      }
-    }
+        // --- 3. Input Handling (PS4 DualShock Gamepad & Keyboard Fallback) ---
+        const keyState = {};
+        window.addEventListener('keydown', (e) => keyState[e.code] = true);
+        window.addEventListener('keyup', (e) => keyState[e.code] = false);
 
-    // Audio File Custom Track Reader
-    audioFileInput.addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
+        let gamepadConnected = false;
+        const gamepadStatusEl = document.getElementById('gamepad-status');
+        const controllerIconEl = document.getElementById('controller-icon-container');
 
-      initAudioEngine();
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        audioCtx.decodeAudioData(evt.target.result, function(buffer) {
-          audioBuffer = buffer;
-          playCustomAudioTrack();
+        window.addEventListener("gamepadconnected", (e) => {
+            gamepadConnected = true;
+            gamepadStatusEl.innerText = `Connected: ${e.gamepad.id.substring(0, 24)}...`;
+            gamepadStatusEl.classList.add('text-emerald-400');
+            controllerIconEl.className = "text-3xl text-emerald-400 neon-text-green";
         });
-      };
-      reader.readAsArrayBuffer(file);
-    });
 
-    function playCustomAudioTrack() {
-      if (!audioCtx || !audioBuffer) return;
-
-      if (audioSourceNode) {
-        audioSourceNode.stop();
-      }
-
-      audioSourceNode = audioCtx.createBufferSource();
-      audioSourceNode.buffer = audioBuffer;
-      audioSourceNode.loop = true;
-      audioSourceNode.connect(biquadFilter);
-      audioSourceNode.start(0);
-      isTrackPlaying = true;
-    }
-
-    // ==========================================
-    // CAMERA & COMPUTER VISION MOTION TRACKING ENGINE
-    // ==========================================
-    async function initCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-          audio: false
+        window.addEventListener("gamepaddisconnected", () => {
+            gamepadConnected = false;
+            gamepadStatusEl.innerText = "Status: Disconnected (Use Keyboard)";
+            gamepadStatusEl.classList.remove('text-emerald-400');
+            controllerIconEl.className = "text-3xl text-rose-500";
         });
-        video.srcObject = stream;
-        await video.play();
 
-        state.isCameraActive = true;
-        cameraPrompt.classList.add('opacity-0', 'pointer-events-none');
-        toggleCameraBtn.innerHTML = `<i data-lucide="video-off" class="w-4 h-4"></i><span>Stop Camera</span>`;
-        toggleCameraBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600/30 border border-red-500/50 hover:bg-red-500/50 text-red-200 font-semibold transition-all duration-300";
-        lucide.createIcons();
-
-        // Match canvas dimensions to video feed aspect ratio
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        diffCanvas.width = canvas.width / 4; // Downsampled for fast optical processing
-        diffCanvas.height = canvas.height / 4;
-
-        requestAnimationFrame(processMotionLoop);
-      } catch (err) {
-        console.error("Camera access error:", err);
-        alert("Unable to access live camera feed. Please allow camera permissions in your browser.");
-      }
-    }
-
-    function stopCamera() {
-      if (video.srcObject) {
-        video.srcObject.getTracks().forEach(track => track.stop());
-        video.srcObject = null;
-      }
-      state.isCameraActive = false;
-      cameraPrompt.classList.remove('opacity-0', 'pointer-events-none');
-      toggleCameraBtn.innerHTML = `<i data-lucide="camera" class="w-4 h-4"></i><span>Start Camera</span>`;
-      toggleCameraBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-600/30 border border-cyan-500/50 hover:bg-cyan-500/50 text-cyan-200 font-semibold transition-all duration-300";
-      lucide.createIcons();
-    }
-
-    let prevFrameData = null;
-
-    function processMotionLoop() {
-      if (!state.isCameraActive) return;
-
-      const dw = diffCanvas.width;
-      const dh = diffCanvas.height;
-
-      // Draw current video frame to downsampled offscreen canvas
-      diffCtx.save();
-      // Mirror horizontal frame for intuitive user movement
-      diffCtx.scale(-1, 1);
-      diffCtx.drawImage(video, -dw, 0, dw, dh);
-      diffCtx.restore();
-
-      const currentFrame = diffCtx.getImageData(0, 0, dw, dh);
-      const currData = currentFrame.data;
-
-      let totalMotionPixels = 0;
-      let sumX = 0;
-      let sumY = 0;
-
-      if (prevFrameData) {
-        const threshold = state.threshold;
-
-        // Frame Differencing Pixel Analysis Loop
-        for (let i = 0; i < currData.length; i += 4) {
-          const rDiff = Math.abs(currData[i] - prevFrameData[i]);
-          const gDiff = Math.abs(currData[i + 1] - prevFrameData[i + 1]);
-          const bDiff = Math.abs(currData[i + 2] - prevFrameData[i + 2]);
-
-          const diff = (rDiff + gDiff + bDiff) / 3;
-
-          if (diff > threshold) {
-            totalMotionPixels++;
-            const pixelIndex = i / 4;
-            const x = pixelIndex % dw;
-            const y = Math.floor(pixelIndex / dw);
-
-            sumX += x;
-            sumY += y;
-          }
-        }
-      }
-
-      // Save frame copy for next diff iteration
-      prevFrameData = new Uint8ClampedArray(currData);
-
-      // Compute Center of Motion Gravity (Mass Centroid)
-      if (totalMotionPixels > 10) {
-        const targetX = (sumX / totalMotionPixels) / dw;
-        const targetY = (sumY / totalMotionPixels) / dh;
-
-        // Smooth movement centroid using exponential smoothing (lerp)
-        state.centerX += (targetX - state.centerX) * 0.35;
-        state.centerY += (targetY - state.centerY) * 0.35;
-
-        // Calculate motion velocity
-        const dx = state.centerX - state.lastCenterX;
-        const dy = state.centerY - state.lastCenterY;
-        state.velocity = Math.sqrt(dx * dx + dy * dy);
-
-        state.lastCenterX = state.centerX;
-        state.lastCenterY = state.centerY;
-      }
-
-      const totalPixels = dw * dh;
-      state.motionEnergy = Math.min(1.0, (totalMotionPixels / (totalPixels * 0.15)));
-
-      // Render Visual Motion Layer (Camera Feed + Vector Trails + Motion Heat Particles)
-      renderMotionCanvas();
-
-      // Trigger Audio Bending update
-      updateAudioFromMotion(state.centerX, state.centerY, state.motionEnergy);
-
-      requestAnimationFrame(processMotionLoop);
-    }
-
-    // ==========================================
-    // VISUAL CANVAS GRAPHICS & PARTICLE ENGINE
-    // ==========================================
-    function renderMotionCanvas() {
-      const cw = canvas.width;
-      const ch = canvas.height;
-
-      // Draw Mirrored Camera Background Feed
-      ctx.save();
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, -cw, 0, cw, ch);
-      ctx.restore();
-
-      // Darken webcam slightly for high contrast glowing visual overlays
-      ctx.fillStyle = 'rgba(5, 7, 15, 0.45)';
-      ctx.fillRect(0, 0, cw, ch);
-
-      // Draw Grid / Cyber Target Lines
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(cw / 2, 0); ctx.lineTo(cw / 2, ch);
-      ctx.moveTo(0, ch / 2); ctx.lineTo(cw, ch / 2);
-      ctx.stroke();
-
-      // Spawn Motion Reactive Particles on movement
-      if (state.motionEnergy > 0.05) {
-        const px = state.centerX * cw;
-        const py = state.centerY * ch;
-
-        for (let i = 0; i < Math.floor(state.motionEnergy * 6); i++) {
-          state.particles.push({
-            x: px + (Math.random() - 0.5) * 40,
-            y: py + (Math.random() - 0.5) * 40,
-            vx: (Math.random() - 0.5) * 4,
-            vy: (Math.random() - 0.5) * 4,
-            radius: Math.random() * 6 + 2,
-            color: Math.random() > 0.5 ? '#06b6d4' : '#ec4899',
-            alpha: 1.0
-          });
-        }
-      }
-
-      // Update and Draw Particles
-      for (let i = state.particles.length - 1; i >= 0; i--) {
-        const p = state.particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.alpha -= 0.025;
-
-        if (p.alpha <= 0) {
-          state.particles.splice(i, 1);
-          continue;
+        // Apply rotation deadzone logic for smooth joystick input
+        function applyDeadzone(value, threshold = 0.12) {
+            if (Math.abs(value) < threshold) return 0;
+            return (value - Math.sign(value) * threshold) / (1 - threshold);
         }
 
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.alpha;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = p.color;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1.0;
-      }
+        // Rotation Speed Coefficient
+        const ROTATION_SPEED = 0.045;
 
-      // Draw Kinetic Motion Tracking Core Node
-      if (state.isCameraActive) {
-        const nodeX = state.centerX * cw;
-        const nodeY = state.centerY * ch;
+        function processInputs() {
+            let leftX = 0, leftY = 0;
+            let rightX = 0, rightY = 0;
 
-        // Outer Pulsing Glow
-        ctx.beginPath();
-        ctx.arc(nodeX, nodeY, 30 + state.motionEnergy * 40, 0, Math.PI * 2);
-        ctx.strokeStyle = state.motionEnergy > 0.3 ? 'rgba(236, 72, 153, 0.6)' : 'rgba(6, 182, 212, 0.5)';
-        ctx.lineWidth = 3;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = state.motionEnergy > 0.3 ? '#ec4899' : '#06b6d4';
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+            // Poll Gamepads
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            let gp = null;
+            for (let i = 0; i < gamepads.length; i++) {
+                if (gamepads[i]) { gp = gamepads[i]; break; }
+            }
 
-        // Inner Motion Core
-        ctx.beginPath();
-        ctx.arc(nodeX, nodeY, 12, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
+            if (gp) {
+                if (!gamepadConnected) {
+                    gamepadConnected = true;
+                    gamepadStatusEl.innerText = `Connected: ${gp.id.substring(0, 24)}...`;
+                    gamepadStatusEl.classList.add('text-emerald-400');
+                    controllerIconEl.className = "text-3xl text-emerald-400 neon-text-green";
+                }
 
-        // Crosshair Coordinates HUD Tag
-        ctx.fillStyle = '#06b6d4';
-        ctx.font = '12px Orbitron';
-        ctx.fillText(`PITCH & FILTER CORE`, nodeX + 20, nodeY - 10);
-      }
-    }
+                // Standard DualShock 4 Mapping:
+                // Axis 0: Left Stick X (-1 Left, +1 Right)
+                // Axis 1: Left Stick Y (-1 Up, +1 Down)
+                // Axis 2: Right Stick X
+                // Axis 3: Right Stick Y
+                leftX = applyDeadzone(gp.axes[0]);
+                leftY = applyDeadzone(gp.axes[1]);
+                rightX = applyDeadzone(gp.axes[2]);
+                rightY = applyDeadzone(gp.axes[3]);
+            }
 
-    // ==========================================
-    // AUDIO SPECTRUM VISUALIZER CANVAS
-    // ==========================================
-    function startAudioVisualizer() {
-      const visCanvas = document.getElementById('audioVisualizer');
-      const visCtx = visCanvas.getContext('2d');
+            // Keyboard Fallback Overlay
+            if (keyState['KeyA']) leftX = -1;
+            if (keyState['KeyD']) leftX = 1;
+            if (keyState['KeyW']) leftY = -1;
+            if (keyState['KeyS']) leftY = 1;
 
-      function drawVis() {
-        requestAnimationFrame(drawVis);
+            if (keyState['ArrowLeft'] || keyState['KeyJ']) rightX = -1;
+            if (keyState['ArrowRight'] || keyState['KeyL']) rightX = 1;
+            if (keyState['ArrowUp'] || keyState['KeyI']) rightY = -1;
+            if (keyState['ArrowDown'] || keyState['KeyK']) rightY = 1;
 
-        visCanvas.width = visCanvas.clientWidth;
-        visCanvas.height = visCanvas.clientHeight;
+            // Rotate Sphere 1 (Left Joystick)
+            if (leftX !== 0 || leftY !== 0) {
+                // Pitch (around X axis) & Yaw (around Y axis)
+                const rotX = leftY * ROTATION_SPEED;
+                const rotY = leftX * ROTATION_SPEED;
+                
+                const deltaQuaternion = new THREE.Quaternion().setFromEuler(
+                    new THREE.Euler(rotX, rotY, 0, 'XYZ')
+                );
+                sphere1.quaternion.multiplyQuaternions(deltaQuaternion, sphere1.quaternion);
+            }
 
-        const w = visCanvas.width;
-        const h = visCanvas.height;
-
-        visCtx.clearRect(0, 0, w, h);
-
-        if (!analyserNode || !state.isAudioActive) {
-          // Draw idle flatline
-          visCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-          visCtx.beginPath();
-          visCtx.moveTo(0, h / 2);
-          visCtx.lineTo(w, h / 2);
-          visCtx.stroke();
-          return;
+            // Rotate Sphere 2 (Right Joystick)
+            if (rightX !== 0 || rightY !== 0) {
+                const rotX = rightY * ROTATION_SPEED;
+                const rotY = rightX * ROTATION_SPEED;
+                
+                const deltaQuaternion = new THREE.Quaternion().setFromEuler(
+                    new THREE.Euler(rotX, rotY, 0, 'XYZ')
+                );
+                sphere2.quaternion.multiplyQuaternions(deltaQuaternion, sphere2.quaternion);
+            }
         }
 
-        const bufferLength = analyserNode.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-        analyserNode.getByteFrequencyData(dataArray);
+        // --- 4. Logic & Game Mechanics ---
+        let score = 0;
+        let canScore = true; // Debounce lock to prevent infinite scoring on a single continuous hold
 
-        const barWidth = (w / bufferLength) * 2.5;
-        let barX = 0;
+        // UI Element References
+        const s1XEl = document.getElementById('s1-x');
+        const s1YEl = document.getElementById('s1-y');
+        const s1ZEl = document.getElementById('s1-z');
 
-        for (let i = 0; i < bufferLength; i++) {
-          const barHeight = (dataArray[i] / 255) * h;
+        const s2XEl = document.getElementById('s2-x');
+        const s2YEl = document.getElementById('s2-y');
+        const s2ZEl = document.getElementById('s2-z');
 
-          const gradient = visCtx.createLinearGradient(0, h, 0, 0);
-          gradient.addColorStop(0, 'rgba(6, 182, 212, 0.2)');
-          gradient.addColorStop(0.5, 'rgba(236, 72, 153, 0.6)');
-          gradient.addColorStop(1, 'rgba(168, 85, 247, 0.9)');
+        const dotValEl = document.getElementById('dot-val');
+        const dotBarEl = document.getElementById('dot-bar');
+        const alignPctEl = document.getElementById('alignment-pct');
+        const scoreValEl = document.getElementById('score-val');
+        const scoreCardEl = document.getElementById('score-card');
+        const pointAlertEl = document.getElementById('point-alert');
 
-          visCtx.fillStyle = gradient;
-          visCtx.fillRect(barX, h - barHeight, barWidth, barHeight);
+        document.getElementById('reset-score-btn').addEventListener('click', () => {
+            score = 0;
+            scoreValEl.innerText = score;
+        });
 
-          barX += barWidth + 1;
+        // Compute world-space vectors and evaluate alignment
+        function evaluateVectors() {
+            // Transform internal vectors by current sphere rotation quaternions
+            const v1 = internalVector1.clone().applyQuaternion(sphere1.quaternion).normalize();
+            const v2 = internalVector2.clone().applyQuaternion(sphere2.quaternion).normalize();
+
+            // Update UI vector coordinates
+            s1XEl.innerText = v1.x.toFixed(3);
+            s1YEl.innerText = v1.y.toFixed(3);
+            s1ZEl.innerText = v1.z.toFixed(3);
+
+            s2XEl.innerText = v2.x.toFixed(3);
+            s2YEl.innerText = v2.y.toFixed(3);
+            s2ZEl.innerText = v2.z.toFixed(3);
+
+            // Compute Dot Product
+            const dotProduct = v1.dot(v2);
+            
+            // Format and Clamp Dot Product display
+            const displayDot = Math.max(-1.0, Math.min(1.0, dotProduct));
+            dotValEl.innerText = displayDot.toFixed(4);
+
+            // Progress bar calculation (Maps dot product from [-1, 1] to [0%, 100%])
+            const normalizedPct = Math.max(0, Math.min(100, ((displayDot + 1) / 2) * 100));
+            dotBarEl.style.width = `${normalizedPct}%`;
+            alignPctEl.innerText = `${normalizedPct.toFixed(1)}%`;
+
+            // Check if Dot Product is virtually 1.0 (Alignment tolerance ~ 0.998)
+            const ALIGNMENT_THRESHOLD = 0.998;
+
+            if (dotProduct >= ALIGNMENT_THRESHOLD) {
+                // Highlight materials
+                s1Obj.material.emissiveIntensity = 0.8;
+                s2Obj.material.emissiveIntensity = 0.8;
+
+                if (canScore) {
+                    score++;
+                    scoreValEl.innerText = score;
+                    canScore = false; // Require player to un-align before scoring again
+
+                    // Trigger HUD score flash effect
+                    scoreCardEl.classList.add('point-flash');
+                    pointAlertEl.style.opacity = '1';
+                    
+                    setTimeout(() => {
+                        scoreCardEl.classList.remove('point-flash');
+                    }, 500);
+
+                    setTimeout(() => {
+                        pointAlertEl.style.opacity = '0';
+                    }, 1200);
+                }
+            } else {
+                // Reset emission levels
+                s1Obj.material.emissiveIntensity = 0.2;
+                s2Obj.material.emissiveIntensity = 0.2;
+
+                // Reset scoring lock when vectors separate slightly
+                if (dotProduct < 0.985) {
+                    canScore = true;
+                }
+            }
         }
-      }
 
-      drawVis();
-    }
+        // --- 5. Main Render Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
 
-    // ==========================================
-    // UI EVENT LISTENERS & PRESETS
-    // ==========================================
-    toggleCameraBtn.addEventListener('click', () => {
-      if (state.isCameraActive) {
-        stopCamera();
-      } else {
-        initCamera();
-      }
-    });
+            // Process Gamepad / Keyboard Joystick Inputs
+            processInputs();
 
-    toggleAudioBtn.addEventListener('click', () => {
-      initAudioEngine();
+            // Evaluate Math Vector Logic & HUD updates
+            evaluateVectors();
 
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+            // Update Controls & Render
+            controls.update();
+            renderer.render(scene, camera);
+        }
 
-      state.isAudioActive = !state.isAudioActive;
+        // --- Window Resize Handling ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
-      if (state.isAudioActive) {
-        toggleAudioBtn.innerHTML = `<i data-lucide="volume-x" class="w-4 h-4"></i><span>Mute Audio</span>`;
-        toggleAudioBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600/40 border border-purple-400 hover:bg-purple-500/50 text-purple-100 font-semibold glow-magenta transition-all duration-300";
-      } else {
-        toggleAudioBtn.innerHTML = `<i data-lucide="volume-2" class="w-4 h-4"></i><span>Enable Audio Engine</span>`;
-        toggleAudioBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600/30 border border-pink-500/50 hover:bg-pink-500/50 text-pink-200 font-semibold transition-all duration-300";
-      }
-      lucide.createIcons();
-    });
+        // Initialize Loop on load
+        window.onload = function() {
+            animate();
+        };
 
-    // Sound Mode Buttons
-    document.querySelectorAll('.mode-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const mode = e.target.getAttribute('data-mode');
-        setSoundMode(mode);
-      });
-    });
-
-    // Preset Selection
-    presetSelect.addEventListener('change', (e) => {
-      state.preset = e.target.value;
-      activePresetBadge.innerText = `PRESET: ${e.target.options[e.target.selectedIndex].text.toUpperCase()}`;
-
-      if (!synthOsc1 || !synthOsc2) return;
-
-      if (state.preset === 'theremin') {
-        synthOsc1.type = 'sine';
-        synthOsc2.type = 'sine';
-        biquadFilter.Q.value = 8;
-      } else if (state.preset === 'cyberbass') {
-        synthOsc1.type = 'sawtooth';
-        synthOsc2.type = 'square';
-        biquadFilter.Q.value = 14;
-      } else if (state.preset === 'harp') {
-        synthOsc1.type = 'triangle';
-        synthOsc2.type = 'sine';
-        biquadFilter.Q.value = 4;
-      } else if (state.preset === 'glitch') {
-        synthOsc1.type = 'square';
-        synthOsc2.type = 'sawtooth';
-        biquadFilter.Q.value = 18;
-      }
-    });
-
-    // Sliders
-    sensitivitySlider.addEventListener('input', (e) => {
-      state.sensitivity = parseFloat(e.target.value);
-      sensValDisplay.innerText = `${state.sensitivity.toFixed(1)}x`;
-    });
-
-    thresholdSlider.addEventListener('input', (e) => {
-      state.threshold = parseInt(e.target.value);
-      threshValDisplay.innerText = state.threshold;
-    });
-
-    // Canvas Auto-Resizing listener
-    window.addEventListener('resize', () => {
-      if (video.videoWidth) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        diffCanvas.width = canvas.width / 4;
-        diffCanvas.height = canvas.height / 4;
-      }
-    });
-  </script>
+    </script>
 </body>
 </html>
