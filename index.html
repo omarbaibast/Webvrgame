@@ -1,165 +1,41 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Sound Benders — Learn your movement</title>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Sound Benders — Body Instrument</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1020;--panel:#151d31;--accent:#8b7cff;--mint:#6ee7c2;--text:#edf1ff;--muted:#a8b1cc}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#1a2450,var(--bg) 65%);color:var(--text);font:16px system-ui,sans-serif}
-main{max-width:900px;margin:auto;padding:18px}h1{margin:0;font-size:clamp(1.8rem,5vw,3rem)}.sub{color:var(--muted);margin:6px 0 18px}
-.panel{background:rgba(21,29,49,.92);border:1px solid #303b5b;border-radius:18px;padding:15px;margin:12px 0}
-.videoWrap{position:relative;overflow:hidden;border-radius:14px;background:#050812;aspect-ratio:4/3}
-video,canvas{position:absolute;width:100%;height:100%;inset:0;object-fit:cover;transform:scaleX(-1)}canvas{pointer-events:none}
-.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}button{border:0;border-radius:12px;padding:12px 15px;font-weight:700;color:#0b1020;background:var(--mint);cursor:pointer}button.secondary{background:#303b5b;color:var(--text)}button:disabled{opacity:.45;cursor:not-allowed}
-.status{color:var(--mint);font-size:.92rem;margin-top:10px}.small{color:var(--muted);font-size:.9rem;line-height:1.5}.stat{font-size:1.6rem;font-weight:800}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.statbox{background:#0e1527;padding:12px;border-radius:12px}.statbox span{display:block;color:var(--muted);font-size:.8rem}
-canvas#wave{position:static;transform:none;width:100%;height:90px;background:#0b1020;border-radius:12px}
-input[type=range]{width:100%}
-</style>
-</head>
-<body><main>
-<h1>Sound Benders</h1>
-<p class="sub">A personal movement-to-music experiment. It learns recurring motion features, then turns the learned sequence into a melody.</p>
-<section class="panel">
-<div class="videoWrap"><video id="video" autoplay muted playsinline></video><canvas id="overlay"></canvas></div>
-<div class="row" style="margin-top:12px">
-<button id="camera">Enable camera</button><button id="record" class="secondary" disabled>Start learning</button><button id="learn" class="secondary" disabled>Learn patterns</button>
-</div><p id="status" class="status">Camera is off. Use HTTPS or localhost, then allow camera access.</p>
-</section>
-<section class="panel">
-<div class="stats">
-<div class="statbox"><div id="samples" class="stat">0</div><span>Movement samples</span></div>
-<div class="statbox"><div id="motifs" class="stat">0</div><span>Learned motifs</span></div>
-<div class="statbox"><div id="notes" class="stat">0</div><span>Song notes</span></div>
-</div>
-<p class="small">Move naturally in front of the camera. The prototype samples body posture and motion every 220 ms. “Learn patterns” clusters your captured movement and creates a musical sequence. More varied recording gives it more material.</p>
-</section>
-<section class="panel">
-<h2 style="margin-top:0">Your learned song</h2>
-<div class="row"><button id="play" disabled>▶ Play song</button><button id="stop" class="secondary" disabled>■ Stop</button><button id="clear" class="secondary">Clear learning</button></div>
-<p class="small">Tempo <strong id="tempoText">100 BPM</strong></p><input id="tempo" type="range" min="60" max="150" value="100">
-<canvas id="wave" width="800" height="100"></canvas>
-<p id="songStatus" class="status">Record movement, then learn patterns.</p>
-</section>
-<p class="small">Prototype note: this learns a lightweight personalized mapping from motion features to notes; it is not yet a full song-composition neural network. Camera processing runs locally in your browser.</p>
+*{box-sizing:border-box}body{margin:0;background:#090e1c;color:#eef2ff;font:16px system-ui;padding:16px}main{max-width:800px;margin:auto}h1{font-size:2.3rem;margin:0}.muted{color:#aab5d0;line-height:1.5}.panel{background:#141d31;border:1px solid #2c3958;border-radius:18px;padding:14px;margin:14px 0}.video{position:relative;aspect-ratio:4/3;background:#030610;border-radius:14px;overflow:hidden}video,canvas#overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}button,select{padding:12px;border:0;border-radius:12px;background:#70f0c8;color:#07131a;font-weight:bold}button.alt,select{background:#303b5b;color:white}button:disabled{opacity:.45}.status{color:#70f0c8}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.tile{background:#0c1426;border-radius:12px;padding:12px}.tile b{display:block;font-size:1.25rem}.tile span{font-size:.8rem;color:#aab5d0}canvas#wave{position:static;transform:none;width:100%;height:80px;background:#0a1020;border-radius:10px}
+</style></head><body><main>
+<h1>Sound Benders</h1><p class="muted">BODY INSTRUMENT · Let your gestures play a virtual instrument. Hand position chooses notes; motion triggers them; your other hand and vertical movement shape the sound.</p>
+<section class="panel"><div class="video"><video id="video" autoplay muted playsinline></video><canvas id="overlay"></canvas></div>
+<div class="buttons"><button id="camera">Enable camera</button><button id="audio" class="alt">Unlock sound</button><button id="mode" class="alt" disabled>Instrument: OFF</button></div><p id="status" class="status">Use this page over HTTPS, allow camera access, and unlock audio.</p></section>
+<section class="panel"><h2>Your body controls</h2><div class="grid"><div class="tile"><b id="pitch">—</b><span>Note (hand horizontal position)</span></div><div class="tile"><b id="energy">—</b><span>Movement energy / velocity</span></div><div class="tile"><b id="gesture">Waiting</b><span>Gesture detected</span></div><div class="tile"><b id="filter">—</b><span>Filter brightness</span></div></div>
+<div class="buttons"><label for="waveform">Sound</label><select id="waveform"><option>triangle</option><option>sine</option><option>sawtooth</option><option>square</option></select><button id="stop" class="alt">Stop</button></div>
+<p class="muted">Move hand left/right to select pitch. Pinch thumb and index finger to trigger a note. An open hand triggers notes when moving. Move your hand up/down to change expression. A second hand adjusts sound brightness.</p></section>
+<section class="panel"><h2>Capture a phrase</h2><div class="buttons"><button id="record" class="alt" disabled>Record phrase</button><button id="replay" disabled>Replay</button><button id="clear" class="alt">Clear</button></div><p id="phraseStatus" class="status">Phrase: 0 notes</p><canvas id="wave" width="800" height="90"></canvas></section>
+<p class="muted">Prototype: gesture-driven virtual instrument with phrase capture. Adaptive individual mappings and AI song composition are planned next.</p>
 </main>
 <script type="module">
-import {FilesetResolver, HandLandmarker, PoseLandmarker, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+import {FilesetResolver,HandLandmarker,DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 import * as Tone from "https://cdn.jsdelivr.net/npm/tone@14.8.49/+esm";
-const $=id=>document.getElementById(id);
-const video=$("video"), overlay=$("overlay"), ctx=overlay.getContext("2d");
-let handTask,poseTask,stream,raf=0,recording=false,timer=null,prev=null;
-let samples=[], learned=[], song=[], synth, playing=false, loop=null;
-const status=t=>$("status").textContent=t;
+const $=id=>document.getElementById(id),video=$("video"),canvas=$("overlay"),ctx=canvas.getContext("2d");
 const scale=["C4","D4","E4","G4","A4","C5","D5","E5","G5","A5","C6"];
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-async function setupTasks(){
- const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
- const handModel="https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
- const poseModel="https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
- handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:handModel},runningMode:"VIDEO",numHands:2});
- poseTask=await PoseLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:poseModel},runningMode:"VIDEO"});
-}
-$("camera").onclick=async()=>{
- $("camera").disabled=true;status("Loading hand/body tracking models…");
- try{
- await setupTasks();
- stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:480}},audio:false});
- video.srcObject=stream;await video.play();
- overlay.width=video.videoWidth||640;overlay.height=video.videoHeight||480;
- $("record").disabled=false;status("Camera ready. Start learning, then move your body.");
- detect();
- }catch(e){status("Camera/model error: "+e.message+" — check permission and internet, and use HTTPS/localhost.");$("camera").disabled=false;}
-};
-function detect(){
- if(video.readyState>=2){
-  const now=performance.now();
-  try{
-   const h=handTask.detectForVideo(video,now),p=poseTask.detectForVideo(video,now);
-   ctx.clearRect(0,0,overlay.width,overlay.height);
-   const draw=new DrawingUtils(ctx);
-   for(const landmarks of h.landmarks||[]){draw.drawConnectors(landmarks,HandLandmarker.HAND_CONNECTIONS,{color:"#6ee7c2",lineWidth:3});draw.drawLandmarks(landmarks,{color:"#8b7cff",radius:2});}
-   if(p.landmarks?.length) draw.drawLandmarks(p.landmarks[0],PoseLandmarker.POSE_CONNECTIONS,{color:"#ffd166",lineWidth:2,radius:3});
-   currentFeatures(h,p);
-  }catch(e){/* camera frame can occasionally be skipped */}
- }
- raf=requestAnimationFrame(detect);
-}
-function currentFeatures(h,p){
- // Normalize a compact personal movement feature vector: shoulder/wrist positions,
- // hand openness and frame-to-frame movement. Missing points safely default to center.
- const pose=p.landmarks?.[0]||[];
- const point=(i)=>pose[i]&&pose[i].visibility>.25?[pose[i].x,pose[i].y]:[.5,.5];
- const ls=point(11),rs=point(12),lw=point(15),rw=point(16);
- const hands=h.landmarks||[];
- let openness=0,handX=.5,handY=.5,spread=0;
- if(hands.length){
-  const all=hands.flat();
-  handX=all.reduce((s,q)=>s+q.x,0)/all.length;handY=all.reduce((s,q)=>s+q.y,0)/all.length;
-  openness=hands.reduce((s,L)=>s+Math.hypot(L[8].x-L[0].x,L[8].y-L[0].y),0)/hands.length;
-  spread=hands.length/2;
- }
- const raw=[(lw[0]+rw[0])/2,(lw[1]+rw[1])/2,(ls[0]+rs[0])/2,(ls[1]+rs[1])/2,handX,handY,clamp(openness,0,1),spread];
- let motion=0;
- if(prev){motion=raw.reduce((s,v,i)=>s+Math.abs(v-prev[i]),0)/raw.length;}
- prev=raw;
- window.latest=[...raw,clamp(motion*8,0,1)];
-}
-$("record").onclick=()=>{
- if(!recording){
-  recording=true;$("record").textContent="Stop recording";$("record").classList.remove("secondary");$("learn").disabled=true;
-  samples=[];status("Learning your movement… move freely.");
-  timer=setInterval(()=>{if(window.latest){samples.push(window.latest.slice());$("samples").textContent=samples.length;}},220);
- }else{
-  recording=false;clearInterval(timer);$("record").textContent="Start learning";$("record").classList.add("secondary");$("learn").disabled=samples.length<12;
-  status(`Captured ${samples.length} samples. Press Learn patterns.`);
- }
-};
-function distance(a,b){let s=0;for(let i=0;i<a.length;i++)s+=(a[i]-b[i])**2;return Math.sqrt(s/a.length);}
-function kmeans(data,k,iterations=12){
- if(!data.length)return [];
- let centers=[];
- for(let i=0;i<k;i++)centers.push(data[Math.floor(i*data.length/k)].slice());
- let labels=new Array(data.length).fill(0);
- for(let it=0;it<iterations;it++){
-  const sums=Array.from({length:k},()=>Array(data[0].length).fill(0)),counts=Array(k).fill(0);
-  data.forEach((x,i)=>{let best=0,bd=Infinity;centers.forEach((c,j)=>{let d=distance(x,c);if(d<bd){bd=d;best=j;}});labels[i]=best;counts[best]++;x.forEach((v,d)=>sums[best][d]+=v);});
-  centers=centers.map((c,j)=>counts[j]?sums[j].map(v=>v/counts[j]):c);
- }
- return {centers,labels,counts:labels.reduce((a,l)=>(a[l]++,a),Array(k).fill(0))};
-}
-$("learn").onclick=async()=>{
- if(samples.length<12)return;
- $("learn").disabled=true;$("songStatus").textContent="Finding recurring motion patterns…";
- // Normalize features by the captured person's range; last feature is motion intensity.
- const mins=samples[0].map((_,d)=>Math.min(...samples.map(x=>x[d]))),maxs=samples[0].map((_,d)=>Math.max(...samples.map(x=>x[d])));
- const norm=samples.map(x=>x.map((v,d)=>(v-mins[d])/(maxs[d]-mins[d]+1e-6)));
- const k=clamp(Math.round(Math.sqrt(samples.length/5)),2,8);
- const result=kmeans(norm,k);
- learned=result.centers.map((c,i)=>({center:c,uses:result.counts[i],id:i})).filter(m=>m.uses>1);
- // Build a sequence from learned cluster labels, smoothing consecutive duplicates.
- const labels=result.labels.filter((v,i,a)=>i===0||v!==a[i-1]);
- song=labels.map((id,index)=>{
-  const c=result.centers[id],energy=clamp(c[7]*.65+c[8]*.35,0,1);
-  const noteIndex=clamp(Math.round((c[1]*.42+c[4]*.28+c[6]*.18+c[8]*.12)*(scale.length-1)),0,scale.length-1);
-  return {note:scale[noteIndex],duration:energy>.68?"8n":"4n",velocity:clamp(.35+energy*.6,.3,.95),cluster:id};
- });
- if(song.length<4){song=Array.from({length:16},(_,i)=>{const id=result.labels[i%result.labels.length],c=result.centers[id];return {note:scale[clamp(Math.round(c[1]*10),0,10)],duration:"8n",velocity:.65,cluster:id};});}
- $("motifs").textContent=learned.length;$("notes").textContent=song.length;$("play").disabled=false;$("stop").disabled=false;
- drawWave();$("songStatus").textContent=`Learned ${learned.length} recurring motion clusters and composed ${song.length} notes. Press Play song.`;$("learn").disabled=false;
-};
-function drawWave(){
- const c=$("wave"),g=c.getContext("2d");g.clearRect(0,0,c.width,c.height);g.strokeStyle="#8b7cff";g.lineWidth=2;g.beginPath();
- if(song.length){song.forEach((n,i)=>{const x=i/(song.length-1||1)*c.width,y=75-(scale.indexOf(n.note)/10)*55;if(i===0)g.moveTo(x,y);else g.lineTo(x,y);});g.stroke();}
-}
-$("play").onclick=async()=>{
- if(!song.length)return;await Tone.start();if(!synth)synth=new Tone.PolySynth(Tone.Synth,{oscillator:{type:"triangle"},envelope:{attack:.02,decay:.12,sustain:.35,release:.35}}).toDestination();
- stopSong();playing=true;let i=0;const bpm=Number($("tempo").value);Tone.Transport.bpm.value=bpm;
- loop=new Tone.Loop(time=>{const n=song[i%song.length];synth.triggerAttackRelease(n.note,n.duration,time,n.velocity);i++;}, "4n").start(0);
- Tone.Transport.start();$("songStatus").textContent="Playing your learned composition…";
-};
-function stopSong(){Tone.Transport.stop();Tone.Transport.cancel();if(loop){loop.dispose();loop=null;}playing=false;}
-$("stop").onclick=()=>{stopSong();$("songStatus").textContent="Playback stopped.";};
-$("tempo").oninput=()=>{$("tempoText").textContent=$("tempo").value+" BPM";if(playing)Tone.Transport.bpm.value=Number($("tempo").value);};
-$("clear").onclick=()=>{stopSong();samples=[];learned=[];song=[];prev=null;$("samples").textContent=$("motifs").textContent=$("notes").textContent="0";$("learn").disabled=true;$("play").disabled=true;$("stop").disabled=true;drawWave();$("songStatus").textContent="Learning cleared.";status("Ready for a new learning session.");};
+let tracker,stream,ready=false,audioReady=false,live=false,recording=false,synth,filter,previous=null,lastBin=-1,lastAt=0,phrase=[];
+const setStatus=s=>$("status").textContent=s;
+async function cameraSetup(){const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");tracker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"},runningMode:"VIDEO",numHands:2});}
+$("camera").onclick=async()=>{const b=$("camera");b.disabled=true;setStatus("Loading hand tracker…");try{await cameraSetup();stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:480}},audio:false});video.srcObject=stream;await video.play();canvas.width=video.videoWidth||640;canvas.height=video.videoHeight||480;ready=true;$("mode").disabled=false;$("record").disabled=false;setStatus("Camera ready. Unlock sound and turn instrument ON.");track();}catch(e){b.disabled=false;setStatus("Camera error: "+e.name+" — "+e.message+". Check Chrome site permissions, reload, and ensure HTTPS.");}};
+$("audio").onclick=async()=>{try{await Tone.start();filter=new Tone.Filter(1000,"lowpass").toDestination();synth=new Tone.PolySynth(Tone.Synth,{oscillator:{type:$("waveform").value},envelope:{attack:.025,decay:.14,sustain:.35,release:.3}}).connect(filter);audioReady=true;$("audio").textContent="Sound unlocked ✓";setStatus(ready?"Sound ready. Turn instrument ON.":"Sound ready. Enable camera.");}catch(e){setStatus("Audio error: "+e.message);}};
+$("mode").onclick=()=>{if(!ready||!audioReady){setStatus("Enable camera and unlock sound first.");return}live=!live;$("mode").textContent="Instrument: "+(live?"ON":"OFF");$("mode").className=live?"":"alt";setStatus(live?"Live instrument — move to play!":"Instrument paused.");if(!live)synth.releaseAll();};
+$("waveform").onchange=()=>{if(synth)synth.set({oscillator:{type:$("waveform").value}}};
+function d(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function track(){if(video.readyState>=2){let res;try{res=tracker.detectForVideo(video,performance.now())}catch(e){requestAnimationFrame(track);return}ctx.clearRect(0,0,canvas.width,canvas.height);const draw=new DrawingUtils(ctx),hands=res.landmarks||[];hands.forEach(L=>draw.drawConnectors(L,HandLandmarker.HAND_CONNECTIONS,{color:"#70f0c8",lineWidth:3}));
+let feats=hands.map((L,i)=>{let wrist=L[0],pinch=d(L[4],L[8])<.055,open=(d(wrist,L[8])+d(wrist,L[12])+d(wrist,L[16])+d(wrist,L[20]))/4>.22,speed=previous?.[i]?Math.hypot(wrist.x-previous[i].x,wrist.y-previous[i].y):0;return{x:L[8].x,y:L[8].y,pinch,open,speed}});
+previous=hands.map(L=>({x:L[0].x,y:L[0].y}));
+if(feats.length){let f=feats[0],bin=Math.max(0,Math.min(10,Math.round((1-f.x)*10))),energy=Math.min(1,f.speed*15),bright=feats[1]?1-feats[1].y:1-f.y,cutoff=Math.round(200+Math.max(0,Math.min(1,bright))*6500);$("pitch").textContent=scale[bin];$("energy").textContent=Math.round(energy*100)+"%";$("gesture").textContent=f.pinch?"Pinch trigger":f.open?"Open hand":"Moving hand";$("filter").textContent=cutoff+" Hz";if(filter)filter.frequency.value=cutoff;
+if(live&&audioReady){let trigger=f.pinch||(f.open&&f.speed>.012);if(trigger&&bin!==lastBin&&performance.now()-lastAt>110){let velocity=Math.max(.22,Math.min(.95,.25+energy*.7));synth.triggerAttackRelease(scale[bin],"8n",undefined,velocity);lastAt=performance.now();lastBin=bin;if(recording){phrase.push({note:scale[bin],velocity});updatePhrase();}}else if(!trigger)lastBin=-1;}
+}else{$("pitch").textContent="—";$("gesture").textContent="No hands";}}
+requestAnimationFrame(track);}
+$("record").onclick=()=>{recording=!recording;$("record").textContent=recording?"Finish phrase":"Record phrase";if(recording){phrase=[];$("replay").disabled=true;$("phraseStatus").textContent="Recording played notes…"}else{$("replay").disabled=!phrase.length;updatePhrase();}};
+function updatePhrase(){$("phraseStatus").textContent="Phrase: "+phrase.length+" notes";drawPhrase()}
+function drawPhrase(){let c=$("wave"),g=c.getContext("2d");g.clearRect(0,0,c.width,c.height);if(!phrase.length)return;g.strokeStyle="#988aff";g.lineWidth=3;g.beginPath();phrase.forEach((n,i)=>{let x=i/(Math.max(1,phrase.length-1))*c.width,y=78-scale.indexOf(n.note)*6;if(!i)g.moveTo(x,y);else g.lineTo(x,y)});g.stroke()}
+$("replay").onclick=async()=>{if(!audioReady||!phrase.length)return;await Tone.start();phrase.forEach((n,i)=>synth.triggerAttackRelease(n.note,"8n",Tone.now()+i*.28,n.velocity));};
+$("clear").onclick=()=>{phrase=[];recording=false;$("record").textContent="Record phrase";$("replay").disabled=true;updatePhrase()};
+$("stop").onclick=()=>{if(synth)synth.releaseAll();live=false;$("mode").textContent="Instrument: OFF";$("mode").className="alt";setStatus("Stopped.")};
 </script></body></html>
