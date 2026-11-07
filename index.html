@@ -1,782 +1,289 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Voxel Game - PS4 Controller Enabled</title>
-    <!-- Tailwind CSS for UI HUD -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>AI Voxel Morphing Embodiment Engine</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0d1117;
+            font-family: monospace;
+            color: #00ffcc;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(13, 17, 23, 0.85);
+            padding: 15px 20px;
+            border: 1px solid #00ffcc;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+            max-width: 300px;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; }
+        .stat { margin: 5px 0; font-size: 13px; color: #a5d6ff; }
+        .highlight { color: #ff7b72; font-weight: bold; }
+        .controls { margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
+        button {
+            background: #21262d;
+            color: #00ffcc;
+            border: 1px solid #00ffcc;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        button:hover { background: #00ffcc; color: #0d1117; }
+    </style>
     <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            user-select: none;
-            font-family: 'Inter', sans-serif;
-            background-color: #1a202c;
-        }
-
-        #game-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        /* Custom Crosshair */
-        .crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 12px;
-            height: 12px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 20;
-        }
-        .crosshair::before, .crosshair::after {
-            content: '';
-            position: absolute;
-            background: rgba(255, 255, 255, 0.85);
-            box-shadow: 0 0 4px rgba(0,0,0,0.5);
-        }
-        .crosshair::before {
-            top: 5px;
-            left: 0;
-            width: 12px;
-            height: 2px;
-        }
-        .crosshair::after {
-            top: 0;
-            left: 5px;
-            width: 2px;
-            height: 12px;
-        }
-
-        /* Glass effect for HUD elements */
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .hotbar-slot {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .hotbar-slot.active {
-            transform: scale(1.15);
-            border-color: #3b82f6;
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
-        }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
-<body class="relative">
+<body>
 
-    <!-- Canvas for 3D Rendering -->
-    <canvas id="game-canvas"></canvas>
-
-    <!-- Crosshair -->
-    <div class="crosshair" id="crosshair"></div>
-
-    <!-- Top Left HUD: Gamepad Status & WebXR AR Button -->
-    <div class="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        <div id="controller-status" class="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 text-white shadow-lg">
-            <div id="status-indicator" class="w-3.5 h-3.5 rounded-full bg-red-500 animate-pulse"></div>
-            <div class="flex flex-col">
-                <span id="status-text" class="text-xs font-bold uppercase tracking-wider text-gray-300">Gamepad Disconnected</span>
-                <span id="controller-name" class="text-[10px] text-gray-400">Press any button on PS4 controller</span>
-            </div>
-        </div>
-
-        <!-- WebXR AR Launcher Button -->
-        <button id="ar-button" class="glass-panel px-4 py-2.5 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border-emerald-500/50 hover:bg-emerald-600/30 transition shadow-lg text-emerald-400">
-            <i class="fa-solid fa-vr-cardboard text-lg"></i>
-            <span id="ar-btn-text">Checking WebXR AR...</span>
-        </button>
-
-        <!-- AR Status Indicator Banner -->
-        <div id="ar-status-banner" class="hidden glass-panel px-3 py-1.5 rounded-lg text-emerald-300 text-[11px] font-semibold flex items-center gap-2">
-            <i class="fa-solid fa-circle-info text-emerald-400"></i>
-            <span id="ar-status-msg">AR Mode Active</span>
-        </div>
-    </div>
-
-    <!-- AR On-Screen Touch Controls (Visible during AR) -->
-    <div id="ar-touch-controls" class="hidden absolute bottom-20 left-1/2 transform -translate-x-1/2 z-20 flex gap-3">
-        <button id="btn-ar-mine" class="px-5 py-3 bg-red-600/80 active:bg-red-500 text-white font-bold rounded-xl shadow-lg border border-red-400/30 flex items-center gap-2">
-            <i class="fa-solid fa-hammer"></i> Mine
-        </button>
-        <button id="btn-ar-place" class="px-5 py-3 bg-blue-600/80 active:bg-blue-500 text-white font-bold rounded-xl shadow-lg border border-blue-400/30 flex items-center gap-2">
-            <i class="fa-solid fa-cubes"></i> Place
-        </button>
-        <button id="btn-ar-next" class="px-4 py-3 bg-gray-700/80 active:bg-gray-600 text-white font-bold rounded-xl shadow-lg border border-gray-400/30">
-            <i class="fa-solid fa-arrows-rotate"></i> Swap
-        </button>
-    </div>
-
-    <!-- Top Right HUD: Controls Legend Overlay -->
-    <div class="absolute top-4 right-4 z-10 glass-panel p-4 rounded-xl text-white max-w-xs shadow-lg text-xs" id="controls-panel">
-        <h3 class="font-bold text-sm mb-2 text-blue-400 border-b border-gray-700 pb-1 flex justify-between items-center">
-            <span>PS4 Controller Layout</span>
-            <i class="fa-brands fa-playstation text-base"></i>
-        </h3>
-        <div class="space-y-1.5 text-gray-200">
-            <div class="flex justify-between"><span>Left Stick (LS)</span> <span class="font-semibold text-gray-400">Move / Strafe</span></div>
-            <div class="flex justify-between"><span>Right Stick (RS)</span> <span class="font-semibold text-gray-400">Look Around</span></div>
-            <div class="flex justify-between"><span>L2 Trigger</span> <span class="font-semibold text-emerald-400">Aim / Preview Target</span></div>
-            <div class="flex justify-between"><span>R2 Trigger</span> <span class="font-semibold text-blue-400">Place Block</span></div>
-            <div class="flex justify-between"><span>Circle Button</span> <span class="font-semibold text-red-400">Destroy Block</span></div>
-            <div class="flex justify-between"><span>X Button</span> <span class="font-semibold text-yellow-400">Fly Upward</span></div>
-            <div class="flex justify-between"><span>Square Button</span> <span class="font-semibold text-purple-400">Fly Downward</span></div>
-            <div class="flex justify-between"><span>L1 / R1 or D-Pad</span> <span class="font-semibold text-gray-400">Cycle Block Type</span></div>
-        </div>
-        <div class="mt-3 pt-2 border-t border-gray-700 text-[11px] text-gray-400">
-            <span class="text-yellow-400 font-semibold">AR Mode:</span> Aim camera at real floor/table surface to anchor world, then build voxels!
-        </div>
-    </div>
-
-    <!-- Bottom Center: Hotbar for Block Selection -->
-    <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10 glass-panel p-2 rounded-2xl shadow-2xl flex items-center gap-2" id="hotbar">
-        <!-- Hotbar items dynamically injected by JS -->
-    </div>
-
-    <!-- Click to Start Screen for Keyboard Mouse Pointer Lock -->
-    <div id="start-overlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm z-30 flex flex-col items-center justify-center text-white cursor-pointer transition-opacity duration-300">
-        <i class="fa-solid fa-cube text-6xl text-blue-500 mb-4 animate-bounce"></i>
-        <h1 class="text-3xl font-bold tracking-wide mb-2">Voxel Explorer 3D + WebXR AR</h1>
-        <p class="text-gray-300 mb-6 text-center max-w-md">Connect your PS4 DualShock Controller or click anywhere to play with Keyboard & Mouse / WebXR AR.</p>
-        <div class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-sm tracking-wider uppercase transition shadow-lg">
-            Start Exploring
+    <div id="ui">
+        <h1>AI Embodiment Core</h1>
+        <div class="stat">Current Mindset: <span id="form-label" class="highlight">Initializing...</span></div>
+        <div class="stat">Voxel Mass: <span id="voxel-count">0</span> units</div>
+        <div class="stat">State Intention: <span id="ai-thought">Processing...</span></div>
+        <div class="controls">
+            <button onclick="triggerMorph('robot')">Form: Robot</button>
+            <button onclick="triggerMorph('vehicle')">Form: Vehicle</button>
+            <button onclick="triggerMorph('building')">Form: Building</button>
+            <button onclick="triggerMorph('animal')">Form: Animal</button>
         </div>
     </div>
 
     <script>
-        // --- GAME STATE & CONSTANTS ---
-        const BLOCK_SIZE = 1;
-        const WORLD_SIZE = 24; // 24x24 terrain grid
-        const DEADZONE = 0.15;  // Joystick deadzone
-        const LOOK_SPEED = 0.035;
-        const MOVE_SPEED = 0.15;
-
-        // Block Types Configuration
-        const BLOCK_TYPES = [
-            { id: 1, name: 'Grass', color: 0x4CAF50, roughness: 0.8 },
-            { id: 2, name: 'Dirt', color: 0x795548, roughness: 0.9 },
-            { id: 3, name: 'Stone', color: 0x9E9E9E, roughness: 0.6 },
-            { id: 4, name: 'Wood', color: 0x5D4037, roughness: 0.7 },
-            { id: 5, name: 'Leaves', color: 0x2E7D32, transparent: true, opacity: 0.85, roughness: 0.9 },
-            { id: 6, name: 'Brick', color: 0xB71C1C, roughness: 0.5 },
-            { id: 7, name: 'Glass', color: 0x81D4FA, transparent: true, opacity: 0.4, roughness: 0.1 },
-            { id: 8, name: 'Gold', color: 0xFFD700, roughness: 0.3, metalness: 0.8 },
-            { id: 9, name: 'Obsidian', color: 0x212121, roughness: 0.2, metalness: 0.5 }
-        ];
-
-        let selectedBlockIndex = 0;
-
-        // --- THREE.JS INITIALIZATION ---
-        const canvas = document.getElementById('game-canvas');
+        // --- 3D Scene Initialization ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Sky Blue (Will be transparent in AR)
-        scene.fog = new THREE.FogExp2(0x87CEEB, 0.025);
+        scene.background = new THREE.Color(0x0d1117);
+        scene.fog = new THREE.FogExp2(0x0d1117, 0.015);
 
-        // Root container for whole world (used to position voxel world on AR surfaces)
-        const worldGroup = new THREE.Group();
-        scene.add(worldGroup);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(20, 20, 30);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
 
-        // WebXR Setup
-        renderer.xr.enabled = true;
-        let xrHitTestSource = null;
-        let xrRefSpace = null;
-        let isARActive = false;
-        let activeXRSession = null;
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
 
-        // --- LIGHTING ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // --- Lighting & Ground Grid ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(ambientLight);
 
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(40, 60, 20);
+        dirLight.position.set(20, 40, 20);
         dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 2048;
-        dirLight.shadow.mapSize.height = 2048;
-        dirLight.shadow.camera.near = 0.5;
-        dirLight.shadow.camera.far = 150;
-        const d = 30;
-        dirLight.shadow.camera.left = -d;
-        dirLight.shadow.camera.right = d;
-        dirLight.shadow.camera.top = d;
-        dirLight.shadow.camera.bottom = -d;
         scene.add(dirLight);
 
-        // --- VOXEL WORLD DATA & MESH MANAGEMENT ---
-        const blockMap = new Map(); // Store active blocks: key = "x,y,z", value = mesh
-        const blockMaterials = {};
+        const gridHelper = new THREE.GridHelper(100, 50, 0x00ffcc, 0x21262d);
+        scene.add(gridHelper);
 
-        const boxGeometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-        
-        BLOCK_TYPES.forEach(type => {
-            blockMaterials[type.id] = new THREE.MeshStandardMaterial({
-                color: type.color,
-                roughness: type.roughness || 0.7,
-                metalness: type.metalness || 0.0,
-                transparent: type.transparent || false,
-                opacity: type.opacity || 1.0,
-            });
-        });
+        // --- Voxel Engine Setup ---
+        const boxGeometry = new THREE.BoxGeometry(0.95, 0.95, 0.95);
+        const voxelGroup = new THREE.Group();
+        scene.add(voxelGroup);
 
-        function getBlockKey(x, y, z) {
-            return `${Math.round(x)},${Math.round(y)},${Math.round(z)}`;
-        }
-
-        function placeBlock(x, y, z, typeId) {
-            const key = getBlockKey(x, y, z);
-            if (blockMap.has(key)) return;
-
-            const material = blockMaterials[typeId];
-            const mesh = new THREE.Mesh(boxGeometry, material);
-            mesh.position.set(Math.round(x), Math.round(y), Math.round(z));
+        // Pre-allocated Voxel Pool for zero-garbage-collection morphing
+        const MAX_VOXELS = 250;
+        const voxelPool = [];
+        for (let i = 0; i < MAX_VOXELS; i++) {
+            const mat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, roughness: 0.3 });
+            const mesh = new THREE.Mesh(boxGeometry, mat);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
-            mesh.userData = { typeId, key };
-
-            worldGroup.add(mesh);
-            blockMap.set(key, mesh);
-        }
-
-        function removeBlock(key) {
-            if (!blockMap.has(key)) return;
-            const mesh = blockMap.get(key);
-            worldGroup.remove(mesh);
-            mesh.geometry.dispose();
-            blockMap.delete(key);
-        }
-
-        // --- PROCEDURAL TERRAIN GENERATION ---
-        function generateTerrain() {
-            const halfSize = Math.floor(WORLD_SIZE / 2);
-            for (let x = -halfSize; x < halfSize; x++) {
-                for (let z = -halfSize; z < halfSize; z++) {
-                    const height = Math.floor(Math.sin(x * 0.2) * 2 + Math.cos(z * 0.2) * 2) + 3;
-                    
-                    for (let y = 0; y <= height; y++) {
-                        let blockId = 3; // Stone
-                        if (y === height) blockId = 1; // Grass
-                        else if (y > height - 3) blockId = 2; // Dirt
-
-                        placeBlock(x, y, z, blockId);
-                    }
-
-                    // Trees
-                    if (x > -halfSize + 2 && x < halfSize - 2 && z > -halfSize + 2 && z < halfSize - 2) {
-                        if (Math.random() < 0.015) {
-                            const trunkHeight = 3 + Math.floor(Math.random() * 2);
-                            for (let ty = 1; ty <= trunkHeight; ty++) {
-                                placeBlock(x, height + ty, z, 4);
-                            }
-                            const leafBase = height + trunkHeight;
-                            for (let lx = -1; lx <= 1; lx++) {
-                                for (let lz = -1; lz <= 1; lz++) {
-                                    for (let ly = 0; ly <= 2; ly++) {
-                                        if (lx === 0 && lz === 0 && ly === 0) continue;
-                                        placeBlock(x + lx, leafBase + ly, z + lz, 5);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        generateTerrain();
-
-        // --- CAMERA & TARGETING PREVIEW ---
-        camera.position.set(0, 8, 12);
-        let pitch = -0.3;
-        let yaw = 0;
-
-        const wireframeGeo = new THREE.BoxGeometry(BLOCK_SIZE + 0.02, BLOCK_SIZE + 0.02, BLOCK_SIZE + 0.02);
-        const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, wireframeLinewidth: 2 });
-        const aimBoxPreview = new THREE.Mesh(wireframeGeo, wireframeMat);
-        aimBoxPreview.visible = false;
-        worldGroup.add(aimBoxPreview);
-
-        // AR Hit Test Reticle for World Surface Anchoring
-        const arReticleGeo = new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2);
-        const arReticleMat = new THREE.MeshBasicMaterial({ color: 0x10B981, side: THREE.DoubleSide });
-        const arReticle = new THREE.Mesh(arReticleGeo, arReticleMat);
-        arReticle.matrixAutoUpdate = false;
-        arReticle.visible = false;
-        scene.add(arReticle);
-
-        const raycaster = new THREE.Raycaster();
-        raycaster.far = 12;
-        let targetedIntersection = null;
-        let placementPosition = null;
-
-        function updateRaycastTarget() {
-            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            const blocks = Array.from(blockMap.values());
-            const intersects = raycaster.intersectObjects(blocks);
-
-            if (intersects.length > 0) {
-                targetedIntersection = intersects[0];
-                const hitMesh = targetedIntersection.object;
-                const normal = targetedIntersection.face.normal;
-
-                const targetPos = hitMesh.position;
-                placementPosition = new THREE.Vector3(
-                    Math.round(targetPos.x + normal.x),
-                    Math.round(targetPos.y + normal.y),
-                    Math.round(targetPos.z + normal.z)
-                );
-
-                if (aimBoxPreview.visible) {
-                    aimBoxPreview.position.copy(placementPosition);
-                }
-            } else {
-                targetedIntersection = null;
-                placementPosition = null;
-                aimBoxPreview.visible = false;
-            }
-        }
-
-        // --- WEBXR AR SETUP & BUTTON LOGIC ---
-        const arButton = document.getElementById('ar-button');
-        const arBtnText = document.getElementById('ar-btn-text');
-        const arStatusBanner = document.getElementById('ar-status-banner');
-        const arStatusMsg = document.getElementById('ar-status-msg');
-        const arTouchControls = document.getElementById('ar-touch-controls');
-
-        if ('xr' in navigator) {
-            navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-                if (supported) {
-                    arBtnText.innerText = 'Enter WebXR AR Mode';
-                    arButton.addEventListener('click', toggleAR);
-                } else {
-                    arBtnText.innerText = 'AR Not Supported on Device';
-                    arButton.disabled = true;
-                    arButton.classList.add('opacity-50', 'cursor-not-allowed');
-                }
-            }).catch(() => {
-                arBtnText.innerText = 'AR Check Failed';
-            });
-        } else {
-            arBtnText.innerText = 'WebXR Unavailable';
-            arButton.disabled = true;
-            arButton.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-
-        async function toggleAR() {
-            if (isARActive && activeXRSession) {
-                await activeXRSession.end();
-                return;
-            }
-
-            try {
-                arBtnText.innerText = 'Starting AR...';
-                
-                // Request session with hit-test or DOM overlay fallbacks
-                const sessionOptions = {
-                    requiredFeatures: ['local'],
-                    optionalFeatures: ['hit-test', 'dom-overlay', 'local-floor'],
-                    domOverlay: { root: document.body }
-                };
-
-                const session = await navigator.xr.requestSession('immersive-ar', sessionOptions);
-                activeXRSession = session;
-
-                // Establish Reference Space with fallback
-                let refSpace;
-                try {
-                    refSpace = await session.requestReferenceSpace('local-floor');
-                } catch (e) {
-                    refSpace = await session.requestReferenceSpace('local');
-                }
-                xrRefSpace = refSpace;
-
-                await renderer.xr.setSession(session);
-
-                // Prepare Three.js Scene for AR Pass-through
-                scene.background = null;
-                scene.fog = null;
-                isARActive = true;
-                
-                arBtnText.innerText = 'Exit AR Mode';
-                arStatusBanner.classList.remove('hidden');
-                arStatusMsg.innerText = "AR Active (Pointing camera...)";
-                arTouchControls.classList.remove('hidden');
-
-                // Position Voxel World directly in front of AR viewer camera
-                worldGroup.position.set(0, -0.5, -1.5);
-                worldGroup.scale.set(0.25, 0.25, 0.25);
-
-                // Setup Hit Testing if available
-                try {
-                    const viewerSpace = await session.requestReferenceSpace('viewer');
-                    xrHitTestSource = await session.requestHitTestSource({ space: viewerSpace });
-                } catch (err) {
-                    console.log("Hit-testing unavailable:", err);
-                }
-
-                session.addEventListener('end', () => {
-                    isARActive = false;
-                    activeXRSession = null;
-                    xrHitTestSource = null;
-                    scene.background = new THREE.Color(0x87CEEB);
-                    scene.fog = new THREE.FogExp2(0x87CEEB, 0.025);
-                    worldGroup.scale.set(1, 1, 1);
-                    worldGroup.position.set(0, 0, 0);
-                    arBtnText.innerText = 'Enter WebXR AR Mode';
-                    arStatusBanner.classList.add('hidden');
-                    arTouchControls.classList.add('hidden');
-                    arReticle.visible = false;
-                });
-
-                // AR Touch/Select event to anchor world on surface
-                session.addEventListener('select', () => {
-                    if (arReticle.visible) {
-                        worldGroup.position.setFromMatrixPosition(arReticle.matrix);
-                        arStatusMsg.innerText = "World Anchored to Surface!";
-                    }
-                });
-
-            } catch (err) {
-                console.error("Failed to start WebXR AR session: ", err);
-                arBtnText.innerText = 'AR Session Failed';
-                setTimeout(() => { arBtnText.innerText = 'Enter WebXR AR Mode'; }, 3000);
-            }
-        }
-
-        // AR Touch Buttons Logic
-        document.getElementById('btn-ar-mine').addEventListener('click', () => {
-            if (targetedIntersection) {
-                removeBlock(targetedIntersection.object.userData.key);
-            }
-        });
-
-        document.getElementById('btn-ar-place').addEventListener('click', () => {
-            if (placementPosition) {
-                placeBlock(placementPosition.x, placementPosition.y, placementPosition.z, BLOCK_TYPES[selectedBlockIndex].id);
-            }
-        });
-
-        document.getElementById('btn-ar-next').addEventListener('click', () => {
-            selectedBlockIndex = (selectedBlockIndex + 1) % BLOCK_TYPES.length;
-            updateHotbarUI();
-        });
-
-        // --- UI HOTBAR ---
-        const hotbarContainer = document.getElementById('hotbar');
-        function initHotbar() {
-            hotbarContainer.innerHTML = '';
-            BLOCK_TYPES.forEach((type, idx) => {
-                const slot = document.createElement('div');
-                slot.className = `hotbar-slot w-11 h-11 rounded-xl flex flex-col items-center justify-center border-2 border-gray-600/50 bg-slate-800/80 cursor-pointer ${idx === selectedBlockIndex ? 'active' : ''}`;
-                
-                const colorHex = '#' + type.color.toString(16).padStart(6, '0');
-                slot.innerHTML = `
-                    <div class="w-5 h-5 rounded-md shadow-inner mb-0.5" style="background-color: ${colorHex}"></div>
-                    <span class="text-[9px] font-bold text-gray-300 uppercase">${idx + 1}</span>
-                `;
-                slot.addEventListener('click', () => {
-                    selectedBlockIndex = idx;
-                    updateHotbarUI();
-                });
-                hotbarContainer.appendChild(slot);
+            mesh.visible = false;
+            voxelGroup.add(mesh);
+            voxelPool.push({
+                mesh: mesh,
+                targetPos: new THREE.Vector3(),
+                targetColor: new THREE.Color(0x00ffcc),
+                active: false
             });
         }
 
-        function updateHotbarUI() {
-            const slots = hotbarContainer.children;
-            for (let i = 0; i < slots.length; i++) {
-                if (i === selectedBlockIndex) {
-                    slots[i].classList.add('active');
-                } else {
-                    slots[i].classList.remove('active');
-                }
-            }
-        }
-        initHotbar();
-
-        // --- GAMEPAD API INTEGRATION (PS4 DualShock Mapping) ---
-        let gamepadConnected = false;
-        let lastDPadLeft = false;
-        let lastDPadRight = false;
-        let lastL1 = false;
-        let lastR1 = false;
-        let lastR2 = false;
-        let lastCircle = false;
-
-        const statusIndicator = document.getElementById('status-indicator');
-        const statusText = document.getElementById('status-text');
-        const controllerName = document.getElementById('controller-name');
-
-        window.addEventListener('gamepadconnected', (e) => {
-            gamepadConnected = true;
-            statusIndicator.className = "w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse";
-            statusText.innerText = "PS4 Gamepad Active";
-            controllerName.innerText = e.gamepad.id.substring(0, 30);
-        });
-
-        window.addEventListener('gamepaddisconnected', () => {
-            gamepadConnected = false;
-            statusIndicator.className = "w-3.5 h-3.5 rounded-full bg-red-500 animate-pulse";
-            statusText.innerText = "Gamepad Disconnected";
-            controllerName.innerText = "Press any button on PS4 controller";
-        });
-
-        function applyDeadzone(value, threshold = DEADZONE) {
-            if (Math.abs(value) < threshold) return 0;
-            return Math.sign(value) * ((Math.abs(value) - threshold) / (1 - threshold));
-        }
-
-        function processGamepadInputs() {
-            let gp = null;
-
-            // 1. Check Standard Navigator Gamepads
-            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-            for (let i = 0; i < gamepads.length; i++) {
-                if (gamepads[i] && gamepads[i].connected) {
-                    gp = gamepads[i];
-                    break;
-                }
-            }
-
-            // 2. Check WebXR InputSources for Gamepads (if standard return empty in XR mode)
-            if (!gp && activeXRSession && activeXRSession.inputSources) {
-                for (const source of activeXRSession.inputSources) {
-                    if (source.gamepad) {
-                        gp = source.gamepad;
-                        break;
-                    }
-                }
-            }
-
-            if (!gp) return;
-
-            // 1. LOOK AROUND (RS -> Pitch & Yaw)
-            const rsX = applyDeadzone(gp.axes[2]);
-            const rsY = applyDeadzone(gp.axes[3]);
-
-            if (rsX !== 0 || rsY !== 0) {
-                yaw -= rsX * LOOK_SPEED;
-                pitch -= rsY * LOOK_SPEED;
-                pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, pitch));
-            }
-
-            // 2. MOVE AROUND (LS -> Forward/Back & Strafe)
-            const lsX = applyDeadzone(gp.axes[0]);
-            const lsY = applyDeadzone(gp.axes[1]);
-
-            if (lsX !== 0 || lsY !== 0) {
-                const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
-                const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).negate().normalize();
-
-                if (isARActive) {
-                    worldGroup.position.addScaledVector(forward, lsY * MOVE_SPEED);
-                    worldGroup.position.addScaledVector(right, -lsX * MOVE_SPEED);
-                } else {
-                    camera.position.addScaledVector(forward, -lsY * MOVE_SPEED);
-                    camera.position.addScaledVector(right, lsX * MOVE_SPEED);
-                }
-            }
-
-            // 3. MOVE UP / DOWN (X & Square Buttons)
-            const btnX = gp.buttons[0]?.pressed;      // Cross (X) -> Up
-            const btnSquare = gp.buttons[2]?.pressed; // Square -> Down
-
-            if (btnX) {
-                if (isARActive) worldGroup.position.y -= MOVE_SPEED;
-                else camera.position.y += MOVE_SPEED;
-            }
-            if (btnSquare) {
-                if (isARActive) worldGroup.position.y += MOVE_SPEED;
-                else camera.position.y -= MOVE_SPEED;
-            }
-
-            // 4. AIM / PREVIEW TARGET (L2 Trigger)
-            const l2Pressed = gp.buttons[6]?.pressed || gp.buttons[6]?.value > 0.3;
-            aimBoxPreview.visible = l2Pressed && (placementPosition !== null);
-
-            // 5. PLACE BLOCK (R2 Trigger)
-            const r2Pressed = gp.buttons[7]?.pressed || gp.buttons[7]?.value > 0.3;
-            if (r2Pressed && !lastR2) {
-                if (placementPosition) {
-                    placeBlock(placementPosition.x, placementPosition.y, placementPosition.z, BLOCK_TYPES[selectedBlockIndex].id);
-                }
-            }
-            lastR2 = r2Pressed;
-
-            // 6. DESTROY BLOCK (Circle Button)
-            const circlePressed = gp.buttons[1]?.pressed;
-            if (circlePressed && !lastCircle) {
-                if (targetedIntersection) {
-                    const key = targetedIntersection.object.userData.key;
-                    removeBlock(key);
-                }
-            }
-            lastCircle = circlePressed;
-
-            // 7. CYCLE BLOCKS (L1 / R1 or D-Pad)
-            const l1Pressed = gp.buttons[4]?.pressed;
-            const r1Pressed = gp.buttons[5]?.pressed;
-            const dPadLeft = gp.buttons[14]?.pressed;
-            const dPadRight = gp.buttons[15]?.pressed;
-
-            if ((r1Pressed && !lastR1) || (dPadRight && !lastDPadRight)) {
-                selectedBlockIndex = (selectedBlockIndex + 1) % BLOCK_TYPES.length;
-                updateHotbarUI();
-            }
-            if ((l1Pressed && !lastL1) || (dPadLeft && !lastDPadLeft)) {
-                selectedBlockIndex = (selectedBlockIndex - 1 + BLOCK_TYPES.length) % BLOCK_TYPES.length;
-                updateHotbarUI();
-            }
-
-            lastR1 = r1Pressed;
-            lastL1 = l1Pressed;
-            lastDPadRight = dPadRight;
-            lastDPadLeft = dPadLeft;
-        }
-
-        // --- KEYBOARD & MOUSE FALLBACK CONTROL SYSTEM ---
-        const keys = {};
-        let isPointerLocked = false;
-
-        const startOverlay = document.getElementById('start-overlay');
-        startOverlay.addEventListener('click', () => {
-            if (!isARActive) {
-                canvas.requestPointerLock();
-                startOverlay.style.opacity = '0';
-                setTimeout(() => startOverlay.style.pointerEvents = 'none', 300);
-            }
-        });
-
-        document.addEventListener('pointerlockchange', () => {
-            isPointerLocked = (document.pointerLockElement === canvas);
-            if (!isPointerLocked && !gamepadConnected && !isARActive) {
-                startOverlay.style.pointerEvents = 'auto';
-                startOverlay.style.opacity = '1';
-            }
-        });
-
-        window.addEventListener('keydown', (e) => {
-            keys[e.code] = true;
-            if (e.key >= '1' && e.key <= '9') {
-                selectedBlockIndex = parseInt(e.key) - 1;
-                updateHotbarUI();
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            keys[e.code] = false;
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isPointerLocked || isARActive) return;
-            yaw -= e.movementX * 0.0025;
-            pitch -= e.movementY * 0.0025;
-            pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, pitch));
-        });
-
-        window.addEventListener('mousedown', (e) => {
-            if (!isPointerLocked || isARActive) return;
-            if (e.button === 0) { // Left Click -> Mine
-                if (targetedIntersection) {
-                    removeBlock(targetedIntersection.object.userData.key);
-                }
-            } else if (e.button === 2) { // Right Click -> Place
-                if (placementPosition) {
-                    placeBlock(placementPosition.x, placementPosition.y, placementPosition.z, BLOCK_TYPES[selectedBlockIndex].id);
-                }
-            }
-        });
-
-        window.addEventListener('contextmenu', (e) => e.preventDefault());
-
-        window.addEventListener('wheel', (e) => {
-            if (e.deltaY > 0) {
-                selectedBlockIndex = (selectedBlockIndex + 1) % BLOCK_TYPES.length;
-            } else {
-                selectedBlockIndex = (selectedBlockIndex - 1 + BLOCK_TYPES.length) % BLOCK_TYPES.length;
-            }
-            updateHotbarUI();
-        });
-
-        function processKeyboardInputs() {
-            if (!isPointerLocked || isARActive) return;
-
-            const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
-            const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).negate().normalize();
-
-            if (keys['KeyW']) camera.position.addScaledVector(forward, MOVE_SPEED);
-            if (keys['KeyS']) camera.position.addScaledVector(forward, -MOVE_SPEED);
-            if (keys['KeyA']) camera.position.addScaledVector(right, -MOVE_SPEED);
-            if (keys['KeyD']) camera.position.addScaledVector(right, MOVE_SPEED);
-
-            if (keys['Space']) camera.position.y += MOVE_SPEED;
-            if (keys['ShiftLeft'] || keys['KeyE']) camera.position.y -= MOVE_SPEED;
-
-            aimBoxPreview.visible = (placementPosition !== null);
-        }
-
-        // --- MAIN RENDER & ANIMATION LOOP (WebXR Compatible) ---
-        renderer.setAnimationLoop((timestamp, frame) => {
-            // Handle AR Hit Testing
-            if (isARActive && frame) {
-                if (xrHitTestSource && xrRefSpace) {
-                    const hitTestResults = frame.getHitTestResults(xrHitTestSource);
-                    if (hitTestResults.length > 0) {
-                        const hit = hitTestResults[0];
-                        const pose = hit.getPose(xrRefSpace);
-                        if (pose) {
-                            arReticle.visible = true;
-                            arReticle.matrix.fromArray(pose.transform.matrix);
-                            arStatusMsg.innerText = "Surface Found! Tap screen to anchor world";
+        // --- Core Voxel Presets (Offset Coordinates relative to root) ---
+        const FORM_SCHEMATICS = {
+            robot: {
+                label: "Autonomous Bipedal Unit",
+                thought: "Perceiving spatial reach. Scanning vertical axis.",
+                color: 0x00ffcc,
+                voxels: (function() {
+                    let pts = [];
+                    // Legs
+                    for(let y=0; y<4; y++) { pts.push([-1, y, 0]); pts.push([1, y, 0]); }
+                    // Torso
+                    for(let y=4; y<9; y++) { for(let x=-2; x<=2; x++) { pts.push([x, y, 0]); pts.push([x, y, 1]); } }
+                    // Head
+                    for(let y=9; y<=11; y++) { for(let x=-1; x<=1; x++) { pts.push([x, y, 0]); pts.push([x, y, 1]); } }
+                    // Arms
+                    for(let y=4; y<=8; y++) { pts.push([-3, y, 0]); pts.push([3, y, 0]); }
+                    return pts;
+                })()
+            },
+            vehicle: {
+                label: "High-Speed Recon Vehicle",
+                thought: "Optimizing ground traction. Calculating velocity vectors.",
+                color: 0xffaa00,
+                voxels: (function() {
+                    let pts = [];
+                    // Chassis Base
+                    for(let x=-3; x<=3; x++) { for(let z=-2; z<=2; z++) { pts.push([x, 1, z]); pts.push([x, 2, z]); } }
+                    // Cockpit
+                    for(let x=-1; x<=1; x++) { for(let z=-1; z<=1; z++) { pts.push([x, 3, z]); } }
+                    // Wheels
+                    [[-3,-2], [3,-2], [-3,2], [3,2]].forEach(([wx, wz]) => {
+                        pts.push([wx, 0, wz]); pts.push([wx, 1, wz+ (wz > 0 ? 1 : -1)]);
+                    });
+                    return pts;
+                })()
+            },
+            building: {
+                label: "Static Voxel Core Fortress",
+                thought: "Anchoring structural grid. Establishing stationary baseline.",
+                color: 0xff0055,
+                voxels: (function() {
+                    let pts = [];
+                    // Hollow Tower Base
+                    for(let y=0; y<14; y++) {
+                        for(let x=-2; x<=2; x++) {
+                            for(let z=-2; z<=2; z++) {
+                                if(Math.abs(x) === 2 || Math.abs(z) === 2 || y > 11) pts.push([x, y, z]);
+                            }
                         }
-                    } else {
-                        arReticle.visible = false;
+                    }
+                    return pts;
+                })()
+            },
+            animal: {
+                label: "Quadrupedal Biomechanical Unit",
+                thought: "Simulating low-center kinetic balance. Quadruped stride active.",
+                color: 0x00ff66,
+                voxels: (function() {
+                    let pts = [];
+                    // 4 Legs
+                    [[-2,-1], [2,-1], [-2,1], [2,1]].forEach(([lx, lz]) => {
+                        for(let y=0; y<3; y++) pts.push([lx, y, lz]);
+                    });
+                    // Spine Body
+                    for(let x=-3; x<=3; x++) { for(let z=-1; z<=1; z++) { pts.push([x, 3, z]); pts.push([x, 4, z]); } }
+                    // Head & Tail
+                    pts.push([4, 5, 0]); pts.push([4, 6, 0]); pts.push([5, 6, 0]); // Head
+                    pts.push([-4, 5, 0]); pts.push([-5, 6, 0]); // Tail
+                    return pts;
+                })()
+            }
+        };
+
+        // --- AI State Machine ---
+        let currentFormKey = 'robot';
+        let stateTimer = 0;
+        const AUTO_SWITCH_INTERVAL = 400; // Frames before AI changes its mind (~6-7s)
+
+        function triggerMorph(formKey) {
+            if (!FORM_SCHEMATICS[formKey]) return;
+            currentFormKey = formKey;
+            const schematic = FORM_SCHEMATICS[formKey];
+
+            document.getElementById('form-label').innerText = schematic.label;
+            document.getElementById('form-label').style.color = '#' + schematic.color.toString(16);
+            document.getElementById('ai-thought').innerText = schematic.thought;
+            document.getElementById('voxel-count').innerText = schematic.voxels.length;
+
+            // Map target positions onto the pool
+            for (let i = 0; i < MAX_VOXELS; i++) {
+                if (i < schematic.voxels.length) {
+                    const [x, y, z] = schematic.voxels[i];
+                    voxelPool[i].targetPos.set(x, y, z);
+                    voxelPool[i].targetColor.setHex(schematic.color);
+                    voxelPool[i].active = true;
+                    voxelPool[i].mesh.visible = true;
+                } else {
+                    voxelPool[i].active = false;
+                }
+            }
+        }
+
+        // Initialize first state
+        triggerMorph('robot');
+
+        // --- Main Render & Dynamics Loop ---
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = clock.getElapsedTime();
+            controls.update();
+
+            // 1. Lerp Voxels to Target Positions (Morphing Animation)
+            for (let i = 0; i < MAX_VOXELS; i++) {
+                const item = voxelPool[i];
+                if (item.active) {
+                    item.mesh.position.lerp(item.targetPos, 0.1);
+                    item.mesh.material.color.lerp(item.targetColor, 0.05);
+                } else if (item.mesh.visible) {
+                    // Shrink unused voxels down before hiding
+                    item.mesh.scale.lerp(new THREE.Vector3(0, 0, 0), 0.15);
+                    if (item.mesh.scale.x < 0.05) {
+                        item.mesh.visible = false;
+                        item.mesh.scale.set(1, 1, 1);
                     }
                 }
             }
 
-            // Process Inputs
-            processGamepadInputs();
-            processKeyboardInputs();
-
-            // Camera Look Direction in Non-AR mode
-            if (!isARActive) {
-                const euler = new THREE.Euler(pitch, yaw, 0, 'YXZ');
-                camera.quaternion.setFromEuler(euler);
+            // 2. Form-Specific Behavior Dynamics (AI physical expression)
+            if (currentFormKey === 'robot') {
+                // Bobbing gait / vertical breathing
+                voxelGroup.position.y = Math.sin(time * 3) * 0.4;
+                voxelGroup.rotation.y = Math.sin(time * 0.5) * 0.2;
+                voxelGroup.position.x = 0;
+                voxelGroup.position.z = 0;
+            } else if (currentFormKey === 'vehicle') {
+                // Driving in a fast circular path
+                voxelGroup.position.x = Math.cos(time * 1.5) * 12;
+                voxelGroup.position.z = Math.sin(time * 1.5) * 12;
+                voxelGroup.position.y = 0.2 + Math.random() * 0.05; // Road vibration
+                voxelGroup.rotation.y = - (time * 1.5) + Math.PI / 2;
+            } else if (currentFormKey === 'building') {
+                // Stationary lock with subtle breathing energy pulse
+                voxelGroup.position.set(0, 0, 0);
+                voxelGroup.rotation.y = 0;
+            } else if (currentFormKey === 'animal') {
+                // Prowling / trotting motion
+                voxelGroup.position.x = Math.sin(time) * 5;
+                voxelGroup.position.z = Math.cos(time) * 5;
+                voxelGroup.position.y = Math.abs(Math.sin(time * 6)) * 0.5; // Bounds
+                voxelGroup.rotation.y = Math.atan2(Math.cos(time), -Math.sin(time));
             }
 
-            // Target Raycasting
-            updateRaycastTarget();
+            // 3. Autonomous AI Mind Cycle
+            stateTimer++;
+            if (stateTimer > AUTO_SWITCH_INTERVAL) {
+                stateTimer = 0;
+                const forms = Object.keys(FORM_SCHEMATICS);
+                const nextForm = forms[(forms.indexOf(currentFormKey) + 1) % forms.length];
+                triggerMorph(nextForm);
+            }
 
             renderer.render(scene, camera);
-        });
+        }
 
-        // --- RESPONSIVE WINDOW RESIZING ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        animate();
     </script>
 </body>
 </html>
-```
