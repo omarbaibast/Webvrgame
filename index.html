@@ -98,7 +98,26 @@
         <!-- WebXR AR Launcher Button -->
         <button id="ar-button" class="glass-panel px-4 py-2.5 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border-emerald-500/50 hover:bg-emerald-600/30 transition shadow-lg text-emerald-400">
             <i class="fa-solid fa-vr-cardboard text-lg"></i>
-            <span id="ar-btn-text">Check AR Support...</span>
+            <span id="ar-btn-text">Checking WebXR AR...</span>
+        </button>
+
+        <!-- AR Status Indicator Banner -->
+        <div id="ar-status-banner" class="hidden glass-panel px-3 py-1.5 rounded-lg text-emerald-300 text-[11px] font-semibold flex items-center gap-2">
+            <i class="fa-solid fa-circle-info text-emerald-400"></i>
+            <span id="ar-status-msg">AR Mode Active</span>
+        </div>
+    </div>
+
+    <!-- AR On-Screen Touch Controls (Visible during AR) -->
+    <div id="ar-touch-controls" class="hidden absolute bottom-20 left-1/2 transform -translate-x-1/2 z-20 flex gap-3">
+        <button id="btn-ar-mine" class="px-5 py-3 bg-red-600/80 active:bg-red-500 text-white font-bold rounded-xl shadow-lg border border-red-400/30 flex items-center gap-2">
+            <i class="fa-solid fa-hammer"></i> Mine
+        </button>
+        <button id="btn-ar-place" class="px-5 py-3 bg-blue-600/80 active:bg-blue-500 text-white font-bold rounded-xl shadow-lg border border-blue-400/30 flex items-center gap-2">
+            <i class="fa-solid fa-cubes"></i> Place
+        </button>
+        <button id="btn-ar-next" class="px-4 py-3 bg-gray-700/80 active:bg-gray-600 text-white font-bold rounded-xl shadow-lg border border-gray-400/30">
+            <i class="fa-solid fa-arrows-rotate"></i> Swap
         </button>
     </div>
 
@@ -184,6 +203,7 @@
         let xrHitTestSource = null;
         let xrRefSpace = null;
         let isARActive = false;
+        let activeXRSession = null;
 
         // --- LIGHTING ---
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -338,17 +358,22 @@
         // --- WEBXR AR SETUP & BUTTON LOGIC ---
         const arButton = document.getElementById('ar-button');
         const arBtnText = document.getElementById('ar-btn-text');
+        const arStatusBanner = document.getElementById('ar-status-banner');
+        const arStatusMsg = document.getElementById('ar-status-msg');
+        const arTouchControls = document.getElementById('ar-touch-controls');
 
         if ('xr' in navigator) {
             navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
                 if (supported) {
                     arBtnText.innerText = 'Enter WebXR AR Mode';
-                    arButton.addEventListener('click', onEnterAR);
+                    arButton.addEventListener('click', toggleAR);
                 } else {
-                    arBtnText.innerText = 'AR Not Supported';
+                    arBtnText.innerText = 'AR Not Supported on Device';
                     arButton.disabled = true;
                     arButton.classList.add('opacity-50', 'cursor-not-allowed');
                 }
+            }).catch(() => {
+                arBtnText.innerText = 'AR Check Failed';
             });
         } else {
             arBtnText.innerText = 'WebXR Unavailable';
@@ -356,54 +381,104 @@
             arButton.classList.add('opacity-50', 'cursor-not-allowed');
         }
 
-        async function onEnterAR() {
-            if (isARActive) return;
+        async function toggleAR() {
+            if (isARActive && activeXRSession) {
+                await activeXRSession.end();
+                return;
+            }
 
             try {
-                const session = await navigator.xr.requestSession('immersive-ar', {
-                    requiredFeatures: ['hit-test'],
-                    optionalFeatures: ['dom-overlay'],
+                arBtnText.innerText = 'Starting AR...';
+                
+                // Request session with hit-test or DOM overlay fallbacks
+                const sessionOptions = {
+                    requiredFeatures: ['local'],
+                    optionalFeatures: ['hit-test', 'dom-overlay', 'local-floor'],
                     domOverlay: { root: document.body }
-                });
+                };
 
-                renderer.xr.setReferenceSpaceType('local');
+                const session = await navigator.xr.requestSession('immersive-ar', sessionOptions);
+                activeXRSession = session;
+
+                // Establish Reference Space with fallback
+                let refSpace;
+                try {
+                    refSpace = await session.requestReferenceSpace('local-floor');
+                } catch (e) {
+                    refSpace = await session.requestReferenceSpace('local');
+                }
+                xrRefSpace = refSpace;
+
                 await renderer.xr.setSession(session);
 
-                scene.background = null; // Transparent background to pass through camera
+                // Prepare Three.js Scene for AR Pass-through
+                scene.background = null;
                 scene.fog = null;
                 isARActive = true;
+                
                 arBtnText.innerText = 'Exit AR Mode';
+                arStatusBanner.classList.remove('hidden');
+                arStatusMsg.innerText = "AR Active (Pointing camera...)";
+                arTouchControls.classList.remove('hidden');
 
-                // Scale world slightly smaller in AR mode for tabletop experience
-                worldGroup.scale.set(0.4, 0.4, 0.4);
+                // Position Voxel World directly in front of AR viewer camera
+                worldGroup.position.set(0, -0.5, -1.5);
+                worldGroup.scale.set(0.25, 0.25, 0.25);
 
-                // Setup Hit Testing
-                const viewerSpace = await session.requestReferenceSpace('viewer');
-                xrHitTestSource = await session.requestHitTestSource({ space: viewerSpace });
-                xrRefSpace = await session.requestReferenceSpace('local');
+                // Setup Hit Testing if available
+                try {
+                    const viewerSpace = await session.requestReferenceSpace('viewer');
+                    xrHitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+                } catch (err) {
+                    console.log("Hit-testing unavailable:", err);
+                }
 
                 session.addEventListener('end', () => {
                     isARActive = false;
+                    activeXRSession = null;
                     xrHitTestSource = null;
                     scene.background = new THREE.Color(0x87CEEB);
                     scene.fog = new THREE.FogExp2(0x87CEEB, 0.025);
                     worldGroup.scale.set(1, 1, 1);
                     worldGroup.position.set(0, 0, 0);
                     arBtnText.innerText = 'Enter WebXR AR Mode';
+                    arStatusBanner.classList.add('hidden');
+                    arTouchControls.classList.add('hidden');
                     arReticle.visible = false;
                 });
 
-                // AR Touch to Anchor World
+                // AR Touch/Select event to anchor world on surface
                 session.addEventListener('select', () => {
                     if (arReticle.visible) {
                         worldGroup.position.setFromMatrixPosition(arReticle.matrix);
+                        arStatusMsg.innerText = "World Anchored to Surface!";
                     }
                 });
 
             } catch (err) {
-                console.error("WebXR AR Session Error: ", err);
+                console.error("Failed to start WebXR AR session: ", err);
+                arBtnText.innerText = 'AR Session Failed';
+                setTimeout(() => { arBtnText.innerText = 'Enter WebXR AR Mode'; }, 3000);
             }
         }
+
+        // AR Touch Buttons Logic
+        document.getElementById('btn-ar-mine').addEventListener('click', () => {
+            if (targetedIntersection) {
+                removeBlock(targetedIntersection.object.userData.key);
+            }
+        });
+
+        document.getElementById('btn-ar-place').addEventListener('click', () => {
+            if (placementPosition) {
+                placeBlock(placementPosition.x, placementPosition.y, placementPosition.z, BLOCK_TYPES[selectedBlockIndex].id);
+            }
+        });
+
+        document.getElementById('btn-ar-next').addEventListener('click', () => {
+            selectedBlockIndex = (selectedBlockIndex + 1) % BLOCK_TYPES.length;
+            updateHotbarUI();
+        });
 
         // --- UI HOTBAR ---
         const hotbarContainer = document.getElementById('hotbar');
@@ -471,13 +546,24 @@
         }
 
         function processGamepadInputs() {
-            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
             let gp = null;
 
+            // 1. Check Standard Navigator Gamepads
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
             for (let i = 0; i < gamepads.length; i++) {
                 if (gamepads[i] && gamepads[i].connected) {
                     gp = gamepads[i];
                     break;
+                }
+            }
+
+            // 2. Check WebXR InputSources for Gamepads (if standard return empty in XR mode)
+            if (!gp && activeXRSession && activeXRSession.inputSources) {
+                for (const source of activeXRSession.inputSources) {
+                    if (source.gamepad) {
+                        gp = source.gamepad;
+                        break;
+                    }
                 }
             }
 
@@ -652,13 +738,16 @@
         renderer.setAnimationLoop((timestamp, frame) => {
             // Handle AR Hit Testing
             if (isARActive && frame) {
-                if (xrHitTestSource) {
+                if (xrHitTestSource && xrRefSpace) {
                     const hitTestResults = frame.getHitTestResults(xrHitTestSource);
                     if (hitTestResults.length > 0) {
                         const hit = hitTestResults[0];
                         const pose = hit.getPose(xrRefSpace);
-                        arReticle.visible = true;
-                        arReticle.matrix.fromArray(pose.transform.matrix);
+                        if (pose) {
+                            arReticle.visible = true;
+                            arReticle.matrix.fromArray(pose.transform.matrix);
+                            arStatusMsg.innerText = "Surface Found! Tap screen to anchor world";
+                        }
                     } else {
                         arReticle.visible = false;
                     }
