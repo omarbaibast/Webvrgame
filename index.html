@@ -14,7 +14,7 @@
     body {
       margin: 0;
       overflow: hidden;
-      background-color: #0b0f19;
+      background-color: #05070d;
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       color: #f3f4f6;
     }
@@ -26,26 +26,33 @@
       left: 0;
       z-index: 1;
     }
-    /* Glassmorphism styling for UI panels */
     .glass-panel {
-      background: rgba(15, 23, 42, 0.75);
+      background: rgba(10, 15, 29, 0.75);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
-    /* Custom Scrollbar for side panel */
-    ::-webkit-scrollbar {
-      width: 6px;
+    /* Customize lil-gui overlay placement */
+    .lil-gui {
+      --background-color: rgba(13, 19, 36, 0.85) !important;
+      --text-color: #e2e8f0 !important;
+      --title-background-color: rgba(30, 41, 59, 0.9) !important;
+      --widget-color: rgba(30, 41, 59, 0.7) !important;
+      --hover-color: rgba(99, 102, 241, 0.6) !important;
+      --focus-color: #6366f1 !important;
+      --number-color: #38bdf8 !important;
+      --string-color: #34d399 !important;
+      font-family: inherit !important;
+      border-radius: 0.75rem !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5) !important;
+      overflow: hidden !important;
     }
-    ::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.2);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.4);
+    .lil-gui .title {
+      font-weight: 600 !important;
+      letter-spacing: 0.05em !important;
+      text-transform: uppercase !important;
+      font-size: 0.75rem !important;
     }
   </style>
 </head>
@@ -58,261 +65,183 @@
   <div class="absolute top-4 left-4 z-10 pointer-events-none">
     <div class="glass-panel p-4 rounded-xl shadow-2xl flex items-center gap-3 border border-white/10 pointer-events-auto">
       <div class="w-10 h-10 rounded-lg bg-indigo-600/80 flex items-center justify-center text-white shadow-lg">
-        <i class="fa-solid fa-shapes text-xl"></i>
+        <i class="fa-solid fa-user-astronaut text-xl"></i>
       </div>
       <div>
-        <h1 class="font-bold text-base tracking-wide text-white">Smooth Manifolds</h1>
-        <p class="text-xs text-gray-400">Parametric 3D Surface Explorer</p>
+        <h1 class="font-bold text-base tracking-wide text-white">Humanoid Manifold</h1>
+        <p class="text-xs text-gray-400">Continuous Topology & Curvature Explorer</p>
       </div>
     </div>
   </div>
 
-  <!-- Mobile Toggle UI Button -->
-  <button id="toggle-ui-btn" class="md:hidden absolute top-4 right-4 z-20 glass-panel p-3 rounded-xl text-white focus:outline-none">
-    <i class="fa-solid fa-sliders text-lg"></i>
-  </button>
-
-  <!-- Control Panel Drawer -->
-  <div id="control-panel" class="absolute top-4 right-4 bottom-4 w-80 z-10 glass-panel rounded-2xl p-5 shadow-2xl overflow-y-auto flex flex-col gap-6 transition-transform duration-300 transform md:translate-x-0 translate-x-full md:flex">
-    
-    <!-- Manifold Selection -->
-    <div>
-      <label class="text-xs font-semibold uppercase tracking-wider text-indigo-400 block mb-2">Select Manifold</label>
-      <select id="surface-select" class="w-full bg-slate-900/90 border border-slate-700/80 text-sm rounded-lg p-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all">
-        <option value="klein">Klein Bottle</option>
-        <option value="enneper" selected>Enneper Surface</option>
-        <option value="mobius">Möbius Strip</option>
-        <option value="torusknot">Torus Knot Manifold</option>
-        <option value="dini">Dini's Surface</option>
-      </select>
-    </div>
-
-    <hr class="border-white/10" />
-
-    <!-- Material Presets -->
-    <div>
-      <label class="text-xs font-semibold uppercase tracking-wider text-indigo-400 block mb-2">Material Presets</label>
-      <div class="grid grid-cols-2 gap-2">
-        <button data-preset="iridescent" class="preset-btn bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/40 hover:to-pink-500/40 border border-purple-500/30 text-xs py-2 px-3 rounded-lg text-white font-medium transition-all">Iridescent Glass</button>
-        <button data-preset="gold" class="preset-btn bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/40 hover:to-yellow-500/40 border border-amber-500/30 text-xs py-2 px-3 rounded-lg text-white font-medium transition-all">Polished Gold</button>
-        <button data-preset="chrome" class="preset-btn bg-gradient-to-r from-slate-400/20 to-slate-200/20 hover:from-slate-400/40 hover:to-slate-200/40 border border-slate-400/30 text-xs py-2 px-3 rounded-lg text-white font-medium transition-all">Liquid Chrome</button>
-        <button data-preset="emerald" class="preset-btn bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/40 hover:to-teal-500/40 border border-emerald-500/30 text-xs py-2 px-3 rounded-lg text-white font-medium transition-all">Emerald Glass</button>
-      </div>
-    </div>
-
-    <!-- Material Parameters -->
-    <div class="space-y-4">
-      <label class="text-xs font-semibold uppercase tracking-wider text-indigo-400 block">Surface Material</label>
-      
-      <!-- Color Picker -->
-      <div class="flex justify-between items-center">
-        <span class="text-xs text-slate-300">Base Color</span>
-        <input type="color" id="material-color" value="#ffffff" class="w-8 h-8 rounded border-none cursor-pointer bg-transparent">
-      </div>
-
-      <!-- Roughness -->
-      <div>
-        <div class="flex justify-between text-xs mb-1">
-          <span class="text-slate-300">Roughness</span>
-          <span id="roughness-val" class="text-slate-400 font-mono">0.10</span>
-        </div>
-        <input type="range" id="roughness-slider" min="0" max="1" step="0.01" value="0.10" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-      </div>
-
-      <!-- Metalness -->
-      <div>
-        <div class="flex justify-between text-xs mb-1">
-          <span class="text-slate-300">Metalness</span>
-          <span id="metalness-val" class="text-slate-400 font-mono">0.10</span>
-        </div>
-        <input type="range" id="metalness-slider" min="0" max="1" step="0.01" value="0.10" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-      </div>
-
-      <!-- Clearcoat & Transmission -->
-      <div>
-        <div class="flex justify-between text-xs mb-1">
-          <span class="text-slate-300">Clearcoat</span>
-          <span id="clearcoat-val" class="text-slate-400 font-mono">1.00</span>
-        </div>
-        <input type="range" id="clearcoat-slider" min="0" max="1" step="0.01" value="1.00" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-      </div>
-
-      <!-- Transmission -->
-      <div>
-        <div class="flex justify-between text-xs mb-1">
-          <span class="text-slate-300">Transmission (Glass)</span>
-          <span id="transmission-val" class="text-slate-400 font-mono">0.60</span>
-        </div>
-        <input type="range" id="transmission-slider" min="0" max="1" step="0.01" value="0.60" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-      </div>
-
-      <!-- Wireframe Mode Toggle -->
-      <div class="flex items-center justify-between pt-1">
-        <span class="text-xs text-slate-300">Wireframe Overlay</span>
-        <label class="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" id="wireframe-toggle" class="sr-only peer" checked>
-          <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-        </label>
-      </div>
-    </div>
-
-    <hr class="border-white/10" />
-
-    <!-- Geometry Resolution Settings -->
-    <div class="space-y-4">
-      <label class="text-xs font-semibold uppercase tracking-wider text-indigo-400 block">Geometry Sampling</label>
-      
-      <!-- U Resolution -->
-      <div>
-        <div class="flex justify-between text-xs mb-1">
-          <span class="text-slate-300">U Resolution</span>
-          <span id="u-res-val" class="text-slate-400 font-mono">80</span>
-        </div>
-        <input type="range" id="u-res-slider" min="16" max="160" step="4" value="80" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-      </div>
-
-      <!-- V Resolution -->
-      <div>
-        <div class="flex justify-between text-xs mb-1">
-          <span class="text-slate-300">V Resolution</span>
-          <span id="v-res-val" class="text-slate-400 font-mono">80</span>
-        </div>
-        <input type="range" id="v-res-slider" min="16" max="160" step="4" value="80" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-      </div>
-
-      <!-- Scale -->
-      <div>
-        <div class="flex justify-between text-xs mb-1">
-          <span class="text-slate-300">Scale Factor</span>
-          <span id="scale-val" class="text-slate-400 font-mono">1.0</span>
-        </div>
-        <input type="range" id="scale-slider" min="0.3" max="2.5" step="0.1" value="1.0" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-      </div>
-    </div>
-
-    <hr class="border-white/10" />
-
-    <!-- View & Animation Controls -->
-    <div class="space-y-3">
-      <div class="flex items-center justify-between">
-        <span class="text-xs text-slate-300">Auto Rotation</span>
-        <label class="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" id="autorotate-toggle" class="sr-only peer" checked>
-          <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-        </label>
-      </div>
-
-      <button id="reset-cam-btn" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-600/50 text-xs py-2 px-3 rounded-lg text-slate-200 transition-all flex items-center justify-center gap-2">
-        <i class="fa-solid fa-arrows-rotate"></i> Reset Camera View
-      </button>
-    </div>
-
-  </div>
-
-  <!-- Include Three.js and OrbitControls via CDN -->
+  <!-- Include Three.js, OrbitControls, and lil-gui via CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/ParametricGeometry.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.18"></script>
 
   <script>
     // --- Application State ---
     const params = {
-      surface: 'enneper',
-      uRes: 80,
-      vRes: 80,
+      manifoldMode: 'parametricHumanoid',
+      uRes: 100,
+      vRes: 120,
       scale: 1.0,
-      color: '#ffffff',
-      roughness: 0.1,
-      metalness: 0.1,
+      materialPreset: 'cyberHolo',
+      baseColor: '#ffffff',
+      roughness: 0.15,
+      metalness: 0.2,
       clearcoat: 1.0,
-      transmission: 0.6,
+      transmission: 0.4,
       wireframe: true,
+      wireframeColor: '#6366f1',
+      wireframeOpacity: 0.25,
+      curvatureMode: 'none', // 'none', 'gaussian', 'height', 'normal'
+      animateBreathing: true,
+      breathingSpeed: 1.2,
+      breathingIntensity: 0.08,
+      pulseDeform: false,
       autoRotate: true,
-      preset: 'iridescent'
+      autoRotateSpeed: 1.0,
+      resetCamera: () => resetCamera()
     };
 
-    // --- Parametric Surface Equations ---
-    const ParametricSurfaces = {
-      // 1. Enneper Surface
-      enneper: (u, v, target) => {
-        u = (u - 0.5) * 3;
-        v = (v - 0.5) * 3;
-        const x = u - (Math.pow(u, 3) / 3) + u * Math.pow(v, 2);
-        const y = v - (Math.pow(v, 3) / 3) + v * Math.pow(u, 2);
-        const z = Math.pow(u, 2) - Math.pow(v, 2);
-        target.set(x, z, y).multiplyScalar(0.7);
-      },
+    // --- Humanoid Parametric Surface Equations ---
+    // Smooth mathematical mappings for parametric humanoid manifolds
+    const HumanoidManifolds = {
+      
+      // 1. Smooth Parametric Humanoid Torso / Body
+      parametricHumanoid: (u, v, target) => {
+        // u in [0, 1] maps around body perimeter (theta)
+        // v in [0, 1] maps vertical height from head to feet
+        const theta = u * Math.PI * 2;
+        const y = (v - 0.5) * 4.2; // Height span
 
-      // 2. Figure-8 Klein Bottle
-      klein: (u, v, target) => {
-        u = u * Math.PI * 2;
-        v = v * Math.PI * 2;
-        const r = 4 - 2 * Math.cos(u);
-        let x, y, z;
-        if (u < Math.PI) {
-          x = 6 * Math.cos(u) * (1 + Math.sin(u)) + r * Math.cos(u) * Math.cos(v);
-          y = 16 * Math.sin(u) + r * Math.sin(u) * Math.cos(v);
-        } else {
-          x = 6 * Math.cos(u) * (1 + Math.sin(u)) + r * Math.cos(v + Math.PI);
-          y = 16 * Math.sin(u);
+        // Base anatomical contour profile along height v
+        let radius = 0.4;
+
+        // Head (top)
+        if (v > 0.85) {
+          const headV = (v - 0.85) / 0.15;
+          radius = 0.38 * Math.sin(headV * Math.PI);
+        } 
+        // Neck
+        else if (v > 0.78) {
+          const neckV = (v - 0.78) / 0.07;
+          radius = 0.18 + 0.05 * Math.cos(neckV * Math.PI);
+        } 
+        // Shoulders & Chest
+        else if (v > 0.58) {
+          const chestV = (v - 0.58) / 0.20;
+          radius = 0.48 + 0.22 * Math.sin(chestV * Math.PI);
+          // Shoulder width modulation via cosine theta
+          radius += 0.28 * Math.pow(Math.cos(theta), 2) * Math.sin(chestV * Math.PI);
+        } 
+        // Waist & Abdomen
+        else if (v > 0.42) {
+          const waistV = (v - 0.42) / 0.16;
+          radius = 0.32 + 0.10 * Math.cos(waistV * Math.PI);
+          radius += 0.08 * Math.pow(Math.cos(theta), 2);
+        } 
+        // Hips / Pelvis
+        else if (v > 0.30) {
+          const hipV = (v - 0.30) / 0.12;
+          radius = 0.42 + 0.12 * Math.sin(hipV * Math.PI);
+          radius += 0.12 * Math.pow(Math.cos(theta), 2);
+        } 
+        // Legs (split dual-cylinder manifold trick using sine harmonics)
+        else {
+          const legV = v / 0.30;
+          const legRadius = 0.18 * Math.sin(legV * Math.PI * 0.9 + 0.1);
+          // Create leg separation modulation
+          const separation = 0.24 * (1.0 - legV * 0.3);
+          const isLeft = Math.cos(theta) > 0 ? 1 : -1;
+          const xOffset = isLeft * separation;
+          
+          const x = xOffset + legRadius * Math.cos(theta);
+          const z = legRadius * Math.sin(theta) * 0.95;
+          target.set(x, y, z);
+          return;
         }
-        z = r * Math.sin(v);
-        target.set(x, y, z).multiplyScalar(0.12);
+
+        // Elliptical cross-section modulation for natural torso depth vs width
+        const depthFactor = 0.7 + 0.15 * Math.sin(v * Math.PI * 2);
+        const x = radius * Math.cos(theta);
+        const z = radius * depthFactor * Math.sin(theta);
+        target.set(x, y, z);
       },
 
-      // 3. Möbius Strip
-      mobius: (u, v, target) => {
-        u = u * Math.PI * 2;
-        v = (v - 0.5) * 1.2;
-        const x = (1 + (v / 2) * Math.cos(u / 2)) * Math.cos(u);
-        const y = (1 + (v / 2) * Math.cos(u / 2)) * Math.sin(u);
-        const z = (v / 2) * Math.sin(u / 2);
-        target.set(x, z, y).multiplyScalar(1.4);
+      // 2. Cyberpunk Android (Segmented smooth manifold curves)
+      cyberAndroid: (u, v, target) => {
+        const theta = u * Math.PI * 2;
+        const y = (v - 0.5) * 4.0;
+        
+        // Base profile + ribbed cyberpunk surface modulation
+        let r = 0.35 + 0.25 * Math.sin(v * Math.PI * 3);
+        
+        // Exoskeleton panel ribbing
+        const ribbing = 0.04 * Math.sin(v * 40) * Math.cos(theta * 4);
+        r += ribbing;
+
+        // Chest core expansion
+        if (v > 0.55 && v < 0.75) {
+          r += 0.2 * Math.sin((v - 0.55) / 0.2 * Math.PI) * Math.pow(Math.cos(theta), 2);
+        }
+
+        const x = r * Math.cos(theta);
+        const z = r * Math.sin(theta) * (0.8 + 0.2 * Math.cos(theta * 2));
+        target.set(x, y, z);
       },
 
-      // 4. Torus Knot Surface (Trefoil-like extrusion)
-      torusknot: (u, v, target) => {
-        u = u * Math.PI * 2;
-        v = v * Math.PI * 2;
-        const p = 2, q = 3;
-        const rKnot = 0.5 * (2 + Math.sin(q * u));
-        const cx = rKnot * Math.cos(p * u);
-        const cy = rKnot * Math.sin(p * u);
-        const cz = 0.5 * Math.cos(q * u);
+      // 3. Continuous Topological Torus-Humanoid Hybrid
+      topologicalHybrid: (u, v, target) => {
+        // A genus-1 continuous self-inverting torus manifold twisted into a stylized humanoid stance
+        const uAngle = u * Math.PI * 2;
+        const vAngle = v * Math.PI * 2;
 
-        const rTube = 0.35;
-        const x = cx + rTube * Math.cos(v) * Math.cos(p * u);
-        const y = cy + rTube * Math.cos(v) * Math.sin(p * u);
-        const z = cz + rTube * Math.sin(v);
-        target.set(x, z, y).multiplyScalar(1.2);
+        const R = 1.2 + 0.4 * Math.sin(vAngle * 2); // Major radius modulation
+        const r = 0.45 + 0.15 * Math.cos(uAngle * 3); // Minor radius modulation
+
+        const x = (R + r * Math.cos(vAngle)) * Math.cos(uAngle);
+        const y = (R + r * Math.cos(vAngle)) * Math.sin(uAngle) * 1.5 - 0.2;
+        const z = r * Math.sin(vAngle) + 0.3 * Math.sin(uAngle * 2);
+
+        target.set(x, y, z).multiplyScalar(0.75);
       },
 
-      // 5. Dini's Surface
-      dini: (u, v, target) => {
-        u = u * 4 * Math.PI;
-        v = 0.01 + v * 0.98; // Avoid v=0 singularities
-        const a = 1.0;
-        const b = 0.2;
-        const x = a * Math.cos(u) * Math.sin(v);
-        const y = a * Math.sin(u) * Math.sin(v);
-        const z = a * (Math.cos(v) + Math.log(Math.tan(v / 2))) + b * u;
-        target.set(x, z - 2, y).multiplyScalar(0.4);
+      // 4. Minimalist Organic Mannequin (Ultra-smooth continuous geometry)
+      organicMannequin: (u, v, target) => {
+        const theta = u * Math.PI * 2;
+        const y = (v - 0.5) * 4.2;
+
+        // Smooth continuous Gaussian blob blend along spine axis
+        const headBlob = 0.4 * Math.exp(-Math.pow((v - 0.9) / 0.08, 2));
+        const chestBlob = 0.6 * Math.exp(-Math.pow((v - 0.65) / 0.15, 2));
+        const hipBlob = 0.5 * Math.exp(-Math.pow((v - 0.4) / 0.12, 2));
+        const legBlob = 0.3 * Math.exp(-Math.pow((v - 0.18) / 0.18, 2));
+
+        const r = 0.1 + headBlob + chestBlob + hipBlob + legBlob;
+        
+        const widthFactor = 1.0 + 0.4 * Math.exp(-Math.pow((v - 0.68) / 0.1, 2)) * Math.pow(Math.cos(theta), 2);
+
+        const x = r * widthFactor * Math.cos(theta);
+        const z = r * 0.8 * Math.sin(theta);
+        target.set(x, y, z);
       }
     };
 
     // --- Scene Setup ---
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0b0f19, 0.05);
+    scene.fog = new THREE.FogExp2(0x05070d, 0.035);
 
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 2.5, 5);
+    camera.position.set(0, 0.8, 6.0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.25;
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
 
@@ -320,62 +249,161 @@
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.maxDistance = 20;
-    controls.minDistance = 1;
+    controls.maxDistance = 15;
+    controls.minDistance = 2;
+    controls.target.set(0, 0, 0);
 
-    // --- Lighting Setup ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    function resetCamera() {
+      camera.position.set(0, 0.8, 6.0);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    }
+
+    // --- Lighting & Studio Environment ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0x6366f1, 2.5); // Indigo Tint Key Light
-    keyLight.position.set(5, 8, 5);
+    const keyLight = new THREE.DirectionalLight(0x6366f1, 3.0); // Cyan/Indigo Key Light
+    keyLight.position.set(6, 8, 6);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xec4899, 1.8); // Pink/Rose Fill Light
-    fillLight.position.set(-5, -2, -5);
+    const fillLight = new THREE.DirectionalLight(0xec4899, 2.0); // Pink Fill Light
+    fillLight.position.set(-6, -2, -4);
     scene.add(fillLight);
 
-    const rimLight = new THREE.PointLight(0x38bdf8, 3, 10); // Cyan Rim Light
-    rimLight.position.set(0, 4, -3);
+    const rimLight = new THREE.PointLight(0x38bdf8, 4.0, 12); // Blue Rim Light
+    rimLight.position.set(0, 5, -4);
     scene.add(rimLight);
 
-    // --- Material & Mesh Creation ---
+    // Reflective Floor Grid
+    const gridHelper = new THREE.GridHelper(20, 40, 0x6366f1, 0x1e293b);
+    gridHelper.position.y = -2.3;
+    gridHelper.material.opacity = 0.35;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
+
+    // --- Custom Shader for Curvature Overlay ---
+    const CurvatureShader = {
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          vNormal = normalize(normalMatrix * normal);
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform stringCurvatureMode;
+        uniform int uCurvatureMode; // 0: none, 1: gaussian, 2: height, 3: normal gradient
+        uniform vec3 uBaseColor;
+        uniform float uRoughness;
+        uniform float uMetalness;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        varying vec2 vUv;
+
+        // Color map helpers for curvature mapping
+        vec3 turboColormap(float t) {
+          t = clamp(t, 0.0, 1.0);
+          return 0.5 + 0.5 * cos(6.28318 * (vec3(1.0, 1.0, 1.0) * t + vec3(0.0, 0.33, 0.67)));
+        }
+
+        void main() {
+          vec3 viewDir = normalize(-vPosition);
+          float NdotV = max(0.0, dot(vNormal, viewDir));
+          
+          vec3 finalColor = uBaseColor;
+
+          if (uCurvatureMode == 1) {
+            // Gaussian curvature approximation via derivatives of normal
+            vec3 dNdx = dFdx(vNormal);
+            vec3 dNdy = dFdy(vNormal);
+            float curvature = length(dNdx) + length(dNdy);
+            finalColor = turboColormap(curvature * 2.5);
+          } else if (uCurvatureMode == 2) {
+            // Height gradient color map
+            float normalizedHeight = clamp((vPosition.y + 2.0) / 4.0, 0.0, 1.0);
+            finalColor = turboColormap(normalizedHeight);
+          } else if (uCurvatureMode == 3) {
+            // Normal facing gradient
+            finalColor = vNormal * 0.5 + 0.5;
+          }
+
+          // Basic shading output
+          float light = max(0.2, NdotV);
+          gl_FragColor = vec4(finalColor * light, 1.0);
+        }
+      `
+    };
+
+    // --- Material Presets ---
+    const MaterialPresets = {
+      cyberHolo: { color: '#ffffff', roughness: 0.1, metalness: 0.1, clearcoat: 1.0, transmission: 0.5 },
+      chrome: { color: '#ffffff', roughness: 0.05, metalness: 1.0, clearcoat: 1.0, transmission: 0.0 },
+      gold: { color: '#ffb703', roughness: 0.2, metalness: 0.95, clearcoat: 0.5, transmission: 0.0 },
+      emeraldGlass: { color: '#10b981', roughness: 0.1, metalness: 0.05, clearcoat: 1.0, transmission: 0.8 },
+      marble: { color: '#f8fafc', roughness: 0.35, metalness: 0.0, clearcoat: 0.2, transmission: 0.0 }
+    };
+
     const surfaceMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(params.color),
+      color: new THREE.Color(params.baseColor),
       roughness: params.roughness,
       metalness: params.metalness,
       clearcoat: params.clearcoat,
       clearcoatRoughness: 0.1,
       transmission: params.transmission,
       ior: 1.5,
-      side: THREE.DoubleSide,
-      flatShading: false
+      side: THREE.DoubleSide
+    });
+
+    const curvatureMaterial = new THREE.ShaderMaterial({
+      vertexShader: CurvatureShader.vertexShader,
+      fragmentShader: CurvatureShader.fragmentShader,
+      uniforms: {
+        uCurvatureMode: { value: 0 },
+        uBaseColor: { value: new THREE.Color(params.baseColor) },
+        uRoughness: { value: params.roughness },
+        uMetalness: { value: params.metalness }
+      },
+      side: THREE.DoubleSide
     });
 
     const wireframeMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
+      color: new THREE.Color(params.wireframeColor),
       wireframe: true,
       transparent: true,
-      opacity: 0.15
+      opacity: params.wireframeOpacity
     });
 
+    // --- Mesh & Geometry Builder ---
     let meshGroup = new THREE.Group();
     let mainMesh, wireframeMesh;
     scene.add(meshGroup);
 
-    function buildGeometry() {
-      // Clear previous meshes
+    // Dynamic procedural geometry cache
+    let originalPositions = null;
+
+    function buildManifoldGeometry() {
+      // Clear previous geometries
       while (meshGroup.children.length > 0) {
         const obj = meshGroup.children.pop();
         if (obj.geometry) obj.geometry.dispose();
       }
 
-      const surfaceFunc = ParametricSurfaces[params.surface];
-      const geometry = new THREE.ParametricGeometry(surfaceFunc, params.uRes, params.vRes);
+      const parametricFunc = HumanoidManifolds[params.manifoldMode];
+      const geometry = new THREE.ParametricGeometry(parametricFunc, params.uRes, params.vRes);
       geometry.center();
       geometry.computeVertexNormals();
 
-      mainMesh = new THREE.Mesh(geometry, surfaceMaterial);
+      // Store original positions for real-time deformation animation
+      originalPositions = geometry.attributes.position.array.slice();
+
+      const activeMaterial = (params.curvatureMode !== 'none') ? curvatureMaterial : surfaceMaterial;
+
+      mainMesh = new THREE.Mesh(geometry, activeMaterial);
       wireframeMesh = new THREE.Mesh(geometry, wireframeMaterial);
       wireframeMesh.visible = params.wireframe;
 
@@ -384,140 +412,107 @@
       meshGroup.scale.setScalar(params.scale);
     }
 
-    // Initial Build
-    buildGeometry();
+    // Update Curvature Uniforms
+    function updateCurvatureMode() {
+      const modeMap = { 'none': 0, 'gaussian': 1, 'height': 2, 'normal': 3 };
+      curvatureMaterial.uniforms.uCurvatureMode.value = modeMap[params.curvatureMode];
+      
+      if (mainMesh) {
+        mainMesh.material = (params.curvatureMode !== 'none') ? curvatureMaterial : surfaceMaterial;
+      }
+    }
 
-    // --- UI Controls Integration ---
-    const surfaceSelect = document.getElementById('surface-select');
-    const uResSlider = document.getElementById('u-res-slider');
-    const vResSlider = document.getElementById('v-res-slider');
-    const scaleSlider = document.getElementById('scale-slider');
-    const colorPicker = document.getElementById('material-color');
-    const roughnessSlider = document.getElementById('roughness-slider');
-    const metalnessSlider = document.getElementById('metalness-slider');
-    const clearcoatSlider = document.getElementById('clearcoat-slider');
-    const transmissionSlider = document.getElementById('transmission-slider');
-    const wireframeToggle = document.getElementById('wireframe-toggle');
-    const autoRotateToggle = document.getElementById('autorotate-toggle');
-    const resetCamBtn = document.getElementById('reset-cam-btn');
+    // Apply Preset Materials
+    function applyMaterialPreset(presetKey) {
+      const p = MaterialPresets[presetKey];
+      if (p) {
+        params.baseColor = p.color;
+        params.roughness = p.roughness;
+        params.metalness = p.metalness;
+        params.clearcoat = p.clearcoat;
+        params.transmission = p.transmission;
 
-    // UI Input Event Listeners
-    surfaceSelect.addEventListener('change', (e) => {
-      params.surface = e.target.value;
-      buildGeometry();
+        surfaceMaterial.color.set(p.color);
+        surfaceMaterial.roughness = p.roughness;
+        surfaceMaterial.metalness = p.metalness;
+        surfaceMaterial.clearcoat = p.clearcoat;
+        surfaceMaterial.transmission = p.transmission;
+
+        curvatureMaterial.uniforms.uBaseColor.value.set(p.color);
+      }
+    }
+
+    // Initialize Geometry
+    applyMaterialPreset(params.materialPreset);
+    buildManifoldGeometry();
+
+    // --- Lil-GUI Panel Setup ---
+    const gui = new lil.GUI({ title: 'Humanoid Manifold Controls' });
+
+    // 1. Manifold Selector
+    gui.add(params, 'manifoldMode', {
+      'Parametric Humanoid Body': 'parametricHumanoid',
+      'Cyberpunk Android': 'cyberAndroid',
+      'Torus-Humanoid Hybrid': 'topologicalHybrid',
+      'Organic Mannequin': 'organicMannequin'
+    }).name('Topology Mode').onChange(buildManifoldGeometry);
+
+    // 2. Curvature & Analysis
+    const curvatureFolder = gui.addFolder('Curvature & Analysis');
+    curvatureFolder.add(params, 'curvatureMode', {
+      'Shaded Surface (Off)': 'none',
+      'Gaussian Curvature Map': 'gaussian',
+      'Height Gradient Map': 'height',
+      'Normal Orientation Map': 'normal'
+    }).name('Curvature Overlay').onChange(updateCurvatureMode);
+
+    // 3. Material Controls
+    const matFolder = gui.addFolder('PBR Surface Material');
+    matFolder.add(params, 'materialPreset', {
+      'Holographic Cyber Glow': 'cyberHolo',
+      'Polished Chrome': 'chrome',
+      'Golden Metallic': 'gold',
+      'Emerald Glass': 'emeraldGlass',
+      'Smooth Marble': 'marble'
+    }).name('Preset').onChange((val) => {
+      applyMaterialPreset(val);
+      gui.controllersRecursive().forEach(c => c.updateDisplay());
     });
 
-    uResSlider.addEventListener('input', (e) => {
-      params.uRes = parseInt(e.target.value);
-      document.getElementById('u-res-val').innerText = params.uRes;
-      buildGeometry();
+    matFolder.addColor(params, 'baseColor').name('Base Color').onChange(c => {
+      surfaceMaterial.color.set(c);
+      curvatureMaterial.uniforms.uBaseColor.value.set(c);
     });
+    matFolder.add(params, 'roughness', 0, 1, 0.01).name('Roughness').onChange(v => surfaceMaterial.roughness = v);
+    matFolder.add(params, 'metalness', 0, 1, 0.01).name('Metalness').onChange(v => surfaceMaterial.metalness = v);
+    matFolder.add(params, 'clearcoat', 0, 1, 0.01).name('Clearcoat').onChange(v => surfaceMaterial.clearcoat = v);
+    matFolder.add(params, 'transmission', 0, 1, 0.01).name('Glass Transparency').onChange(v => surfaceMaterial.transmission = v);
 
-    vResSlider.addEventListener('input', (e) => {
-      params.vRes = parseInt(e.target.value);
-      document.getElementById('v-res-val').innerText = params.vRes;
-      buildGeometry();
-    });
+    // 4. Wireframe Settings
+    const wireFolder = gui.addFolder('Wireframe Overlay');
+    wireFolder.add(params, 'wireframe').name('Show Wireframe').onChange(v => wireframeMesh.visible = v);
+    wireFolder.addColor(params, 'wireframeColor').name('Wire Color').onChange(c => wireframeMaterial.color.set(c));
+    wireFolder.add(params, 'wireframeOpacity', 0.05, 1.0, 0.05).name('Opacity').onChange(v => wireframeMaterial.opacity = v);
 
-    scaleSlider.addEventListener('input', (e) => {
-      params.scale = parseFloat(e.target.value);
-      document.getElementById('scale-val').innerText = params.scale.toFixed(1);
-      meshGroup.scale.setScalar(params.scale);
-    });
+    // 5. Sampling & Resolution
+    const geoFolder = gui.addFolder('Parametric Sampling');
+    geoFolder.add(params, 'uRes', 30, 160, 2).name('U Grid Sampling').onChange(buildManifoldGeometry);
+    geoFolder.add(params, 'vRes', 40, 200, 2).name('V Grid Sampling').onChange(buildManifoldGeometry);
+    geoFolder.add(params, 'scale', 0.5, 2.0, 0.1).name('Scale').onChange(v => meshGroup.scale.setScalar(v));
 
-    colorPicker.addEventListener('input', (e) => {
-      params.color = e.target.value;
-      surfaceMaterial.color.set(params.color);
-    });
+    // 6. Animation Controls
+    const animFolder = gui.addFolder('Dynamic Deformations');
+    animFolder.add(params, 'animateBreathing').name('Breathing Wave');
+    animFolder.add(params, 'breathingSpeed', 0.2, 3.0, 0.1).name('Breathing Rate');
+    animFolder.add(params, 'breathingIntensity', 0.01, 0.25, 0.01).name('Breathing Scale');
+    animFolder.add(params, 'pulseDeform').name('Energy Pulse Deform');
+    animFolder.add(params, 'autoRotate').name('Auto Rotate Camera').onChange(v => controls.autoRotate = v);
 
-    roughnessSlider.addEventListener('input', (e) => {
-      params.roughness = parseFloat(e.target.value);
-      document.getElementById('roughness-val').innerText = params.roughness.toFixed(2);
-      surfaceMaterial.roughness = params.roughness;
-    });
+    gui.add(params, 'resetCamera').name('Reset Camera View');
 
-    metalnessSlider.addEventListener('input', (e) => {
-      params.metalness = parseFloat(e.target.value);
-      document.getElementById('metalness-val').innerText = params.metalness.toFixed(2);
-      surfaceMaterial.metalness = params.metalness;
-    });
-
-    clearcoatSlider.addEventListener('input', (e) => {
-      params.clearcoat = parseFloat(e.target.value);
-      document.getElementById('clearcoat-val').innerText = params.clearcoat.toFixed(2);
-      surfaceMaterial.clearcoat = params.clearcoat;
-    });
-
-    transmissionSlider.addEventListener('input', (e) => {
-      params.transmission = parseFloat(e.target.value);
-      document.getElementById('transmission-val').innerText = params.transmission.toFixed(2);
-      surfaceMaterial.transmission = params.transmission;
-    });
-
-    wireframeToggle.addEventListener('change', (e) => {
-      params.wireframe = e.target.checked;
-      if (wireframeMesh) wireframeMesh.visible = params.wireframe;
-    });
-
-    autoRotateToggle.addEventListener('change', (e) => {
-      params.autoRotate = e.target.checked;
-      controls.autoRotate = params.autoRotate;
-    });
-
-    resetCamBtn.addEventListener('click', () => {
-      camera.position.set(0, 2.5, 5);
-      controls.target.set(0, 0, 0);
-      controls.update();
-    });
-
-    // Material Presets
-    const presets = {
-      iridescent: { color: '#ffffff', roughness: 0.1, metalness: 0.1, clearcoat: 1.0, transmission: 0.6 },
-      gold: { color: '#ffb703', roughness: 0.2, metalness: 0.9, clearcoat: 0.3, transmission: 0.0 },
-      chrome: { color: '#ffffff', roughness: 0.05, metalness: 1.0, clearcoat: 1.0, transmission: 0.0 },
-      emerald: { color: '#10b981', roughness: 0.15, metalness: 0.0, clearcoat: 1.0, transmission: 0.75 }
-    };
-
-    document.querySelectorAll('.preset-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const p = presets[e.target.dataset.preset];
-        if (p) {
-          params.color = p.color;
-          params.roughness = p.roughness;
-          params.metalness = p.metalness;
-          params.clearcoat = p.clearcoat;
-          params.transmission = p.transmission;
-
-          colorPicker.value = p.color;
-          roughnessSlider.value = p.roughness;
-          metalnessSlider.value = p.metalness;
-          clearcoatSlider.value = p.clearcoat;
-          transmissionSlider.value = p.transmission;
-
-          document.getElementById('roughness-val').innerText = p.roughness.toFixed(2);
-          document.getElementById('metalness-val').innerText = p.metalness.toFixed(2);
-          document.getElementById('clearcoat-val').innerText = p.clearcoat.toFixed(2);
-          document.getElementById('transmission-val').innerText = p.transmission.toFixed(2);
-
-          surfaceMaterial.color.set(p.color);
-          surfaceMaterial.roughness = p.roughness;
-          surfaceMaterial.metalness = p.metalness;
-          surfaceMaterial.clearcoat = p.clearcoat;
-          surfaceMaterial.transmission = p.transmission;
-        }
-      });
-    });
-
-    // Mobile UI Toggle
-    const toggleBtn = document.getElementById('toggle-ui-btn');
-    const controlPanel = document.getElementById('control-panel');
-    toggleBtn.addEventListener('click', () => {
-      controlPanel.classList.toggle('translate-x-full');
-    });
-
-    // Configure Initial OrbitControls state
+    // Configure OrbitControls
     controls.autoRotate = params.autoRotate;
-    controls.autoRotateSpeed = 1.5;
+    controls.autoRotateSpeed = params.autoRotateSpeed;
 
     // Window Resize Handler
     window.addEventListener('resize', () => {
@@ -526,16 +521,60 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // --- Animation Loop ---
+    // --- Animation & Real-Time Deformation Loop ---
     const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
       const elapsedTime = clock.getElapsedTime();
 
-      // Slow dynamic pulsing or rim light shift for aesthetic depth
-      rimLight.position.x = Math.sin(elapsedTime * 0.5) * 4;
-      rimLight.position.z = Math.cos(elapsedTime * 0.5) * 4;
+      // Real-time Procedural Mesh Deformation (Breathing & Pulse Waves)
+      if (mainMesh && originalPositions && (params.animateBreathing || params.pulseDeform)) {
+        const positions = mainMesh.geometry.attributes.position.array;
+        const count = positions.length / 3;
+
+        const breathPhase = Math.sin(elapsedTime * params.breathingSpeed * 2.5);
+        const pulsePhase = Math.sin(elapsedTime * 4.0);
+
+        for (let i = 0; i < count; i++) {
+          const idx = i * 3;
+          const ox = originalPositions[idx];
+          const oy = originalPositions[idx + 1];
+          const oz = originalPositions[idx + 2];
+
+          // Compute deformation factors based on height (oy)
+          let deformX = 0;
+          let deformZ = 0;
+
+          if (params.animateBreathing) {
+            // Chest breathing modulation (higher intensity around chest height oy ~ 0.5)
+            const chestFactor = Math.exp(-Math.pow((oy - 0.4) / 0.8, 2));
+            deformX += ox * breathPhase * params.breathingIntensity * chestFactor;
+            deformZ += oz * breathPhase * params.breathingIntensity * 1.5 * chestFactor;
+          }
+
+          if (params.pulseDeform) {
+            // Traveling wave pulse deformation along body Y-axis
+            const wave = Math.sin(oy * 6.0 - elapsedTime * 5.0) * 0.04;
+            deformX += ox * wave;
+            deformZ += oz * wave;
+          }
+
+          positions[idx] = ox + deformX;
+          positions[idx + 2] = oz + deformZ;
+        }
+
+        mainMesh.geometry.attributes.position.needsUpdate = true;
+        mainMesh.geometry.computeVertexNormals();
+
+        if (wireframeMesh) {
+          wireframeMesh.geometry.attributes.position.needsUpdate = true;
+        }
+      }
+
+      // Dynamic light animation for visual depth
+      rimLight.position.x = Math.sin(elapsedTime * 0.6) * 5;
+      rimLight.position.z = Math.cos(elapsedTime * 0.6) * 5;
 
       controls.update();
       renderer.render(scene, camera);
