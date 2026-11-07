@@ -3,57 +3,111 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
-<title>Voxel Creative Sandbox</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Voxel Sandbox - Creative Mode</title>
 
 <style>
-  body {
-    margin: 0;
-    overflow: hidden;
-    background: #080d18;
-    font-family: Arial, sans-serif;
-    color: white;
-  }
+* { box-sizing: border-box; }
 
-  #hud {
-    position: fixed;
-    top: 15px;
-    left: 15px;
-    z-index: 10;
-    background: rgba(0, 10, 25, 0.8);
-    padding: 12px;
-    border: 1px solid #00d9ff;
-    border-radius: 8px;
-    font-size: 14px;
-  }
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #080d18;
+  color: white;
+  font-family: Arial, sans-serif;
+  touch-action: none;
+}
 
-  #material {
-    color: #00ffff;
-    font-weight: bold;
-  }
+canvas { display: block; }
 
-  #crosshair {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 5;
-    color: cyan;
-    font-size: 24px;
-    pointer-events: none;
-  }
+#hud {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  background: rgba(0,10,25,.85);
+  border: 1px solid #00d9ff;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  pointer-events: none;
+}
 
-  #help {
-    position: fixed;
-    bottom: 12px;
-    left: 12px;
-    z-index: 10;
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.65);
-    font-size: 12px;
-    line-height: 1.6;
-  }
+#material { color: #00ffff; font-weight: bold; }
+
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  color: cyan;
+  font-size: 25px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+#diagnostics {
+  position: fixed;
+  top: 125px;
+  left: 10px;
+  z-index: 15;
+  max-width: calc(100vw - 20px);
+  max-height: 100px;
+  overflow: auto;
+  background: rgba(0,0,0,.8);
+  color: #66ff88;
+  font-size: 10px;
+  padding: 8px;
+  pointer-events: none;
+}
+
+#help {
+  position: fixed;
+  bottom: 8px;
+  left: 8px;
+  z-index: 10;
+  background: rgba(0,0,0,.7);
+  padding: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+#touchControls {
+  position: fixed;
+  bottom: 15px;
+  right: 12px;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+}
+
+.touchButton {
+  width: 55px;
+  height: 55px;
+  border: 1px solid #00d9ff;
+  border-radius: 50%;
+  background: rgba(0,40,70,.75);
+  color: white;
+  font-size: 18px;
+  touch-action: none;
+}
+
+#enterButton {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 30;
+  padding: 10px;
+  color: white;
+  background: #07536a;
+  border: 1px solid cyan;
+  border-radius: 6px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #touchControls { display: none; }
+}
 </style>
 
 <script type="importmap">
@@ -68,169 +122,164 @@
 <body>
 
 <div id="hud">
-  <div>VOXEL CREATIVE MODE</div>
-  <div>Material: <span id="material">CYAN METAL</span></div>
-  <div>Cubes: <span id="cubeCount">0</span></div>
-  <div>VR: <span id="vrStatus">Ready</span></div>
+  <b>VOXEL CREATIVE MODE</b><br>
+  Material: <span id="material">CYAN METAL</span><br>
+  Cubes: <span id="cubeCount">0</span><br>
+  Controller: <span id="connection">Waiting...</span><br>
+  VR: <span id="vrStatus">Ready</span>
 </div>
 
+<div id="diagnostics">Waiting for controller...</div>
 <div id="crosshair">+</div>
+
+<button id="enterButton">ENTER VR</button>
 
 <div id="help">
   WASD: Move | Mouse: Look<br>
-  Left Click: Place | Right Click: Destroy<br>
-  L1 / R1: Change Material<br>
-  L2: Aim | R2: Place<br>
+  Left click: Place | Right click: Destroy<br>
+  L1/R1: Material | L2+R2: Place<br>
   Circle: Destroy | X: Up | Square: Down<br>
-  Left Stick: Move | Right Stick: Look
+  Left stick: Move | Right stick: Look
+</div>
+
+<div id="touchControls">
+  <button class="touchButton" id="placeTouch">+</button>
+  <button class="touchButton" id="destroyTouch">O</button>
+  <button class="touchButton" id="upTouch">↑</button>
+  <button class="touchButton" id="downTouch">↓</button>
+  <button class="touchButton" id="nextTouch">M</button>
 </div>
 
 <script type="module">
 
 import * as THREE from "three";
 import { VRButton } from
-  "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/webxr/VRButton.js";
+"https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/webxr/VRButton.js";
 
-// --------------------------------------------------
+// ==================================================
 // SCENE
-// --------------------------------------------------
+// ==================================================
 
 const scene = new THREE.Scene();
-
 scene.background = new THREE.Color(0x080d18);
 
 const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
+  75, window.innerWidth/window.innerHeight, 0.1, 500
 );
 
-// Camera/player rig
 const player = new THREE.Group();
 scene.add(player);
 
 camera.position.set(0, 1.6, 0);
 player.add(camera);
 
-// --------------------------------------------------
-// LIGHTING
-// --------------------------------------------------
+// ==================================================
+// LIGHTS
+// ==================================================
 
-const ambient = new THREE.HemisphereLight(
-  0x80dfff,
-  0x151020,
-  1.5
-);
+scene.add(new THREE.HemisphereLight(
+  0x80dfff, 0x151020, 1.5
+));
 
-scene.add(ambient);
-
-const sun = new THREE.DirectionalLight(
-  0xffffff,
-  2
-);
-
-sun.position.set(10, 20, 10);
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.position.set(10,20,10);
 scene.add(sun);
 
-// --------------------------------------------------
+// ==================================================
 // RENDERER
-// --------------------------------------------------
+// ==================================================
 
 const renderer = new THREE.WebGLRenderer({
-  antialias: true
+  antialias: true,
+  powerPreference: "high-performance"
 });
 
-renderer.setSize(
-  window.innerWidth,
-  window.innerHeight
-);
-
-renderer.setPixelRatio(
-  Math.min(window.devicePixelRatio, 1.5)
-);
-
-renderer.xr.enabled = true;
-
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.xr.enabled = true;
 
 document.body.appendChild(renderer.domElement);
 
-document.body.appendChild(
-  VRButton.createButton(renderer)
-);
+// ==================================================
+// VR
+// ==================================================
 
-// --------------------------------------------------
+const vrButton = VRButton.createButton(renderer);
+document.body.appendChild(vrButton);
+
+document.getElementById("enterButton").onclick = () => {
+  if (!navigator.xr) {
+    alert("WebXR is not available. Use HTTPS and a compatible VR browser.");
+    return;
+  }
+
+  navigator.xr.isSessionSupported("immersive-vr")
+    .then(supported => {
+      if (!supported) {
+        alert("Immersive VR is not supported by this browser.");
+        return;
+      }
+
+      navigator.xr.requestSession("immersive-vr", {
+        optionalFeatures: ["local-floor", "bounded-floor"]
+      }).then(session => renderer.xr.setSession(session))
+        .catch(error => alert(error.message));
+    });
+};
+
+// ==================================================
 // MATERIALS
-// --------------------------------------------------
+// ==================================================
 
 const materials = [
-  {
-    name: "CYAN METAL",
-    color: 0x00ccff,
-    emissive: 0x003344
-  },
-  {
-    name: "ALIEN PURPLE",
-    color: 0x8833ff,
-    emissive: 0x220044
-  },
-  {
-    name: "LIME ENERGY",
-    color: 0x66ff33,
-    emissive: 0x224400
-  },
-  {
-    name: "GOLD",
-    color: 0xffbb22,
-    emissive: 0x442200
-  },
-  {
-    name: "WHITE FUTURE",
-    color: 0xffffff,
-    emissive: 0x222222
-  },
-  {
-    name: "DARK STEEL",
-    color: 0x444d5a,
-    emissive: 0x000000
-  }
+  {name:"CYAN METAL",color:0x00ccff,emissive:0x003344},
+  {name:"ALIEN PURPLE",color:0x8833ff,emissive:0x220044},
+  {name:"LIME ENERGY",color:0x66ff33,emissive:0x224400},
+  {name:"GOLD",color:0xffbb22,emissive:0x442200},
+  {name:"WHITE FUTURE",color:0xffffff,emissive:0x222222},
+  {name:"DARK STEEL",color:0x444d5a,emissive:0x000000},
+  {name:"RED ENERGY",color:0xff2244,emissive:0x440011},
+  {name:"ICE CRYSTAL",color:0x99ffff,emissive:0x225555}
 ];
 
 let selectedMaterial = 0;
 
-function createMaterial(index) {
+function makeMaterial(index) {
   const m = materials[index];
 
   return new THREE.MeshStandardMaterial({
-    color: m.color,
-    emissive: m.emissive,
-    metalness: 0.65,
-    roughness: 0.3
+    color:m.color,
+    emissive:m.emissive,
+    metalness:0.65,
+    roughness:0.3
   });
 }
 
-// --------------------------------------------------
-// VOXEL WORLD
-// --------------------------------------------------
+function nextMaterial(direction) {
+  selectedMaterial =
+    (selectedMaterial + direction + materials.length)
+    % materials.length;
 
-const voxelSize = 1;
+  document.getElementById("material").textContent =
+    materials[selectedMaterial].name;
+}
 
-const voxelGeometry = new THREE.BoxGeometry(
-  voxelSize,
-  voxelSize,
-  voxelSize
-);
+// ==================================================
+// VOXEL SYSTEM
+// ==================================================
 
+const cubeGeometry = new THREE.BoxGeometry(1,1,1);
 const voxels = [];
 
-function updateCubeCount() {
+function updateCount() {
   document.getElementById("cubeCount").textContent =
     voxels.length;
 }
 
 function createVoxel(position) {
-  // Avoid placing a voxel inside an existing voxel.
+
+  // Prevent overlapping cubes
   for (const voxel of voxels) {
     if (voxel.position.distanceTo(position) < 0.1) {
       return;
@@ -238,384 +287,313 @@ function createVoxel(position) {
   }
 
   const cube = new THREE.Mesh(
-    voxelGeometry,
-    createMaterial(selectedMaterial)
+    cubeGeometry,
+    makeMaterial(selectedMaterial)
   );
 
   cube.position.copy(position);
-
   cube.userData.isVoxel = true;
   cube.userData.materialIndex = selectedMaterial;
 
   scene.add(cube);
   voxels.push(cube);
 
-  updateCubeCount();
+  updateCount();
 }
 
 function destroyVoxel(cube) {
-  if (!cube || !cube.userData.isVoxel) {
-    return;
-  }
+  if (!cube || !cube.userData.isVoxel) return;
 
   scene.remove(cube);
 
   const index = voxels.indexOf(cube);
-
-  if (index !== -1) {
-    voxels.splice(index, 1);
-  }
+  if (index !== -1) voxels.splice(index,1);
 
   cube.material.dispose();
-
-  updateCubeCount();
+  updateCount();
 }
 
-// --------------------------------------------------
-// AIMING / TARGETING
-// --------------------------------------------------
+// ==================================================
+// AIMING
+// ==================================================
 
 const raycaster = new THREE.Raycaster();
-
 raycaster.far = 8;
 
-const center = new THREE.Vector2(0, 0);
+const center = new THREE.Vector2(0,0);
 
 let targetVoxel = null;
-let targetFace = null;
+let targetNormal = null;
 
 function updateTarget() {
-  raycaster.setFromCamera(center, camera);
 
-  const hits = raycaster.intersectObjects(
-    voxels,
-    false
-  );
+  // Aim from the center of the camera view.
+  raycaster.setFromCamera(center,camera);
+
+  const hits = raycaster.intersectObjects(voxels,false);
 
   targetVoxel = null;
-  targetFace = null;
+  targetNormal = null;
 
   if (hits.length > 0) {
     targetVoxel = hits[0].object;
-    targetFace = hits[0].face;
+
+    targetNormal = hits[0].face.normal.clone()
+      .transformDirection(targetVoxel.matrixWorld);
   }
 }
 
-function placeTargetedVoxel() {
-  if (!targetVoxel || !targetFace) {
-    return;
-  }
+function placeVoxel() {
+  if (!targetVoxel || !targetNormal) return;
 
-  const normal = targetFace.normal.clone();
+  const position = targetVoxel.position.clone()
+    .add(targetNormal.clone());
 
-  // Convert the face normal into world coordinates.
-  normal.transformDirection(targetVoxel.matrixWorld);
-
-  const newPosition = targetVoxel.position.clone();
-
-  newPosition.add(
-    normal.multiplyScalar(voxelSize)
-  );
-
-  createVoxel(newPosition);
+  createVoxel(position);
 }
 
-function destroyTargetedVoxel() {
-  if (targetVoxel) {
-    destroyVoxel(targetVoxel);
-  }
+function destroyTarget() {
+  if (targetVoxel) destroyVoxel(targetVoxel);
 }
 
-// --------------------------------------------------
-// MATERIAL SWITCHING
-// --------------------------------------------------
+// ==================================================
+// CONTROLLER CONNECTION
+// ==================================================
 
-function nextMaterial(direction) {
-  selectedMaterial += direction;
+window.addEventListener("gamepadconnected", event => {
+  document.getElementById("connection").textContent =
+    "Connected";
 
-  if (selectedMaterial < 0) {
-    selectedMaterial = materials.length - 1;
-  }
-
-  if (selectedMaterial >= materials.length) {
-    selectedMaterial = 0;
-  }
-
-  document.getElementById("material").textContent =
-    materials[selectedMaterial].name;
-}
-
-// --------------------------------------------------
-// DESKTOP CONTROLS
-// --------------------------------------------------
-
-const keys = {};
-
-window.addEventListener("keydown", (event) => {
-  keys[event.code] = true;
+  console.log("Gamepad connected:", event.gamepad.id);
 });
 
-window.addEventListener("keyup", (event) => {
-  keys[event.code] = false;
+window.addEventListener("gamepaddisconnected", () => {
+  document.getElementById("connection").textContent =
+    "Disconnected";
 });
-
-let mouseLocked = false;
-
-renderer.domElement.addEventListener(
-  "click",
-  () => {
-    if (!renderer.xr.isPresenting) {
-      renderer.domElement.requestPointerLock();
-    }
-  }
-);
-
-document.addEventListener(
-  "pointerlockchange",
-  () => {
-    mouseLocked =
-      document.pointerLockElement === renderer.domElement;
-  }
-);
-
-document.addEventListener(
-  "mousemove",
-  (event) => {
-    if (!mouseLocked || renderer.xr.isPresenting) {
-      return;
-    }
-
-    player.rotation.y -= event.movementX * 0.002;
-
-    camera.rotation.x -= event.movementY * 0.002;
-
-    camera.rotation.x = THREE.MathUtils.clamp(
-      camera.rotation.x,
-      -Math.PI / 2,
-      Math.PI / 2
-    );
-  }
-);
-
-window.addEventListener("mousedown", (event) => {
-  if (renderer.xr.isPresenting) {
-    return;
-  }
-
-  if (event.button === 0) {
-    placeTargetedVoxel();
-  }
-
-  if (event.button === 2) {
-    destroyTargetedVoxel();
-  }
-});
-
-window.addEventListener("contextmenu", (event) => {
-  event.preventDefault();
-});
-
-// --------------------------------------------------
-// GAMEPAD CONTROLS
-// --------------------------------------------------
 
 const previousButtons = {};
 
-function buttonPressed(gamepad, index) {
-  return gamepad.buttons[index]?.pressed || false;
+function pressed(gp,index) {
+  return !!gp.buttons[index]?.pressed;
 }
 
-function buttonJustPressed(gamepad, index) {
-  const current = buttonPressed(gamepad, index);
-  const previous = previousButtons[index] || false;
+function justPressed(gp,index) {
+  const current = pressed(gp,index);
+  const old = previousButtons[index] || false;
 
   previousButtons[index] = current;
 
-  return current && !previous;
+  return current && !old;
+}
+
+function axis(gp,index) {
+  const value = gp.axes[index] || 0;
+  return Math.abs(value) < 0.15 ? 0 : value;
 }
 
 function updateGamepad() {
-  const gamepads = navigator.getGamepads();
 
-  let gamepad = null;
+  const gamepads = navigator.getGamepads
+    ? navigator.getGamepads()
+    : [];
 
-  for (const gp of gamepads) {
-    if (gp && gp.connected) {
-      gamepad = gp;
+  let gp = null;
+
+  for (const item of gamepads) {
+    if (item && item.connected) {
+      gp = item;
       break;
     }
   }
 
-  if (!gamepad) {
+  const diagnostic = document.getElementById("diagnostics");
+
+  if (!gp) {
+    diagnostic.textContent =
+      "No controller detected. Press a controller button after pairing.";
+    document.getElementById("connection").textContent =
+      "Waiting...";
     return;
   }
 
-  // L1: Previous material
-  if (buttonJustPressed(gamepad, 4)) {
-    nextMaterial(-1);
+  document.getElementById("connection").textContent =
+    "Connected";
+
+  diagnostic.textContent =
+    gp.id + " | Mapping: " + (gp.mapping || "custom") +
+    " | Axes: " +
+    Array.from(gp.axes).map(v=>v.toFixed(2)).join(", ") +
+    " | Buttons: " +
+    gp.buttons.map((b,i)=>i+":"+(b.pressed?"ON":"off")).join(" ");
+
+  // Standard DualShock 4 mapping:
+  // 0 Cross, 1 Circle, 2 Square, 4 L1, 5 R1,
+  // 6 L2, 7 R2.
+
+  if (justPressed(gp,4)) nextMaterial(-1);
+  if (justPressed(gp,5)) nextMaterial(1);
+
+  // Aim with L2; place with R2.
+  if (pressed(gp,6) && justPressed(gp,7)) {
+    placeVoxel();
   }
 
-  // R1: Next material
-  if (buttonJustPressed(gamepad, 5)) {
-    nextMaterial(1);
+  // Circle: destroy.
+  if (justPressed(gp,1)) {
+    destroyTarget();
   }
 
-  // L2: Aim
-  const aiming = buttonPressed(gamepad, 6);
-
-  // R2: Place voxel while aiming
-  if (
-    aiming &&
-    buttonJustPressed(gamepad, 7)
-  ) {
-    placeTargetedVoxel();
+  // Cross: up.
+  if (pressed(gp,0)) {
+    player.position.y += 0.06;
   }
 
-  // Circle: Destroy
-  if (buttonJustPressed(gamepad, 1)) {
-    destroyTargetedVoxel();
+  // Square: down.
+  if (pressed(gp,2)) {
+    player.position.y -= 0.06;
   }
 
-  // X: Move up
-  if (buttonPressed(gamepad, 0)) {
-    player.position.y += 0.08;
-  }
+  // Left stick: move player.
+  const lx = axis(gp,0);
+  const ly = axis(gp,1);
 
-  // Square: Move down
-  if (buttonPressed(gamepad, 2)) {
-    player.position.y -= 0.08;
-  }
+  const forward = new THREE.Vector3(0,0,-1)
+    .applyQuaternion(player.quaternion);
 
-  // Left stick: Player movement
-  const leftX = gamepad.axes[0] || 0;
-  const leftY = gamepad.axes[1] || 0;
+  const right = new THREE.Vector3(1,0,0)
+    .applyQuaternion(player.quaternion);
 
-  const moveSpeed = 0.08;
+  player.position.addScaledVector(forward,-ly*0.08);
+  player.position.addScaledVector(right,lx*0.08);
 
-  const forward = new THREE.Vector3(
-    0, 0, -1
-  ).applyQuaternion(player.quaternion);
+  // Right stick: rotate camera.
+  const rx = axis(gp,2);
+  const ry = axis(gp,3);
 
-  const right = new THREE.Vector3(
-    1, 0, 0
-  ).applyQuaternion(player.quaternion);
+  player.rotation.y -= rx*0.045;
 
-  player.position.addScaledVector(
-    forward,
-    -leftY * moveSpeed
+  camera.rotation.x -= ry*0.045;
+
+  camera.rotation.x = THREE.MathUtils.clamp(
+    camera.rotation.x,-1.5,1.5
   );
-
-  player.position.addScaledVector(
-    right,
-    leftX * moveSpeed
-  );
-
-  // Right stick: Camera movement
-  const rightX = gamepad.axes[2] || 0;
-  const rightY = gamepad.axes[3] || 0;
-
-  const deadzone = 0.15;
-
-  if (Math.abs(rightX) > deadzone) {
-    player.rotation.y -= rightX * 0.04;
-  }
-
-  if (Math.abs(rightY) > deadzone) {
-    camera.rotation.x -= rightY * 0.04;
-
-    camera.rotation.x = THREE.MathUtils.clamp(
-      camera.rotation.x,
-      -Math.PI / 2,
-      Math.PI / 2
-    );
-  }
 }
 
-// --------------------------------------------------
-// DESKTOP MOVEMENT
-// --------------------------------------------------
+// ==================================================
+// KEYBOARD AND MOUSE
+// ==================================================
 
-function updateKeyboardMovement() {
-  const speed = 0.08;
+const keys = {};
 
-  if (keys["KeyW"]) {
-    player.translateZ(-speed);
+window.addEventListener("keydown",e=>{
+  keys[e.code]=true;
+});
+
+window.addEventListener("keyup",e=>{
+  keys[e.code]=false;
+});
+
+let mouseLocked = false;
+
+renderer.domElement.addEventListener("click",()=>{
+  if (!renderer.xr.isPresenting) {
+    renderer.domElement.requestPointerLock?.();
   }
+});
 
-  if (keys["KeyS"]) {
-    player.translateZ(speed);
-  }
+document.addEventListener("pointerlockchange",()=>{
+  mouseLocked =
+    document.pointerLockElement === renderer.domElement;
+});
 
-  if (keys["KeyA"]) {
-    player.translateX(-speed);
-  }
+document.addEventListener("mousemove",e=>{
+  if (!mouseLocked || renderer.xr.isPresenting) return;
 
-  if (keys["KeyD"]) {
-    player.translateX(speed);
-  }
+  player.rotation.y -= e.movementX*0.002;
+  camera.rotation.x -= e.movementY*0.002;
 
-  if (keys["Space"]) {
-    player.position.y += speed;
-  }
+  camera.rotation.x = THREE.MathUtils.clamp(
+    camera.rotation.x,-1.5,1.5
+  );
+});
 
-  if (keys["ShiftLeft"]) {
-    player.position.y -= speed;
-  }
+window.addEventListener("mousedown",e=>{
+  if (renderer.xr.isPresenting) return;
+
+  if (e.button===0) placeVoxel();
+  if (e.button===2) destroyTarget();
+});
+
+window.addEventListener("contextmenu",e=>e.preventDefault());
+
+function updateKeyboard() {
+  if (renderer.xr.isPresenting) return;
+
+  if (keys.KeyW) player.translateZ(-0.08);
+  if (keys.KeyS) player.translateZ(0.08);
+  if (keys.KeyA) player.translateX(-0.08);
+  if (keys.KeyD) player.translateX(0.08);
+
+  if (keys.Space) player.position.y+=0.08;
+  if (keys.ShiftLeft) player.position.y-=0.08;
 }
 
-// --------------------------------------------------
+// ==================================================
+// MOBILE TOUCH BUTTONS
+// ==================================================
+
+function touchAction(id, action) {
+  const button = document.getElementById(id);
+
+  button.addEventListener("pointerdown",e=>{
+    e.preventDefault();
+    action();
+  });
+}
+
+touchAction("placeTouch",placeVoxel);
+touchAction("destroyTouch",destroyTarget);
+touchAction("nextTouch",()=>nextMaterial(1));
+touchAction("upTouch",()=>player.position.y+=0.3);
+touchAction("downTouch",()=>player.position.y-=0.3);
+
+// ==================================================
 // VR STATUS
-// --------------------------------------------------
+// ==================================================
 
-renderer.xr.addEventListener(
-  "sessionstart",
-  () => {
-    document.getElementById("vrStatus").textContent =
-      "Active";
-  }
-);
+renderer.xr.addEventListener("sessionstart",()=>{
+  document.getElementById("vrStatus").textContent="Active";
+});
 
-renderer.xr.addEventListener(
-  "sessionend",
-  () => {
-    document.getElementById("vrStatus").textContent =
-      "Ready";
-  }
-);
+renderer.xr.addEventListener("sessionend",()=>{
+  document.getElementById("vrStatus").textContent="Ready";
+});
 
-// --------------------------------------------------
-// MAIN LOOP
-// --------------------------------------------------
+// ==================================================
+// RESIZE
+// ==================================================
+
+window.addEventListener("resize",()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+// ==================================================
+// GAME LOOP
+// ==================================================
 
 function animate() {
+  updateGamepad();
+  updateKeyboard();
   updateTarget();
 
-  updateGamepad();
-
-  if (!renderer.xr.isPresenting) {
-    updateKeyboardMovement();
-  }
-
-  renderer.render(scene, camera);
+  renderer.render(scene,camera);
 }
 
 renderer.setAnimationLoop(animate);
-
-// --------------------------------------------------
-// RESIZE
-// --------------------------------------------------
-
-window.addEventListener("resize", () => {
-  camera.aspect =
-    window.innerWidth / window.innerHeight;
-
-  camera.updateProjectionMatrix();
-
-  renderer.setSize(
-    window.innerWidth,
-    window.innerHeight
-  );
-});
 
 </script>
 </body>
