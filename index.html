@@ -3,584 +3,745 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smooth Manifold Visualizer</title>
-  <!-- Tailwind CSS -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>VR Box Voice AR/VR Recorder</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
     body {
       margin: 0;
+      padding: 0;
       overflow: hidden;
-      background-color: #05070d;
+      background-color: #050508;
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      color: #f3f4f6;
+      user-select: none;
+      color: #fff;
     }
-    #canvas-container {
+    
+    /* Stereo Split Layout */
+    .stereo-container {
+      display: flex;
       width: 100vw;
       height: 100vh;
+      position: relative;
+    }
+    
+    .eye-view {
+      width: 50vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    /* Eye Divider Line for VR Box Alignment */
+    .eye-divider {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(255, 255, 255, 0.15);
+      z-index: 40;
+      pointer-events: none;
+    }
+    
+    canvas.webgl-canvas {
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 1;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
     }
-    .glass-panel {
-      background: rgba(10, 15, 29, 0.75);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+
+    /* VR HUD Styling */
+    .vr-hud {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 1.5rem;
+      box-sizing: border-box;
     }
-    /* Customize lil-gui overlay placement */
-    .lil-gui {
-      --background-color: rgba(13, 19, 36, 0.85) !important;
-      --text-color: #e2e8f0 !important;
-      --title-background-color: rgba(30, 41, 59, 0.9) !important;
-      --widget-color: rgba(30, 41, 59, 0.7) !important;
-      --hover-color: rgba(99, 102, 241, 0.6) !important;
-      --focus-color: #6366f1 !important;
-      --number-color: #38bdf8 !important;
-      --string-color: #34d399 !important;
-      font-family: inherit !important;
-      border-radius: 0.75rem !important;
-      border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5) !important;
-      overflow: hidden !important;
+
+    /* Glowing HUD accents */
+    .hud-card {
+      background: rgba(10, 15, 30, 0.65);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+      border-radius: 12px;
     }
-    .lil-gui .title {
-      font-weight: 600 !important;
-      letter-spacing: 0.05em !important;
-      text-transform: uppercase !important;
-      font-size: 0.75rem !important;
+
+    .hud-card-rec {
+      background: rgba(30, 10, 15, 0.75);
+      border-color: rgba(255, 0, 80, 0.5);
+      box-shadow: 0 0 20px rgba(255, 0, 80, 0.3);
+    }
+
+    .pulse-rec {
+      animation: pulse-red 1.2s infinite alternate;
+    }
+
+    @keyframes pulse-red {
+      0% { opacity: 0.3; transform: scale(0.95); }
+      100% { opacity: 1; transform: scale(1.05); }
+    }
+
+    /* Hidden video element for camera feed */
+    #webcam-video {
+      display: none;
+    }
+
+    /* Manual control overlay for desktop / setup mode */
+    .setup-overlay {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      gap: 0.75rem;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 0.75rem 1.25rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
   </style>
 </head>
 <body>
 
-  <!-- Three.js Canvas Container -->
-  <div id="canvas-container"></div>
+  <!-- Hidden Camera Source Video -->
+  <video id="webcam-video" autoplay playsinline muted></video>
 
-  <!-- Header Overlay -->
-  <div class="absolute top-4 left-4 z-10 pointer-events-none">
-    <div class="glass-panel p-4 rounded-xl shadow-2xl flex items-center gap-3 border border-white/10 pointer-events-auto">
-      <div class="w-10 h-10 rounded-lg bg-indigo-600/80 flex items-center justify-center text-white shadow-lg">
-        <i class="fa-solid fa-user-astronaut text-xl"></i>
+  <!-- Central Stereo Divider Line -->
+  <div class="eye-divider"></div>
+
+  <!-- Main Dual Eye Viewport Container -->
+  <div class="stereo-container" id="app-viewport">
+    
+    <!-- LEFT EYE VIEWPORT -->
+    <div class="eye-view" id="left-eye-container">
+      <canvas id="canvas-left" class="webgl-canvas"></canvas>
+
+      <!-- Left HUD Overlay -->
+      <div class="vr-hud">
+        <!-- Top Status Bar -->
+        <div class="flex justify-between items-start">
+          <div class="hud-card p-3 flex items-center gap-3">
+            <div id="left-mode-badge" class="px-2.5 py-1 rounded-md text-xs font-bold tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-500/40">
+              AR MODE
+            </div>
+            <div id="left-rec-indicator" class="hidden flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 hud-card-rec">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500 pulse-rec"></span>
+              <span id="left-rec-timer">REC 00:00</span>
+            </div>
+          </div>
+          <div class="hud-card p-2 text-right">
+            <div class="text-[10px] text-cyan-300/70 font-mono">VOICE CONTROL ACTIVE</div>
+            <div id="left-last-command" class="text-xs font-bold text-cyan-300">Say "Record" or "Play"</div>
+          </div>
+        </div>
+
+        <!-- Center Crosshair / Sight -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="8" stroke="#00F0FF" stroke-width="1.5" stroke-dasharray="2 2"/>
+            <line x1="20" y1="2" x2="20" y2="10" stroke="#00F0FF" stroke-width="1.5"/>
+            <line x1="20" y1="30" x2="20" y2="38" stroke="#00F0FF" stroke-width="1.5"/>
+            <line x1="2" y1="20" x2="10" y2="20" stroke="#00F0FF" stroke-width="1.5"/>
+            <line x1="30" y1="20" x2="38" y2="20" stroke="#00F0FF" stroke-width="1.5"/>
+          </svg>
+        </div>
+
+        <!-- Bottom GPS Data Card -->
+        <div class="hud-card p-3 w-full max-w-xs">
+          <div class="flex items-center gap-2 text-xs font-semibold text-cyan-400 mb-1">
+            <i class="fa-solid fa-location-dot text-rose-400"></i> GPS GEOTAG STATUS
+          </div>
+          <div id="left-gps-info" class="font-mono text-[11px] text-gray-300 leading-tight">
+            Acquiring spatial coordinates...
+          </div>
+        </div>
       </div>
-      <div>
-        <h1 class="font-bold text-base tracking-wide text-white">Humanoid Manifold</h1>
-        <p class="text-xs text-gray-400">Continuous Topology & Curvature Explorer</p>
+    </div>
+
+    <!-- RIGHT EYE VIEWPORT (Mirrored HUD Layout for Stereo Vision) -->
+    <div class="eye-view" id="right-eye-container">
+      <canvas id="canvas-right" class="webgl-canvas"></canvas>
+
+      <!-- Right HUD Overlay -->
+      <div class="vr-hud">
+        <!-- Top Status Bar -->
+        <div class="flex justify-between items-start">
+          <div class="hud-card p-3 flex items-center gap-3">
+            <div id="right-mode-badge" class="px-2.5 py-1 rounded-md text-xs font-bold tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-500/40">
+              AR MODE
+            </div>
+            <div id="right-rec-indicator" class="hidden flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 hud-card-rec">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500 pulse-rec"></span>
+              <span id="right-rec-timer">REC 00:00</span>
+            </div>
+          </div>
+          <div class="hud-card p-2 text-right">
+            <div class="text-[10px] text-cyan-300/70 font-mono">VOICE CONTROL ACTIVE</div>
+            <div id="right-last-command" class="text-xs font-bold text-cyan-300">Say "Record" or "Play"</div>
+          </div>
+        </div>
+
+        <!-- Center Crosshair -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="8" stroke="#00F0FF" stroke-width="1.5" stroke-dasharray="2 2"/>
+            <line x1="20" y1="2" x2="20" y2="10" stroke="#00F0FF" stroke-width="1.5"/>
+            <line x1="20" y1="30" x2="20" y2="38" stroke="#00F0FF" stroke-width="1.5"/>
+            <line x1="2" y1="20" x2="10" y2="20" stroke="#00F0FF" stroke-width="1.5"/>
+            <line x1="30" y1="20" x2="38" y2="20" stroke="#00F0FF" stroke-width="1.5"/>
+          </svg>
+        </div>
+
+        <!-- Bottom GPS Data Card -->
+        <div class="hud-card p-3 w-full max-w-xs">
+          <div class="flex items-center gap-2 text-xs font-semibold text-cyan-400 mb-1">
+            <i class="fa-solid fa-location-dot text-rose-400"></i> GPS GEOTAG STATUS
+          </div>
+          <div id="right-gps-info" class="font-mono text-[11px] text-gray-300 leading-tight">
+            Acquiring spatial coordinates...
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Include Three.js, OrbitControls, and lil-gui via CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.18"></script>
+  <!-- Manual On-Screen Controls for Setup / Desktop Testing -->
+  <div class="setup-overlay shadow-2xl">
+    <button id="btn-toggle-cam" class="px-3 py-1.5 rounded-lg bg-cyan-600/80 hover:bg-cyan-500 text-xs font-semibold text-white flex items-center gap-2 transition">
+      <i class="fa-solid fa-camera"></i> Start Cam
+    </button>
+    <button id="btn-record" class="px-3 py-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-500 text-xs font-semibold text-white flex items-center gap-2 transition">
+      <i class="fa-solid fa-circle"></i> Voice: "Record"
+    </button>
+    <button id="btn-stop" class="px-3 py-1.5 rounded-lg bg-gray-700/80 hover:bg-gray-600 text-xs font-semibold text-white flex items-center gap-2 transition">
+      <i class="fa-solid fa-square"></i> Voice: "Stop"
+    </button>
+    <button id="btn-mode" class="px-3 py-1.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-500 text-xs font-semibold text-white flex items-center gap-2 transition">
+      <i class="fa-solid fa-vr-cardboard"></i> Switch Mode ("Play"/"AR")
+    </button>
+  </div>
 
+  <!-- Application Logic JavaScript -->
   <script>
+    /**
+     * WebVR / WebAR Dual-Eye Voice Controller Engine
+     */
+    
     // --- Application State ---
-    const params = {
-      manifoldMode: 'parametricHumanoid',
-      uRes: 100,
-      vRes: 120,
-      scale: 1.0,
-      materialPreset: 'cyberHolo',
-      baseColor: '#ffffff',
-      roughness: 0.15,
-      metalness: 0.2,
-      clearcoat: 1.0,
-      transmission: 0.4,
-      wireframe: true,
-      wireframeColor: '#6366f1',
-      wireframeOpacity: 0.25,
-      curvatureMode: 'none', // 'none', 'gaussian', 'height', 'normal'
-      animateBreathing: true,
-      breathingSpeed: 1.2,
-      breathingIntensity: 0.08,
-      pulseDeform: false,
-      autoRotate: true,
-      autoRotateSpeed: 1.0,
-      resetCamera: () => resetCamera()
+    const state = {
+      mode: 'AR', // 'AR' or 'VR'
+      isRecording: false,
+      recordingStartTime: 0,
+      recInterval: null,
+      recordedClips: [], // Stores { id, blobUrl, gps, timestamp }
+      activeVideoIndex: 0,
+      gps: {
+        lat: 'Waiting...',
+        lng: 'Waiting...',
+        alt: 'N/A',
+        accuracy: 'N/A'
+      },
+      lastVoiceCmd: 'Listening for "Record" / "Stop" / "Play"',
+      cameraActive: false
     };
 
-    // --- Humanoid Parametric Surface Equations ---
-    // Smooth mathematical mappings for parametric humanoid manifolds
-    const HumanoidManifolds = {
+    // --- DOM Elements ---
+    const videoElem = document.getElementById('webcam-video');
+    const leftCanvas = document.getElementById('canvas-left');
+    const rightCanvas = document.getElementById('canvas-right');
+
+    const leftModeBadge = document.getElementById('left-mode-badge');
+    const rightModeBadge = document.getElementById('right-mode-badge');
+    const leftRecInd = document.getElementById('left-rec-indicator');
+    const rightRecInd = document.getElementById('right-rec-indicator');
+    const leftRecTimer = document.getElementById('left-rec-timer');
+    const rightRecTimer = document.getElementById('right-rec-timer');
+    const leftGpsInfo = document.getElementById('left-gps-info');
+    const rightGpsInfo = document.getElementById('right-gps-info');
+    const leftLastCmd = document.getElementById('left-last-command');
+    const rightLastCmd = document.getElementById('right-last-command');
+
+    // --- Three.js Dual Eye Setup ---
+    let scene, rendererLeft, rendererRight;
+    let cameraLeft, cameraRight;
+    let arCameraPlane, arVideoTexture;
+    let arFloatingObjectsGroup;
+    let vrTheaterGroup, vrVideoPlane, vrVideoTexture, vrTextCanvasPlane;
+    let vrTextCanvas, vrTextCtx;
+
+    const EYE_SEPARATION = 0.064; // Standard interpupillary distance for stereo effect
+
+    function init3D() {
+      // Create Main Scene
+      scene = new THREE.Scene();
+
+      // Setup Cameras for Stereoscopic View
+      const aspect = (window.innerWidth / 2) / window.innerHeight;
       
-      // 1. Smooth Parametric Humanoid Torso / Body
-      parametricHumanoid: (u, v, target) => {
-        // u in [0, 1] maps around body perimeter (theta)
-        // v in [0, 1] maps vertical height from head to feet
-        const theta = u * Math.PI * 2;
-        const y = (v - 0.5) * 4.2; // Height span
+      cameraLeft = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+      cameraRight = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
 
-        // Base anatomical contour profile along height v
-        let radius = 0.4;
+      cameraLeft.position.set(-EYE_SEPARATION / 2, 0, 3);
+      cameraRight.position.set(EYE_SEPARATION / 2, 0, 3);
 
-        // Head (top)
-        if (v > 0.85) {
-          const headV = (v - 0.85) / 0.15;
-          radius = 0.38 * Math.sin(headV * Math.PI);
-        } 
-        // Neck
-        else if (v > 0.78) {
-          const neckV = (v - 0.78) / 0.07;
-          radius = 0.18 + 0.05 * Math.cos(neckV * Math.PI);
-        } 
-        // Shoulders & Chest
-        else if (v > 0.58) {
-          const chestV = (v - 0.58) / 0.20;
-          radius = 0.48 + 0.22 * Math.sin(chestV * Math.PI);
-          // Shoulder width modulation via cosine theta
-          radius += 0.28 * Math.pow(Math.cos(theta), 2) * Math.sin(chestV * Math.PI);
-        } 
-        // Waist & Abdomen
-        else if (v > 0.42) {
-          const waistV = (v - 0.42) / 0.16;
-          radius = 0.32 + 0.10 * Math.cos(waistV * Math.PI);
-          radius += 0.08 * Math.pow(Math.cos(theta), 2);
-        } 
-        // Hips / Pelvis
-        else if (v > 0.30) {
-          const hipV = (v - 0.30) / 0.12;
-          radius = 0.42 + 0.12 * Math.sin(hipV * Math.PI);
-          radius += 0.12 * Math.pow(Math.cos(theta), 2);
-        } 
-        // Legs (split dual-cylinder manifold trick using sine harmonics)
-        else {
-          const legV = v / 0.30;
-          const legRadius = 0.18 * Math.sin(legV * Math.PI * 0.9 + 0.1);
-          // Create leg separation modulation
-          const separation = 0.24 * (1.0 - legV * 0.3);
-          const isLeft = Math.cos(theta) > 0 ? 1 : -1;
-          const xOffset = isLeft * separation;
-          
-          const x = xOffset + legRadius * Math.cos(theta);
-          const z = legRadius * Math.sin(theta) * 0.95;
-          target.set(x, y, z);
-          return;
-        }
-
-        // Elliptical cross-section modulation for natural torso depth vs width
-        const depthFactor = 0.7 + 0.15 * Math.sin(v * Math.PI * 2);
-        const x = radius * Math.cos(theta);
-        const z = radius * depthFactor * Math.sin(theta);
-        target.set(x, y, z);
-      },
-
-      // 2. Cyberpunk Android (Segmented smooth manifold curves)
-      cyberAndroid: (u, v, target) => {
-        const theta = u * Math.PI * 2;
-        const y = (v - 0.5) * 4.0;
-        
-        // Base profile + ribbed cyberpunk surface modulation
-        let r = 0.35 + 0.25 * Math.sin(v * Math.PI * 3);
-        
-        // Exoskeleton panel ribbing
-        const ribbing = 0.04 * Math.sin(v * 40) * Math.cos(theta * 4);
-        r += ribbing;
-
-        // Chest core expansion
-        if (v > 0.55 && v < 0.75) {
-          r += 0.2 * Math.sin((v - 0.55) / 0.2 * Math.PI) * Math.pow(Math.cos(theta), 2);
-        }
-
-        const x = r * Math.cos(theta);
-        const z = r * Math.sin(theta) * (0.8 + 0.2 * Math.cos(theta * 2));
-        target.set(x, y, z);
-      },
-
-      // 3. Continuous Topological Torus-Humanoid Hybrid
-      topologicalHybrid: (u, v, target) => {
-        // A genus-1 continuous self-inverting torus manifold twisted into a stylized humanoid stance
-        const uAngle = u * Math.PI * 2;
-        const vAngle = v * Math.PI * 2;
-
-        const R = 1.2 + 0.4 * Math.sin(vAngle * 2); // Major radius modulation
-        const r = 0.45 + 0.15 * Math.cos(uAngle * 3); // Minor radius modulation
-
-        const x = (R + r * Math.cos(vAngle)) * Math.cos(uAngle);
-        const y = (R + r * Math.cos(vAngle)) * Math.sin(uAngle) * 1.5 - 0.2;
-        const z = r * Math.sin(vAngle) + 0.3 * Math.sin(uAngle * 2);
-
-        target.set(x, y, z).multiplyScalar(0.75);
-      },
-
-      // 4. Minimalist Organic Mannequin (Ultra-smooth continuous geometry)
-      organicMannequin: (u, v, target) => {
-        const theta = u * Math.PI * 2;
-        const y = (v - 0.5) * 4.2;
-
-        // Smooth continuous Gaussian blob blend along spine axis
-        const headBlob = 0.4 * Math.exp(-Math.pow((v - 0.9) / 0.08, 2));
-        const chestBlob = 0.6 * Math.exp(-Math.pow((v - 0.65) / 0.15, 2));
-        const hipBlob = 0.5 * Math.exp(-Math.pow((v - 0.4) / 0.12, 2));
-        const legBlob = 0.3 * Math.exp(-Math.pow((v - 0.18) / 0.18, 2));
-
-        const r = 0.1 + headBlob + chestBlob + hipBlob + legBlob;
-        
-        const widthFactor = 1.0 + 0.4 * Math.exp(-Math.pow((v - 0.68) / 0.1, 2)) * Math.pow(Math.cos(theta), 2);
-
-        const x = r * widthFactor * Math.cos(theta);
-        const z = r * 0.8 * Math.sin(theta);
-        target.set(x, y, z);
-      }
-    };
-
-    // --- Scene Setup ---
-    const container = document.getElementById('canvas-container');
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x05070d, 0.035);
-
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0.8, 6.0);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
-    renderer.shadowMap.enabled = true;
-    container.appendChild(renderer.domElement);
-
-    // Controls
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.maxDistance = 15;
-    controls.minDistance = 2;
-    controls.target.set(0, 0, 0);
-
-    function resetCamera() {
-      camera.position.set(0, 0.8, 6.0);
-      controls.target.set(0, 0, 0);
-      controls.update();
-    }
-
-    // --- Lighting & Studio Environment ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
-
-    const keyLight = new THREE.DirectionalLight(0x6366f1, 3.0); // Cyan/Indigo Key Light
-    keyLight.position.set(6, 8, 6);
-    scene.add(keyLight);
-
-    const fillLight = new THREE.DirectionalLight(0xec4899, 2.0); // Pink Fill Light
-    fillLight.position.set(-6, -2, -4);
-    scene.add(fillLight);
-
-    const rimLight = new THREE.PointLight(0x38bdf8, 4.0, 12); // Blue Rim Light
-    rimLight.position.set(0, 5, -4);
-    scene.add(rimLight);
-
-    // Reflective Floor Grid
-    const gridHelper = new THREE.GridHelper(20, 40, 0x6366f1, 0x1e293b);
-    gridHelper.position.y = -2.3;
-    gridHelper.material.opacity = 0.35;
-    gridHelper.material.transparent = true;
-    scene.add(gridHelper);
-
-    // --- Custom Shader for Curvature Overlay ---
-    const CurvatureShader = {
-      vertexShader: `
-        varying vec3 vNormal;
-        varying vec3 vPosition;
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          vNormal = normalize(normalMatrix * normal);
-          vPosition = position;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform stringCurvatureMode;
-        uniform int uCurvatureMode; // 0: none, 1: gaussian, 2: height, 3: normal gradient
-        uniform vec3 uBaseColor;
-        uniform float uRoughness;
-        uniform float uMetalness;
-        varying vec3 vNormal;
-        varying vec3 vPosition;
-        varying vec2 vUv;
-
-        // Color map helpers for curvature mapping
-        vec3 turboColormap(float t) {
-          t = clamp(t, 0.0, 1.0);
-          return 0.5 + 0.5 * cos(6.28318 * (vec3(1.0, 1.0, 1.0) * t + vec3(0.0, 0.33, 0.67)));
-        }
-
-        void main() {
-          vec3 viewDir = normalize(-vPosition);
-          float NdotV = max(0.0, dot(vNormal, viewDir));
-          
-          vec3 finalColor = uBaseColor;
-
-          if (uCurvatureMode == 1) {
-            // Gaussian curvature approximation via derivatives of normal
-            vec3 dNdx = dFdx(vNormal);
-            vec3 dNdy = dFdy(vNormal);
-            float curvature = length(dNdx) + length(dNdy);
-            finalColor = turboColormap(curvature * 2.5);
-          } else if (uCurvatureMode == 2) {
-            // Height gradient color map
-            float normalizedHeight = clamp((vPosition.y + 2.0) / 4.0, 0.0, 1.0);
-            finalColor = turboColormap(normalizedHeight);
-          } else if (uCurvatureMode == 3) {
-            // Normal facing gradient
-            finalColor = vNormal * 0.5 + 0.5;
-          }
-
-          // Basic shading output
-          float light = max(0.2, NdotV);
-          gl_FragColor = vec4(finalColor * light, 1.0);
-        }
-      `
-    };
-
-    // --- Material Presets ---
-    const MaterialPresets = {
-      cyberHolo: { color: '#ffffff', roughness: 0.1, metalness: 0.1, clearcoat: 1.0, transmission: 0.5 },
-      chrome: { color: '#ffffff', roughness: 0.05, metalness: 1.0, clearcoat: 1.0, transmission: 0.0 },
-      gold: { color: '#ffb703', roughness: 0.2, metalness: 0.95, clearcoat: 0.5, transmission: 0.0 },
-      emeraldGlass: { color: '#10b981', roughness: 0.1, metalness: 0.05, clearcoat: 1.0, transmission: 0.8 },
-      marble: { color: '#f8fafc', roughness: 0.35, metalness: 0.0, clearcoat: 0.2, transmission: 0.0 }
-    };
-
-    const surfaceMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(params.baseColor),
-      roughness: params.roughness,
-      metalness: params.metalness,
-      clearcoat: params.clearcoat,
-      clearcoatRoughness: 0.1,
-      transmission: params.transmission,
-      ior: 1.5,
-      side: THREE.DoubleSide
-    });
-
-    const curvatureMaterial = new THREE.ShaderMaterial({
-      vertexShader: CurvatureShader.vertexShader,
-      fragmentShader: CurvatureShader.fragmentShader,
-      uniforms: {
-        uCurvatureMode: { value: 0 },
-        uBaseColor: { value: new THREE.Color(params.baseColor) },
-        uRoughness: { value: params.roughness },
-        uMetalness: { value: params.metalness }
-      },
-      side: THREE.DoubleSide
-    });
-
-    const wireframeMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(params.wireframeColor),
-      wireframe: true,
-      transparent: true,
-      opacity: params.wireframeOpacity
-    });
-
-    // --- Mesh & Geometry Builder ---
-    let meshGroup = new THREE.Group();
-    let mainMesh, wireframeMesh;
-    scene.add(meshGroup);
-
-    // Dynamic procedural geometry cache
-    let originalPositions = null;
-
-    function buildManifoldGeometry() {
-      // Clear previous geometries
-      while (meshGroup.children.length > 0) {
-        const obj = meshGroup.children.pop();
-        if (obj.geometry) obj.geometry.dispose();
-      }
-
-      const parametricFunc = HumanoidManifolds[params.manifoldMode];
-      const geometry = new THREE.ParametricGeometry(parametricFunc, params.uRes, params.vRes);
-      geometry.center();
-      geometry.computeVertexNormals();
-
-      // Store original positions for real-time deformation animation
-      originalPositions = geometry.attributes.position.array.slice();
-
-      const activeMaterial = (params.curvatureMode !== 'none') ? curvatureMaterial : surfaceMaterial;
-
-      mainMesh = new THREE.Mesh(geometry, activeMaterial);
-      wireframeMesh = new THREE.Mesh(geometry, wireframeMaterial);
-      wireframeMesh.visible = params.wireframe;
-
-      meshGroup.add(mainMesh);
-      meshGroup.add(wireframeMesh);
-      meshGroup.scale.setScalar(params.scale);
-    }
-
-    // Update Curvature Uniforms
-    function updateCurvatureMode() {
-      const modeMap = { 'none': 0, 'gaussian': 1, 'height': 2, 'normal': 3 };
-      curvatureMaterial.uniforms.uCurvatureMode.value = modeMap[params.curvatureMode];
+      // Renderers for Left & Right Canvases
+      rendererLeft = new THREE.WebGLRenderer({ canvas: leftCanvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+      rendererRight = new THREE.WebGLRenderer({ canvas: rightCanvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
       
-      if (mainMesh) {
-        mainMesh.material = (params.curvatureMode !== 'none') ? curvatureMaterial : surfaceMaterial;
+      resizeRenderers();
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0x00f0ff, 1.2);
+      dirLight.position.set(2, 4, 3);
+      scene.add(dirLight);
+
+      // --- Build AR Plane Background ---
+      // Dummy texture if camera isn't loaded yet
+      const canvasPlaceholder = document.createElement('canvas');
+      canvasPlaceholder.width = 640;
+      canvasPlaceholder.height = 480;
+      const ctx = canvasPlaceholder.getContext('2d');
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 640, 480);
+      ctx.fillStyle = '#00f0ff';
+      ctx.font = '24px sans-serif';
+      ctx.fillText('Camera feed initializing...', 180, 240);
+
+      arVideoTexture = new THREE.CanvasTexture(canvasPlaceholder);
+      const arPlaneGeo = new THREE.PlaneGeometry(16, 9);
+      const arPlaneMat = new THREE.MeshBasicMaterial({ map: arVideoTexture, depthWrite: false });
+      arCameraPlane = new THREE.Mesh(arPlaneGeo, arPlaneMat);
+      arCameraPlane.position.set(0, 0, -10);
+      scene.add(arCameraPlane);
+
+      // --- Floating Interactive AR Elements ---
+      arFloatingObjectsGroup = new THREE.Group();
+      
+      // Floating Cyber Ring
+      const ringGeo = new THREE.TorusGeometry(0.8, 0.04, 16, 100);
+      const ringMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, wireframe: true, emissive: 0x00f0ff, emissiveIntensity: 0.5 });
+      const cyberRing = new THREE.Mesh(ringGeo, ringMat);
+      cyberRing.position.set(0, 0, 0);
+      arFloatingObjectsGroup.add(cyberRing);
+
+      // Orbiting Cubes
+      const cubeGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+      const cubeMat = new THREE.MeshStandardMaterial({ color: 0xff0055 });
+      for (let i = 0; i < 4; i++) {
+        const cube = new THREE.Mesh(cubeGeo, cubeMat);
+        const angle = (i / 4) * Math.PI * 2;
+        cube.position.set(Math.cos(angle) * 1.5, Math.sin(angle) * 1.5, 0);
+        cube.userData = { angle: angle };
+        arFloatingObjectsGroup.add(cube);
+      }
+      
+      scene.add(arFloatingObjectsGroup);
+
+      // --- VR Theater Gallery Setup ---
+      vrTheaterGroup = new THREE.Group();
+      vrTheaterGroup.visible = false; // Hidden in AR mode
+
+      // Curved Virtual Theater Screen
+      const screenGeo = new THREE.PlaneGeometry(4, 2.25);
+      const screenMat = new THREE.MeshBasicMaterial({ color: 0x111122 });
+      vrVideoPlane = new THREE.Mesh(screenGeo, screenMat);
+      vrVideoPlane.position.set(0, 0.2, -3);
+      vrTheaterGroup.add(vrVideoPlane);
+
+      // Geotag VR Info Card (2D Canvas to 3D Mesh)
+      vrTextCanvas = document.createElement('canvas');
+      vrTextCanvas.width = 512;
+      vrTextCanvas.height = 256;
+      vrTextCtx = vrTextCanvas.getContext('2d');
+      updateVRInfoCard("No recording selected", "N/A");
+
+      vrTextCanvasTexture = new THREE.CanvasTexture(vrTextCanvas);
+      const vrCardGeo = new THREE.PlaneGeometry(3, 1.2);
+      const vrCardMat = new THREE.MeshBasicMaterial({ map: vrTextCanvasTexture, transparent: true });
+      vrTextCanvasPlane = new THREE.Mesh(vrCardGeo, vrCardMat);
+      vrTextCanvasPlane.position.set(0, -1.6, -3);
+      vrTheaterGroup.add(vrTextCanvasPlane);
+
+      // VR Environment Grid Background
+      const gridHelper = new THREE.GridHelper(20, 20, 0x00f0ff, 0x1e293b);
+      gridHelper.position.y = -2;
+      vrTheaterGroup.add(gridHelper);
+
+      scene.add(vrTheaterGroup);
+
+      // Device Orientation Controller Setup for head-tracking preview
+      window.addEventListener('deviceorientation', handleHeadTracking);
+    }
+
+    // Dynamic VR Info Card Canvas Renderer
+    function updateVRInfoCard(title, gpsText) {
+      if (!vrTextCtx) return;
+      vrTextCtx.clearRect(0, 0, 512, 256);
+      
+      // Card Background Glassmorphism
+      vrTextCtx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      vrTextCtx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
+      vrTextCtx.lineWidth = 4;
+      vrTextCtx.beginPath();
+      vrTextCtx.roundRect(10, 10, 492, 236, 16);
+      vrTextCtx.fill();
+      vrTextCtx.stroke();
+
+      // Card Header
+      vrTextCtx.fillStyle = '#00f0ff';
+      vrTextCtx.font = 'bold 22px sans-serif';
+      vrTextCtx.fillText('RECORDED GEOTAG DATA', 30, 45);
+
+      // Video Info
+      vrTextCtx.fillStyle = '#ffffff';
+      vrTextCtx.font = '18px sans-serif';
+      vrTextCtx.fillText(`Clip: ${title}`, 30, 85);
+
+      // GPS Lines
+      vrTextCtx.fillStyle = '#94a3b8';
+      vrTextCtx.font = '16px monospace';
+      const lines = gpsText.split('\n');
+      lines.forEach((line, idx) => {
+        vrTextCtx.fillText(line, 30, 130 + (idx * 25));
+      });
+
+      if (vrTextCanvasPlane && vrTextCanvasPlane.material.map) {
+        vrTextCanvasPlane.material.map.needsUpdate = true;
       }
     }
 
-    // Apply Preset Materials
-    function applyMaterialPreset(presetKey) {
-      const p = MaterialPresets[presetKey];
-      if (p) {
-        params.baseColor = p.color;
-        params.roughness = p.roughness;
-        params.metalness = p.metalness;
-        params.clearcoat = p.clearcoat;
-        params.transmission = p.transmission;
-
-        surfaceMaterial.color.set(p.color);
-        surfaceMaterial.roughness = p.roughness;
-        surfaceMaterial.metalness = p.metalness;
-        surfaceMaterial.clearcoat = p.clearcoat;
-        surfaceMaterial.transmission = p.transmission;
-
-        curvatureMaterial.uniforms.uBaseColor.value.set(p.color);
+    // Head-tracking fallback using Device Orientation
+    function handleHeadTracking(e) {
+      if (e.alpha !== null && state.mode === 'VR') {
+        const yaw = THREE.MathUtils.degToRad(e.alpha || 0);
+        const pitch = THREE.MathUtils.degToRad(e.beta || 0);
+        
+        // Slightly tilt camera in VR mode for immersion
+        cameraLeft.rotation.y = yaw * 0.1;
+        cameraRight.rotation.y = yaw * 0.1;
       }
     }
 
-    // Initialize Geometry
-    applyMaterialPreset(params.materialPreset);
-    buildManifoldGeometry();
+    function resizeRenderers() {
+      const width = window.innerWidth / 2;
+      const height = window.innerHeight;
 
-    // --- Lil-GUI Panel Setup ---
-    const gui = new lil.GUI({ title: 'Humanoid Manifold Controls' });
+      cameraLeft.aspect = width / height;
+      cameraLeft.updateProjectionMatrix();
 
-    // 1. Manifold Selector
-    gui.add(params, 'manifoldMode', {
-      'Parametric Humanoid Body': 'parametricHumanoid',
-      'Cyberpunk Android': 'cyberAndroid',
-      'Torus-Humanoid Hybrid': 'topologicalHybrid',
-      'Organic Mannequin': 'organicMannequin'
-    }).name('Topology Mode').onChange(buildManifoldGeometry);
+      cameraRight.aspect = width / height;
+      cameraRight.updateProjectionMatrix();
 
-    // 2. Curvature & Analysis
-    const curvatureFolder = gui.addFolder('Curvature & Analysis');
-    curvatureFolder.add(params, 'curvatureMode', {
-      'Shaded Surface (Off)': 'none',
-      'Gaussian Curvature Map': 'gaussian',
-      'Height Gradient Map': 'height',
-      'Normal Orientation Map': 'normal'
-    }).name('Curvature Overlay').onChange(updateCurvatureMode);
+      rendererLeft.setSize(width, height);
+      rendererRight.setSize(width, height);
+    }
 
-    // 3. Material Controls
-    const matFolder = gui.addFolder('PBR Surface Material');
-    matFolder.add(params, 'materialPreset', {
-      'Holographic Cyber Glow': 'cyberHolo',
-      'Polished Chrome': 'chrome',
-      'Golden Metallic': 'gold',
-      'Emerald Glass': 'emeraldGlass',
-      'Smooth Marble': 'marble'
-    }).name('Preset').onChange((val) => {
-      applyMaterialPreset(val);
-      gui.controllersRecursive().forEach(c => c.updateDisplay());
-    });
+    window.addEventListener('resize', resizeRenderers);
 
-    matFolder.addColor(params, 'baseColor').name('Base Color').onChange(c => {
-      surfaceMaterial.color.set(c);
-      curvatureMaterial.uniforms.uBaseColor.value.set(c);
-    });
-    matFolder.add(params, 'roughness', 0, 1, 0.01).name('Roughness').onChange(v => surfaceMaterial.roughness = v);
-    matFolder.add(params, 'metalness', 0, 1, 0.01).name('Metalness').onChange(v => surfaceMaterial.metalness = v);
-    matFolder.add(params, 'clearcoat', 0, 1, 0.01).name('Clearcoat').onChange(v => surfaceMaterial.clearcoat = v);
-    matFolder.add(params, 'transmission', 0, 1, 0.01).name('Glass Transparency').onChange(v => surfaceMaterial.transmission = v);
+    // --- WebAR Camera Access ---
+    async function initCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: true
+        });
+        videoElem.srcObject = stream;
+        await videoElem.play();
 
-    // 4. Wireframe Settings
-    const wireFolder = gui.addFolder('Wireframe Overlay');
-    wireFolder.add(params, 'wireframe').name('Show Wireframe').onChange(v => wireframeMesh.visible = v);
-    wireFolder.addColor(params, 'wireframeColor').name('Wire Color').onChange(c => wireframeMaterial.color.set(c));
-    wireFolder.add(params, 'wireframeOpacity', 0.05, 1.0, 0.05).name('Opacity').onChange(v => wireframeMaterial.opacity = v);
+        arVideoTexture = new THREE.VideoTexture(videoElem);
+        arCameraPlane.material.map = arVideoTexture;
+        arCameraPlane.material.needsUpdate = true;
+        state.cameraActive = true;
+        updateLastCommand("Camera Feed Active");
+      } catch (err) {
+        console.warn("Camera access denied or unvailable:", err);
+        updateLastCommand("Cam Error: Use Setup Mode");
+      }
+    }
 
-    // 5. Sampling & Resolution
-    const geoFolder = gui.addFolder('Parametric Sampling');
-    geoFolder.add(params, 'uRes', 30, 160, 2).name('U Grid Sampling').onChange(buildManifoldGeometry);
-    geoFolder.add(params, 'vRes', 40, 200, 2).name('V Grid Sampling').onChange(buildManifoldGeometry);
-    geoFolder.add(params, 'scale', 0.5, 2.0, 0.1).name('Scale').onChange(v => meshGroup.scale.setScalar(v));
+    // --- Speech Recognition API (Voice Control) ---
+    let recognition;
+    function initVoiceControl() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        updateLastCommand("Voice API not supported");
+        return;
+      }
 
-    // 6. Animation Controls
-    const animFolder = gui.addFolder('Dynamic Deformations');
-    animFolder.add(params, 'animateBreathing').name('Breathing Wave');
-    animFolder.add(params, 'breathingSpeed', 0.2, 3.0, 0.1).name('Breathing Rate');
-    animFolder.add(params, 'breathingIntensity', 0.01, 0.25, 0.01).name('Breathing Scale');
-    animFolder.add(params, 'pulseDeform').name('Energy Pulse Deform');
-    animFolder.add(params, 'autoRotate').name('Auto Rotate Camera').onChange(v => controls.autoRotate = v);
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
 
-    gui.add(params, 'resetCamera').name('Reset Camera View');
+      recognition.onresult = (event) => {
+        const lastIndex = event.results.length - 1;
+        const transcript = event.results[lastIndex][0].transcript.trim().toLowerCase();
+        console.log("Voice Command Recognized:", transcript);
+        processVoiceCommand(transcript);
+      };
 
-    // Configure OrbitControls
-    controls.autoRotate = params.autoRotate;
-    controls.autoRotateSpeed = params.autoRotateSpeed;
+      recognition.onerror = (e) => {
+        console.warn("Voice Recognition Error:", e.error);
+      };
 
-    // Window Resize Handler
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+      recognition.onend = () => {
+        // Auto-restart continuous listening loop
+        try { recognition.start(); } catch(e) {}
+      };
 
-    // --- Animation & Real-Time Deformation Loop ---
-    const clock = new THREE.Clock();
+      try {
+        recognition.start();
+      } catch(e) {
+        console.error("Could not start voice recognition", e);
+      }
+    }
 
-    function animate() {
+    function processVoiceCommand(cmd) {
+      updateLastCommand(`Heard: "${cmd}"`);
+
+      if (cmd.includes('record') || cmd.includes('start recording')) {
+        startRecording();
+      } else if (cmd.includes('stop') || cmd.includes('stop recording')) {
+        stopRecording();
+      } else if (cmd.includes('play') || cmd.includes('view') || cmd.includes('gallery')) {
+        switchMode('VR');
+      } else if (cmd.includes('ar') || cmd.includes('back') || cmd.includes('live')) {
+        switchMode('AR');
+      } else if (cmd.includes('next')) {
+        cycleNextVRVideo();
+      }
+    }
+
+    function updateLastCommand(msg) {
+      state.lastVoiceCmd = msg;
+      leftLastCmd.textContent = msg;
+      rightLastCmd.textContent = msg;
+    }
+
+    // --- GPS Geolocation API ---
+    function initGPS() {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.watchPosition(
+          (pos) => {
+            state.gps.lat = pos.coords.latitude.toFixed(5);
+            state.gps.lng = pos.coords.longitude.toFixed(5);
+            state.gps.alt = pos.coords.altitude ? `${pos.coords.altitude.toFixed(1)}m` : 'Sea Level';
+            state.gps.accuracy = `${pos.coords.accuracy.toFixed(1)}m`;
+            renderGPSHUD();
+          },
+          (err) => {
+            state.gps.lat = '37.7749 (Sim)';
+            state.gps.lng = '-122.4194';
+            renderGPSHUD();
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      } else {
+        state.gps.lat = '37.7749 (Sim)';
+        state.gps.lng = '-122.4194';
+        renderGPSHUD();
+      }
+    }
+
+    function renderGPSHUD() {
+      const text = `LAT: ${state.gps.lat} | LNG: ${state.gps.lng}\nALT: ${state.gps.alt} | ACC: ${state.gps.accuracy}`;
+      leftGpsInfo.innerText = text;
+      rightGpsInfo.innerText = text;
+    }
+
+    // --- MediaRecorder (Recording AR Dual Canvas Stream) ---
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    function startRecording() {
+      if (state.isRecording) return;
+
+      // Merge Left Eye Canvas Stream into Recording
+      const stream = leftCanvas.captureStream(30);
+
+      // Include audio track if available
+      if (videoElem.srcObject && videoElem.srcObject.getAudioTracks().length > 0) {
+        stream.addTrack(videoElem.srcObject.getAudioTracks()[0]);
+      }
+
+      let options = { mimeType: 'video/webm;codecs=vp9' };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = { mimeType: 'video/webm' };
+      }
+
+      try {
+        mediaRecorder = new MediaRecorder(stream, options);
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(stream);
+      }
+
+      recordedChunks = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = saveRecordedVideo;
+
+      mediaRecorder.start();
+      state.isRecording = true;
+      state.recordingStartTime = Date.now();
+
+      // Update UI Indicators
+      leftRecInd.classList.remove('hidden');
+      rightRecInd.classList.remove('hidden');
+
+      state.recInterval = setInterval(updateRecTimer, 1000);
+      updateLastCommand("Recording Started...");
+    }
+
+    function stopRecording() {
+      if (!state.isRecording) return;
+
+      mediaRecorder.stop();
+      state.isRecording = false;
+
+      clearInterval(state.recInterval);
+      leftRecInd.classList.add('hidden');
+      rightRecInd.classList.add('hidden');
+      updateLastCommand("Recording Saved!");
+    }
+
+    function updateRecTimer() {
+      const elapsedSec = Math.floor((Date.now() - state.recordingStartTime) / 1000);
+      const mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+      const secs = String(elapsedSec % 60).padStart(2, '0');
+      const timerStr = `REC ${mins}:${secs}`;
+      leftRecTimer.textContent = timerStr;
+      rightRecTimer.textContent = timerStr;
+    }
+
+    function saveRecordedVideo() {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const videoUrl = URL.createObjectURL(blob);
+      
+      const newClip = {
+        id: Date.now(),
+        url: videoUrl,
+        gps: { ...state.gps },
+        timestamp: new Date().toLocaleTimeString()
+      };
+
+      state.recordedClips.push(newClip);
+      state.activeVideoIndex = state.recordedClips.length - 1;
+      
+      console.log("Saved Video Geotagged Clip:", newClip);
+    }
+
+    // --- AR / VR Mode Switcher ---
+    function switchMode(targetMode) {
+      state.mode = targetMode;
+      
+      if (targetMode === 'VR') {
+        leftModeBadge.textContent = 'VR GALLERY';
+        rightModeBadge.textContent = 'VR GALLERY';
+        leftModeBadge.className = 'px-2.5 py-1 rounded-md text-xs font-bold tracking-wider bg-indigo-500/20 text-indigo-400 border border-indigo-500/40';
+        rightModeBadge.className = 'px-2.5 py-1 rounded-md text-xs font-bold tracking-wider bg-indigo-500/20 text-indigo-400 border border-indigo-500/40';
+
+        arCameraPlane.visible = false;
+        arFloatingObjectsGroup.visible = false;
+        vrTheaterGroup.visible = true;
+
+        loadVRVideoPlayback();
+      } else {
+        leftModeBadge.textContent = 'AR MODE';
+        rightModeBadge.textContent = 'AR MODE';
+        leftModeBadge.className = 'px-2.5 py-1 rounded-md text-xs font-bold tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-500/40';
+        rightModeBadge.className = 'px-2.5 py-1 rounded-md text-xs font-bold tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-500/40';
+
+        arCameraPlane.visible = true;
+        arFloatingObjectsGroup.visible = true;
+        vrTheaterGroup.visible = false;
+      }
+    }
+
+    function loadVRVideoPlayback() {
+      if (state.recordedClips.length === 0) {
+        updateVRInfoCard("No Videos Recorded Yet", "Say 'Record' in AR mode to make your first geotagged VR clip.");
+        return;
+      }
+
+      const clip = state.recordedClips[state.activeVideoIndex];
+      const playbackVideo = document.createElement('video');
+      playbackVideo.src = clip.url;
+      playbackVideo.crossOrigin = 'anonymous';
+      playbackVideo.loop = true;
+      playbackVideo.play();
+
+      vrVideoTexture = new THREE.VideoTexture(playbackVideo);
+      vrVideoPlane.material.map = vrVideoTexture;
+      vrVideoPlane.material.needsUpdate = true;
+
+      const gpsDetails = `LAT: ${clip.gps.lat}\nLNG: ${clip.gps.lng}\nALT: ${clip.gps.alt}\nTIMESTAMP: ${clip.timestamp}`;
+      updateVRInfoCard(`Clip #${state.activeVideoIndex + 1}`, gpsDetails);
+    }
+
+    function cycleNextVRVideo() {
+      if (state.recordedClips.length === 0) return;
+      state.activeVideoIndex = (state.activeVideoIndex + 1) % state.recordedClips.length;
+      loadVRVideoPlayback();
+    }
+
+    // --- Animation & Render Loop ---
+    function animate(time) {
       requestAnimationFrame(animate);
-      const elapsedTime = clock.getElapsedTime();
 
-      // Real-time Procedural Mesh Deformation (Breathing & Pulse Waves)
-      if (mainMesh && originalPositions && (params.animateBreathing || params.pulseDeform)) {
-        const positions = mainMesh.geometry.attributes.position.array;
-        const count = positions.length / 3;
-
-        const breathPhase = Math.sin(elapsedTime * params.breathingSpeed * 2.5);
-        const pulsePhase = Math.sin(elapsedTime * 4.0);
-
-        for (let i = 0; i < count; i++) {
-          const idx = i * 3;
-          const ox = originalPositions[idx];
-          const oy = originalPositions[idx + 1];
-          const oz = originalPositions[idx + 2];
-
-          // Compute deformation factors based on height (oy)
-          let deformX = 0;
-          let deformZ = 0;
-
-          if (params.animateBreathing) {
-            // Chest breathing modulation (higher intensity around chest height oy ~ 0.5)
-            const chestFactor = Math.exp(-Math.pow((oy - 0.4) / 0.8, 2));
-            deformX += ox * breathPhase * params.breathingIntensity * chestFactor;
-            deformZ += oz * breathPhase * params.breathingIntensity * 1.5 * chestFactor;
+      // Rotate Floating AR Objects
+      if (arFloatingObjectsGroup.visible) {
+        arFloatingObjectsGroup.rotation.y = time * 0.0005;
+        arFloatingObjectsGroup.children.forEach((child, idx) => {
+          if (child.userData.angle !== undefined) {
+            child.rotation.x += 0.02;
+            child.rotation.y += 0.02;
           }
-
-          if (params.pulseDeform) {
-            // Traveling wave pulse deformation along body Y-axis
-            const wave = Math.sin(oy * 6.0 - elapsedTime * 5.0) * 0.04;
-            deformX += ox * wave;
-            deformZ += oz * wave;
-          }
-
-          positions[idx] = ox + deformX;
-          positions[idx + 2] = oz + deformZ;
-        }
-
-        mainMesh.geometry.attributes.position.needsUpdate = true;
-        mainMesh.geometry.computeVertexNormals();
-
-        if (wireframeMesh) {
-          wireframeMesh.geometry.attributes.position.needsUpdate = true;
-        }
+        });
       }
 
-      // Dynamic light animation for visual depth
-      rimLight.position.x = Math.sin(elapsedTime * 0.6) * 5;
-      rimLight.position.z = Math.cos(elapsedTime * 0.6) * 5;
-
-      controls.update();
-      renderer.render(scene, camera);
+      // Render Stereo Left and Right Views
+      rendererLeft.render(scene, cameraLeft);
+      rendererRight.render(scene, cameraRight);
     }
 
-    window.onload = animate;
+    // --- Setup Event Listeners for Manual On-Screen Controls ---
+    document.getElementById('btn-toggle-cam').addEventListener('click', initCamera);
+    document.getElementById('btn-record').addEventListener('click', startRecording);
+    document.getElementById('btn-stop').addEventListener('click', stopRecording);
+    document.getElementById('btn-mode').addEventListener('click', () => {
+      switchMode(state.mode === 'AR' ? 'VR' : 'AR');
+    });
+
+    // --- Initialize Application ---
+    window.onload = () => {
+      init3D();
+      initCamera();
+      initVoiceControl();
+      initGPS();
+      animate(0);
+    };
   </script>
 </body>
 </html>
