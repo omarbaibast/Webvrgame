@@ -1,115 +1,871 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Three.js Stereographic Projection</title>
-  <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    canvas { display: block; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stereographic Voxel World</title>
+    <!-- Tailwind CSS for modern responsive UI overlay -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050508;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            user-select: none;
+        }
+
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Glassmorphism UI panel style */
+        .glass-panel {
+            background: rgba(13, 16, 27, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .hotbar-item {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .hotbar-item.active {
+            transform: scale(1.15) translateY(-4px);
+            border-color: #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
+        }
+
+        /* Custom Scrollbar for HUD controls */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+
+        /* Crosshairs */
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+    </style>
 </head>
 <body>
-<script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-    }
-  }
-</script>
-<script type="module">
-  import * as THREE from 'three';
 
-  // 1. Scene & Renderer Setup
-  const scene = new THREE.Scene();
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-  camera.position.z = 1;
+    <!-- Main Render Canvas -->
+    <canvas id="game-canvas"></canvas>
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
+    <!-- Crosshair HUD -->
+    <div class="crosshair z-20 flex items-center justify-center pointer-events-none">
+        <div class="w-4 h-0.5 bg-cyan-400 opacity-80 shadow-[0_0_8px_#06b6d4]"></div>
+        <div class="h-4 w-0.5 bg-cyan-400 opacity-80 shadow-[0_0_8px_#06b6d4] absolute"></div>
+        <div class="w-1.5 h-1.5 bg-white rounded-full absolute shadow-[0_0_6px_#fff]"></div>
+    </div>
 
-  // 2. Stereographic Vertex & Fragment Shaders
-  const stereographicShader = {
-    uniforms: {
-      uTime: { value: 0 },
-      uFOV: { value: 2.0 } // Controls projection scale / field of view
-    },
-    vertexShader: `
-      uniform float uTime;
-      uniform float uFOV;
-      varying vec3 vColor;
+    <!-- Start Overlay / Lock Mouse Banner -->
+    <div id="start-overlay" class="absolute inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center text-white cursor-pointer transition-opacity duration-300">
+        <div class="glass-panel p-8 rounded-2xl max-w-md text-center border border-cyan-500/30 shadow-[0_0_50px_rgba(6,182,212,0.15)]">
+            <div class="inline-flex p-3 bg-cyan-500/10 rounded-xl text-cyan-400 mb-4 ring-1 ring-cyan-500/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent mb-2">
+                STEREOGRAPHIC VOXEL WORLD
+            </h1>
+            <p class="text-slate-300 text-sm mb-6 leading-relaxed">
+                Experience infinite voxel terrain mapped dynamically through <span class="text-cyan-300 font-semibold">Non-Linear Stereographic Conformal Geometry</span>. Straight world lines curve as space transforms!
+            </p>
+            <button class="w-full py-3.5 px-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
+                CLICK TO START & LOCK MOUSE
+            </button>
+            <div class="mt-6 grid grid-cols-2 gap-2 text-xs text-slate-400 text-left bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+                <div><span class="text-cyan-400 font-bold">WASD:</span> Move</div>
+                <div><span class="text-cyan-400 font-bold">SPACE / C:</span> Fly Up / Down</div>
+                <div><span class="text-cyan-400 font-bold">LEFT CLICK:</span> Break Block</div>
+                <div><span class="text-cyan-400 font-bold">RIGHT CLICK:</span> Place Block</div>
+                <div><span class="text-cyan-400 font-bold">1 - 8:</span> Select Hotbar</div>
+                <div><span class="text-cyan-400 font-bold">F / V:</span> Toggle Fly / Cam</div>
+            </div>
+        </div>
+    </div>
 
-      void main() {
-        // Simple rotation of the object in world space
-        float c = cos(uTime);
-        float s = sin(uTime);
-        mat3 rotY = mat3(
-          c, 0.0, s,
-          0.0, 1.0, 0.0,
-         -s, 0.0, c
-        );
-        
-        // Translate world position slightly forward along Z
-        vec3 worldPos = rotY * position + vec3(0.0, 0.0, 3.0);
-        
-        // --- Stereographic Projection Formula ---
-        // Normalize vector to get point on unit sphere
-        vec3 p = normalize(worldPos);
-        
-        // Project onto 2D plane: X = x / (1 + z), Y = y / (1 + z)
-        vec2 stereoPos = p.xy / (1.0 + p.z) * uFOV;
+    <!-- UI Overlay Header / Controls -->
+    <div class="absolute top-4 left-4 z-30 flex flex-col gap-2 pointer-events-none">
+        <div class="glass-panel px-4 py-2.5 rounded-xl flex items-center gap-4 text-xs font-mono text-cyan-300 border border-slate-700/50">
+            <div>FPS: <span id="fps-counter" class="text-white font-bold">60</span></div>
+            <div class="w-px h-4 bg-slate-700"></div>
+            <div>VOXELS: <span id="block-counter" class="text-white font-bold">0</span></div>
+            <div class="w-px h-4 bg-slate-700"></div>
+            <div>POS: <span id="pos-display" class="text-slate-300">0, 0, 0</span></div>
+        </div>
+    </div>
 
-        vColor = color;
-        gl_Position = vec4(stereoPos, 0.0, 1.0);
+    <!-- Collapsible Stereographic Shader Control Drawer -->
+    <div id="settings-panel" class="absolute top-4 right-4 z-30 w-80 glass-panel rounded-2xl p-4 text-white text-xs border border-slate-700/60 transition-all duration-300 shadow-2xl">
+        <div class="flex items-center justify-between mb-3 border-b border-slate-700/60 pb-2">
+            <h2 class="font-bold text-sm tracking-wide text-cyan-400 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                PROJECTION SHADER
+            </h2>
+            <button id="toggle-settings" class="text-slate-400 hover:text-white p-1 rounded">
+                <svg id="chevron-icon" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+        </div>
+
+        <div id="settings-content" class="space-y-3.5">
+            <div>
+                <label class="block text-slate-300 font-medium mb-1">Projection Mode</label>
+                <select id="proj-mode" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-cyan-300 font-mono text-xs focus:outline-none focus:border-cyan-500">
+                    <option value="0">Standard Stereographic (North Pole)</option>
+                    <option value="1">Inverse Stereographic (South Pole)</option>
+                    <option value="2">Hyperbolic Spherical Warp</option>
+                    <option value="3">Ultra Fisheye Lens</option>
+                </select>
+            </div>
+
+            <div>
+                <div class="flex justify-between mb-1">
+                    <span class="text-slate-300">Projection Scale / FOV</span>
+                    <span id="fov-val" class="font-mono text-cyan-400">2.2</span>
+                </div>
+                <input id="slider-fov" type="range" min="0.5" max="6.0" step="0.1" value="2.2" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+            </div>
+
+            <div>
+                <div class="flex justify-between mb-1">
+                    <span class="text-slate-300">Conformal Curvature</span>
+                    <span id="curve-val" class="font-mono text-cyan-400">1.0</span>
+                </div>
+                <input id="slider-curve" type="range" min="0.0" max="3.0" step="0.05" value="1.0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+            </div>
+
+            <div>
+                <div class="flex justify-between mb-1">
+                    <span class="text-slate-300">Sphere Radius Pole (R)</span>
+                    <span id="radius-val" class="font-mono text-cyan-400">4.0</span>
+                </div>
+                <input id="slider-radius" type="range" min="1.0" max="12.0" step="0.2" value="4.0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+            </div>
+
+            <div>
+                <div class="flex justify-between mb-1">
+                    <span class="text-slate-300">Time of Day Cycle</span>
+                    <span id="tod-val" class="font-mono text-amber-400">12:00</span>
+                </div>
+                <input id="slider-tod" type="range" min="0" max="24" step="0.1" value="12" class="w-full accent-amber-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+            </div>
+
+            <div class="pt-2 border-t border-slate-700/60 flex items-center justify-between">
+                <span class="text-slate-300">Audio Synth Ambience</span>
+                <button id="toggle-audio" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 rounded-lg text-xs font-semibold transition-colors">
+                    ENABLE AUDIO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voxel Hotbar HUD -->
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+        <div class="glass-panel p-2 rounded-2xl flex items-center gap-2 border border-slate-700/60 shadow-2xl pointer-events-auto" id="hotbar">
+            <!-- Dynamically populated via JS -->
+        </div>
+    </div>
+
+    <!-- External Libraries: Three.js ESM via UNPKG -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+        }
       }
-    `,
-    fragmentShader: `
-      varying vec3 vColor;
-      void main() {
-        gl_FragColor = vec4(vColor, 1.0);
-      }
-    `
-  };
+    </script>
 
-  // 3. Create High-Subdivision Geometry
-  // Non-linear projection requires dense vertices so straight edges curve smoothly
-  const geometry = new THREE.IcosahedronGeometry(1.5, 5);
-  
-  // Assign vertex colors for visualization
-  const colors = [];
-  const posAttr = geometry.attributes.position;
-  for (let i = 0; i < posAttr.count; i++) {
-    colors.push(
-      Math.abs(posAttr.getX(i)),
-      Math.abs(posAttr.getY(i)),
-      Math.abs(posAttr.getZ(i))
-    );
-  }
-  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    <script type="module">
+        import * as THREE from 'three';
 
-  const material = new THREE.ShaderMaterial({
-    vertexShader: stereographicShader.vertexShader,
-    fragmentShader: stereographicShader.fragmentShader,
-    uniforms: stereographicShader.uniforms,
-    wireframe: true,
-    vertexColors: true
-  });
+        // --- CONSTANTS & BLOCK DEFINITIONS ---
+        const BLOCK_TYPES = [
+            { id: 1, name: 'Grass', color: 0x4ade80, topColor: 0x22c55e, emissive: 0x000000 },
+            { id: 2, name: 'Dirt', color: 0x854d0e, topColor: 0x854d0e, emissive: 0x000000 },
+            { id: 3, name: 'Stone', color: 0x64748b, topColor: 0x64748b, emissive: 0x000000 },
+            { id: 4, name: 'Wood', color: 0xa16207, topColor: 0x78350f, emissive: 0x000000 },
+            { id: 5, name: 'Leaves', color: 0x15803d, topColor: 0x15803d, emissive: 0x000000 },
+            { id: 6, name: 'Neon Gold', color: 0xfacc15, topColor: 0xfef08a, emissive: 0xca8a04 },
+            { id: 7, name: 'Cyan Glass', color: 0x06b6d4, topColor: 0x67e8f9, emissive: 0x0891b2 },
+            { id: 8, name: 'Lava Block', color: 0xef4444, topColor: 0xf97316, emissive: 0xd97706 }
+        ];
 
-  const mesh = new THREE.Mesh(geometry, material);
-  scene.add(mesh);
+        let selectedBlockId = 1;
+        const WORLD_SIZE = 32;
+        const WORLD_HEIGHT = 24;
 
-  // 4. Animation Loop
-  function animate(time) {
-    requestAnimationFrame(animate);
-    material.uniforms.uTime.value = time * 0.001;
-    renderer.render(scene, camera);
-  }
-  animate(0);
+        // --- GLOBAL GAME STATE ---
+        const state = {
+            fov: 2.2,
+            curvature: 1.0,
+            radius: 4.0,
+            mode: 0,
+            timeOfDay: 12.0,
+            audioEnabled: false,
+            thirdPerson: false,
+            flyMode: true,
+            isLocked: false,
+            fps: 60,
+            blockCount: 0
+        };
 
-  // Handle Window Resize
-  window.addEventListener('resize', () => {
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-</script>
+        // --- WEB AUDIO SYNTHESIZER ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.ambientGain = null;
+            }
+
+            init() {
+                if (this.ctx) return;
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioCtx();
+
+                // Synth Ambient Drone
+                const osc1 = this.ctx.createOscillator();
+                const osc2 = this.ctx.createOscillator();
+                this.ambientGain = this.ctx.createGain();
+
+                osc1.type = 'sine';
+                osc2.type = 'triangle';
+                osc1.frequency.setValueAtTime(110, this.ctx.currentTime); // A2
+                osc2.frequency.setValueAtTime(164.81, this.ctx.currentTime); // E3
+
+                this.ambientGain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+
+                osc1.connect(this.ambientGain);
+                osc2.connect(this.ambientGain);
+                this.ambientGain.connect(this.ctx.destination);
+
+                osc1.start();
+                osc2.start();
+            }
+
+            playBlockSound(freq, duration = 0.1, type = 'square') {
+                if (!this.ctx || !state.audioEnabled) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.4, this.ctx.currentTime + duration);
+
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+
+            playBreak() { this.playBlockSound(220, 0.12, 'sawtooth'); }
+            playPlace() { this.playBlockSound(587.33, 0.08, 'sine'); }
+            playFootstep() { this.playBlockSound(120, 0.04, 'triangle'); }
+        }
+
+        const audio = new SoundEngine();
+
+        // --- THREE.JS STEREOGRAPHIC RENDERER SETUP ---
+        const canvas = document.getElementById('game-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x05050a);
+
+        // Standard Orthographic camera because custom vertex shader converts world space directly to stereographic 2D screen NDC [-1, 1]
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 1000);
+        camera.position.set(0, 0, 1);
+
+        // --- STEREOGRAPHIC GLSL SHADER MATERIAL ---
+        // Converts 3D vertices using stereographic projection formula:
+        // P_stereo = ( x / (R + z), y / (R + z) )
+        const CustomStereographicShader = {
+            uniforms: {
+                uViewMatrix: { value: new THREE.Matrix4() },
+                uProjMode: { value: 0 },
+                uScaleFOV: { value: 2.2 },
+                uCurvature: { value: 1.0 },
+                uSphereRadius: { value: 4.0 },
+                uSunDirection: { value: new THREE.Vector3(0.5, 1.0, 0.3).normalize() },
+                uAmbientColor: { value: new THREE.Color(0x22263a) }
+            },
+            vertexShader: `
+                uniform mat4 uViewMatrix;
+                uniform int uProjMode;
+                uniform float uScaleFOV;
+                uniform float uCurvature;
+                uniform float uSphereRadius;
+
+                attribute vec3 color;
+                attribute vec3 normal;
+
+                varying vec3 vColor;
+                varying vec3 vNormal;
+                varying vec3 vWorldPos;
+                varying float vDepth;
+
+                void main() {
+                    // Transform model vertex into Camera / Eye coordinates
+                    vec4 eyePos = uViewMatrix * modelMatrix * vec4(position, 1.0);
+                    vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+                    vNormal = normalize(mat3(modelMatrix) * normal);
+                    vColor = color;
+
+                    // Compute distance from camera
+                    float dist = length(eyePos.xyz);
+                    vDepth = dist;
+
+                    // Normalize eye direction vector
+                    vec3 p = eyePos.xyz;
+                    
+                    vec2 stereoNDC = vec2(0.0);
+                    float R = uSphereRadius;
+
+                    if (uProjMode == 0) {
+                        // Standard North-Pole Stereographic Projection
+                        // Formula: X = x / (R - z), Y = y / (R - z)
+                        float denominator = max(0.001, R - p.z * uCurvature);
+                        stereoNDC = (p.xy / denominator) * uScaleFOV;
+                    } 
+                    else if (uProjMode == 1) {
+                        // South-Pole Inverse Stereographic Projection
+                        float denominator = max(0.001, R + p.z * uCurvature);
+                        stereoNDC = (p.xy / denominator) * uScaleFOV;
+                    } 
+                    else if (uProjMode == 2) {
+                        // Hyperbolic Spherical Curvature
+                        float len = length(p);
+                        vec3 uP = p / max(0.0001, len);
+                        float denom = max(0.001, 1.0 + uP.z * uCurvature);
+                        stereoNDC = (uP.xy / denom) * uScaleFOV * (len * 0.15);
+                    } 
+                    else if (uProjMode == 3) {
+                        // Ultra Fisheye Lens Approximation
+                        float r = length(p.xy);
+                        float theta = atan(r, max(0.001, -p.z));
+                        float radiusMapped = theta / 1.57079;
+                        vec2 dir = (r > 0.0001) ? (p.xy / r) : vec2(0.0);
+                        stereoNDC = dir * radiusMapped * uScaleFOV;
+                    }
+
+                    // Render geometry in normalized device coordinates
+                    // Clip points behind viewer if necessary
+                    float depthZ = (p.z > 0.1) ? 0.99 : (-p.z / 200.0);
+                    gl_Position = vec4(stereoNDC, depthZ, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 uSunDirection;
+                uniform vec3 uAmbientColor;
+
+                varying vec3 vColor;
+                varying vec3 vNormal;
+                varying vec3 vWorldPos;
+                varying float vDepth;
+
+                void main() {
+                    // Directional lighting + simple ambient shading
+                    vec3 norm = normalize(vNormal);
+                    float diff = max(0.15, dot(norm, uSunDirection));
+                    
+                    // Simple face ambient occlusion based on depth
+                    vec3 lighting = uAmbientColor + vec3(diff * 0.85);
+
+                    // Atmospheric distance fog effect
+                    float fogFactor = clamp((vDepth - 5.0) / 70.0, 0.0, 0.85);
+                    vec3 fogColor = vec3(0.02, 0.04, 0.08);
+
+                    vec3 finalColor = mix(vColor * lighting, fogColor, fogFactor);
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+            `
+        };
+
+        const stereoMaterial = new THREE.ShaderMaterial({
+            vertexShader: CustomStereographicShader.vertexShader,
+            fragmentShader: CustomStereographicShader.fragmentShader,
+            uniforms: THREE.UniformsUtils.clone(CustomStereographicShader.uniforms),
+            side: THREE.DoubleSide,
+            wireframe: false
+        });
+
+        // --- VOXEL WORLD GENERATION ENGINE ---
+        // Uses instanced/batched geometry with subdivided cube faces so non-linear stereographic projection curves straight edges smoothly
+        class VoxelWorld {
+            constructor(sizeX, sizeY, sizeZ) {
+                this.sizeX = sizeX;
+                this.sizeY = sizeY;
+                this.sizeZ = sizeZ;
+                this.blocks = new Uint8Array(sizeX * sizeY * sizeZ);
+                this.mesh = null;
+            }
+
+            getIndex(x, y, z) {
+                return x + y * this.sizeX + z * this.sizeX * this.sizeY;
+            }
+
+            getBlock(x, y, z) {
+                if (x < 0 || x >= this.sizeX || y < 0 || y >= this.sizeY || z < 0 || z >= this.sizeZ) return 0;
+                return this.blocks[this.getIndex(x, y, z)];
+            }
+
+            setBlock(x, y, z, type) {
+                if (x < 0 || x >= this.sizeX || y < 0 || y >= this.sizeY || z < 0 || z >= this.sizeZ) return;
+                this.blocks[this.getIndex(x, y, z)] = type;
+            }
+
+            generateProceduralTerrain() {
+                // Generate terrain height map with procedural noise functions
+                for (let x = 0; x < this.sizeX; x++) {
+                    for (let z = 0; z < this.sizeZ; z++) {
+                        // Perlin-style synthetic wave combination
+                        const nx = x * 0.1;
+                        const nz = z * 0.1;
+                        const h = Math.floor(8 + Math.sin(nx) * 3 + Math.cos(nz) * 3 + Math.sin(nx * 0.5 + nz * 0.5) * 4);
+
+                        for (let y = 0; y < this.sizeY; y++) {
+                            if (y < h - 3) {
+                                this.setBlock(x, y, z, 3); // Stone
+                            } else if (y < h) {
+                                this.setBlock(x, y, z, 2); // Dirt
+                            } else if (y === h) {
+                                this.setBlock(x, y, z, 1); // Grass
+                            }
+                        }
+
+                        // Add trees randomly
+                        if (x > 3 && x < this.sizeX - 3 && z > 3 && z < this.sizeZ - 3) {
+                            if (Math.random() < 0.02 && h < this.sizeY - 6) {
+                                this.spawnTree(x, h + 1, z);
+                            }
+                        }
+                    }
+                }
+
+                // Add floating islands with cyan glass and lava
+                this.generateFloatingIsland(16, 17, 16, 4);
+            }
+
+            spawnTree(tx, ty, tz) {
+                for (let i = 0; i < 4; i++) {
+                    this.setBlock(tx, ty + i, tz, 4); // Trunk
+                }
+                for (let lx = -1; lx <= 1; lx++) {
+                    for (let ly = 2; ly <= 4; ly++) {
+                        for (let lz = -1; lz <= 1; lz++) {
+                            if (this.getBlock(tx + lx, ty + ly, tz + lz) === 0) {
+                                this.setBlock(tx + lx, ty + ly, tz + lz, 5); // Leaves
+                            }
+                        }
+                    }
+                }
+            }
+
+            generateFloatingIsland(cx, cy, cz, radius) {
+                for (let x = -radius; x <= radius; x++) {
+                    for (let y = -2; y <= 2; y++) {
+                        for (let z = -radius; z <= radius; z++) {
+                            if (x * x + y * y + z * z <= radius * radius) {
+                                const type = (y === 2) ? 6 : ((Math.random() < 0.2) ? 7 : 3);
+                                this.setBlock(cx + x, cy + y, cz + z, type);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Rebuild high-subdivision mesh representation for stereographic GPU rendering
+            buildMesh() {
+                if (this.mesh) {
+                    scene.remove(this.mesh);
+                    this.mesh.geometry.dispose();
+                }
+
+                const positions = [];
+                const colors = [];
+                const normals = [];
+
+                // High-density box geometry template (subdivided faces allow non-linear vertex curving)
+                const baseBoxGeo = new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
+                const basePositions = baseBoxGeo.attributes.position.array;
+                const baseNormals = baseBoxGeo.attributes.normal.array;
+
+                let totalBlocks = 0;
+
+                for (let x = 0; x < this.sizeX; x++) {
+                    for (let y = 0; y < this.sizeY; y++) {
+                        for (let z = 0; z < this.sizeZ; z++) {
+                            const blockType = this.getBlock(x, y, z);
+                            if (blockType === 0) continue;
+
+                            // Cull interior blocks (check 6 neighbors)
+                            const isExposed = 
+                                this.getBlock(x + 1, y, z) === 0 || this.getBlock(x - 1, y, z) === 0 ||
+                                this.getBlock(x, y + 1, z) === 0 || this.getBlock(x, y - 1, z) === 0 ||
+                                this.getBlock(x, y, z + 1) === 0 || this.getBlock(x, y, z - 1) === 0;
+
+                            if (!isExposed) continue;
+                            totalBlocks++;
+
+                            const def = BLOCK_TYPES.find(b => b.id === blockType) || BLOCK_TYPES[0];
+                            const baseCol = new THREE.Color(def.color);
+                            const topCol = new THREE.Color(def.topColor);
+
+                            for (let i = 0; i < basePositions.length; i += 3) {
+                                const px = basePositions[i] + x;
+                                const py = basePositions[i + 1] + y;
+                                const pz = basePositions[i + 2] + z;
+                                const ny = baseNormals[i + 1];
+
+                                positions.push(px, py, pz);
+                                normals.push(baseNormals[i], baseNormals[i + 1], baseNormals[i + 2]);
+
+                                // Apply top face tinting
+                                const finalCol = (ny > 0.5) ? topCol : baseCol;
+                                colors.push(finalCol.r, finalCol.g, finalCol.b);
+                            }
+                        }
+                    }
+                }
+
+                state.blockCount = totalBlocks;
+                document.getElementById('block-counter').innerText = totalBlocks;
+
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                this.mesh = new THREE.Mesh(geometry, stereoMaterial);
+                scene.add(this.mesh);
+            }
+        }
+
+        const world = new VoxelWorld(WORLD_SIZE, WORLD_HEIGHT, WORLD_SIZE);
+        world.generateProceduralTerrain();
+        world.buildMesh();
+
+        // --- FIRST/THIRD PERSON PLAYER CONTROLLER ---
+        class PlayerController {
+            constructor() {
+                this.position = new THREE.Vector3(WORLD_SIZE / 2, WORLD_HEIGHT + 2, WORLD_SIZE / 2);
+                this.velocity = new THREE.Vector3();
+                this.pitch = 0;
+                this.yaw = 0;
+                this.keys = {};
+                this.isGrounded = false;
+                this.cameraMatrix = new THREE.Matrix4();
+            }
+
+            update(dt) {
+                // Movement vector calculation
+                const speed = state.flyMode ? 14.0 : 6.0;
+                const moveVec = new THREE.Vector3();
+
+                if (this.keys['KeyW']) moveVec.z -= 1;
+                if (this.keys['KeyS']) moveVec.z += 1;
+                if (this.keys['KeyA']) moveVec.x -= 1;
+                if (this.keys['KeyD']) moveVec.x += 1;
+
+                moveVec.normalize();
+                moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+
+                this.position.x += moveVec.x * speed * dt;
+                this.position.z += moveVec.z * speed * dt;
+
+                // Vertical fly / gravity physics
+                if (state.flyMode) {
+                    if (this.keys['Space']) this.position.y += speed * dt;
+                    if (this.keys['KeyC'] || this.keys['ShiftLeft']) this.position.y -= speed * dt;
+                } else {
+                    // Simple voxel collision gravity
+                    this.velocity.y -= 25.0 * dt; // Gravity
+                    this.position.y += this.velocity.y * dt;
+
+                    const blockX = Math.floor(this.position.x);
+                    const blockY = Math.floor(this.position.y - 1.5);
+                    const blockZ = Math.floor(this.position.z);
+
+                    if (world.getBlock(blockX, blockY, blockZ) !== 0) {
+                        this.position.y = blockY + 1.5 + 1.0;
+                        this.velocity.y = 0;
+                        this.isGrounded = true;
+                    } else {
+                        this.isGrounded = false;
+                    }
+
+                    if (this.keys['Space'] && this.isGrounded) {
+                        this.velocity.y = 8.5;
+                        audio.playFootstep();
+                    }
+                }
+
+                // Compute view matrix manually for the Stereographic Vertex Shader
+                const eye = this.position.clone();
+                if (state.thirdPerson) {
+                    const offset = new THREE.Vector3(0, 2, 5);
+                    offset.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.pitch);
+                    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+                    eye.add(offset);
+                }
+
+                const target = eye.clone().add(new THREE.Vector3(
+                    -Math.sin(this.yaw) * Math.cos(this.pitch),
+                    Math.sin(this.pitch),
+                    -Math.cos(this.yaw) * Math.cos(this.pitch)
+                ));
+
+                this.cameraMatrix.lookAt(eye, target, new THREE.Vector3(0, 1, 0));
+                // Invert to get View Matrix
+                const viewMat = new THREE.Matrix4().copy(this.cameraMatrix).invert();
+                stereoMaterial.uniforms.uViewMatrix.value.copy(viewMat);
+
+                // Update UI position text
+                document.getElementById('pos-display').innerText = 
+                    `${this.position.x.toFixed(1)}, ${this.position.y.toFixed(1)}, ${this.position.z.toFixed(1)}`;
+            }
+        }
+
+        const player = new PlayerController();
+
+        // --- RAYCAST VOXEL INTERACTION (BREAK & PLACE) ---
+        function raycastVoxel(breakBlock = false) {
+            const dir = new THREE.Vector3(
+                -Math.sin(player.yaw) * Math.cos(player.pitch),
+                Math.sin(player.pitch),
+                -Math.cos(player.yaw) * Math.cos(player.pitch)
+            ).normalize();
+
+            const pos = player.position.clone();
+            let prevX = Math.floor(pos.x);
+            let prevY = Math.floor(pos.y);
+            let prevZ = Math.floor(pos.z);
+
+            // Step along camera vector ray
+            for (let step = 0; step < 120; step++) {
+                pos.addScaledVector(dir, 0.1);
+                const bx = Math.floor(pos.x);
+                const by = Math.floor(pos.y);
+                const bz = Math.floor(pos.z);
+
+                const currentBlock = world.getBlock(bx, by, bz);
+                if (currentBlock !== 0) {
+                    if (breakBlock) {
+                        world.setBlock(bx, by, bz, 0);
+                        world.buildMesh();
+                        audio.playBreak();
+                    } else {
+                        // Place selected block at previous air voxel position
+                        world.setBlock(prevX, prevY, prevZ, selectedBlockId);
+                        world.buildMesh();
+                        audio.playPlace();
+                    }
+                    break;
+                }
+                prevX = bx;
+                prevY = by;
+                prevZ = bz;
+            }
+        }
+
+        // --- UI & EVENT LISTENERS ---
+        const startOverlay = document.getElementById('start-overlay');
+        
+        startOverlay.addEventListener('click', () => {
+            canvas.requestPointerLock();
+            audio.init();
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            state.isLocked = (document.pointerLockElement === canvas);
+            startOverlay.style.opacity = state.isLocked ? '0' : '1';
+            startOverlay.style.pointerEvents = state.isLocked ? 'none' : 'auto';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!state.isLocked) return;
+            const sensitivity = 0.0025;
+            player.yaw -= e.movementX * sensitivity;
+            player.pitch -= e.movementY * sensitivity;
+            player.pitch = Math.max(-Math.PI / 2.05, Math.min(Math.PI / 2.05, player.pitch));
+        });
+
+        window.addEventListener('keydown', (e) => {
+            player.keys[e.code] = true;
+
+            // Hotbar Selector Keys 1-8
+            if (e.code.startsWith('Digit')) {
+                const num = parseInt(e.code.replace('Digit', ''));
+                if (num >= 1 && num <= 8) {
+                    selectHotbar(num);
+                }
+            }
+
+            if (e.code === 'KeyF') state.flyMode = !state.flyMode;
+            if (e.code === 'KeyV') state.thirdPerson = !state.thirdPerson;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            player.keys[e.code] = false;
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            if (!state.isLocked) return;
+            if (e.button === 0) raycastVoxel(true);  // Left Click: Break
+            if (e.button === 2) raycastVoxel(false); // Right Click: Place
+        });
+
+        // Prevent context menu on right click
+        window.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Dynamic Hotbar Creation
+        const hotbarContainer = document.getElementById('hotbar');
+        BLOCK_TYPES.forEach((block, idx) => {
+            const btn = document.createElement('button');
+            btn.className = `hotbar-item w-10 h-10 rounded-xl flex flex-col items-center justify-center font-bold text-xs border border-slate-700/80 glass-panel ${idx === 0 ? 'active' : ''}`;
+            btn.style.backgroundColor = `#${block.color.toString(16).padStart(6, '0')}44`;
+            btn.innerHTML = `<span class="text-[10px] text-slate-300 font-mono">${idx + 1}</span>`;
+            btn.onclick = () => selectHotbar(idx + 1);
+            hotbarContainer.appendChild(btn);
+        });
+
+        function selectHotbar(slotIndex) {
+            selectedBlockId = slotIndex;
+            const items = hotbarContainer.querySelectorAll('.hotbar-item');
+            items.forEach((item, idx) => {
+                if (idx === slotIndex - 1) item.classList.add('active');
+                else item.classList.remove('active');
+            });
+        }
+
+        // Settings Panel Interactivity
+        const projModeSelect = document.getElementById('proj-mode');
+        const sliderFOV = document.getElementById('slider-fov');
+        const sliderCurve = document.getElementById('slider-curve');
+        const sliderRadius = document.getElementById('slider-radius');
+        const sliderTOD = document.getElementById('slider-tod');
+        const toggleAudioBtn = document.getElementById('toggle-audio');
+
+        projModeSelect.addEventListener('change', (e) => {
+            state.mode = parseInt(e.target.value);
+            stereoMaterial.uniforms.uProjMode.value = state.mode;
+        });
+
+        sliderFOV.addEventListener('input', (e) => {
+            state.fov = parseFloat(e.target.value);
+            document.getElementById('fov-val').innerText = state.fov.toFixed(1);
+            stereoMaterial.uniforms.uScaleFOV.value = state.fov;
+        });
+
+        sliderCurve.addEventListener('input', (e) => {
+            state.curvature = parseFloat(e.target.value);
+            document.getElementById('curve-val').innerText = state.curvature.toFixed(2);
+            stereoMaterial.uniforms.uCurvature.value = state.curvature;
+        });
+
+        sliderRadius.addEventListener('input', (e) => {
+            state.radius = parseFloat(e.target.value);
+            document.getElementById('radius-val').innerText = state.radius.toFixed(1);
+            stereoMaterial.uniforms.uSphereRadius.value = state.radius;
+        });
+
+        sliderTOD.addEventListener('input', (e) => {
+            state.timeOfDay = parseFloat(e.target.value);
+            const hrs = Math.floor(state.timeOfDay);
+            const mins = Math.floor((state.timeOfDay - hrs) * 60);
+            document.getElementById('tod-val').innerText = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+            
+            // Adjust sun direction and skybox color based on time of day
+            const angle = (state.timeOfDay / 24) * Math.PI * 2 - Math.PI / 2;
+            const sunDir = new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0.4).normalize();
+            stereoMaterial.uniforms.uSunDirection.value.copy(sunDir);
+
+            const dayFactor = Math.max(0.0, Math.sin(angle));
+            const skyColor = new THREE.Color(0x05050a).lerp(new THREE.Color(0x1e293b), dayFactor);
+            scene.background = skyColor;
+        });
+
+        toggleAudioBtn.addEventListener('click', () => {
+            state.audioEnabled = !state.audioEnabled;
+            toggleAudioBtn.innerText = state.audioEnabled ? 'DISABLE AUDIO' : 'ENABLE AUDIO';
+            toggleAudioBtn.classList.toggle('text-cyan-400');
+            toggleAudioBtn.classList.toggle('text-rose-400');
+            if (state.audioEnabled) audio.init();
+        });
+
+        // Collapsible Drawer
+        const toggleSettingsBtn = document.getElementById('toggle-settings');
+        const settingsContent = document.getElementById('settings-content');
+        const chevronIcon = document.getElementById('chevron-icon');
+        let isSettingsOpen = true;
+
+        toggleSettingsBtn.addEventListener('click', () => {
+            isSettingsOpen = !isSettingsOpen;
+            settingsContent.style.display = isSettingsOpen ? 'block' : 'none';
+            chevronIcon.style.transform = isSettingsOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        });
+
+        // --- MAIN ANIMATION & RENDER LOOP ---
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fpsTimer = 0;
+
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            // FPS Counter update
+            frameCount++;
+            fpsTimer += dt;
+            if (fpsTimer >= 0.5) {
+                state.fps = Math.round(frameCount / fpsTimer);
+                document.getElementById('fps-counter').innerText = state.fps;
+                frameCount = 0;
+                fpsTimer = 0;
+            }
+
+            // Update Player physics & camera view matrix
+            player.update(dt);
+
+            // Render scene via custom Stereographic Shader pipeline
+            renderer.render(scene, camera);
+        }
+
+        // Handle Window Resizing
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start loop on load
+        animate(performance.now());
+    </script>
 </body>
 </html>
+```
