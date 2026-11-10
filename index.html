@@ -2,107 +2,114 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Three.js Smooth Surface Example</title>
+  <title>Three.js Stereographic Projection</title>
   <style>
-    body { margin: 0; overflow: hidden; background-color: #000; }
+    body { margin: 0; overflow: hidden; background: #000; }
     canvas { display: block; }
   </style>
 </head>
 <body>
-
-<!-- Import Three.js and Addons using ES Modules -->
 <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
     }
   }
 </script>
-
 <script type="module">
   import * as THREE from 'three';
-  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-  import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.js';
 
-  // 1. Scene setup
+  // 1. Scene & Renderer Setup
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(5, 5, 7);
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+  camera.position.z = 1;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
   document.body.appendChild(renderer.domElement);
 
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
+  // 2. Stereographic Vertex & Fragment Shaders
+  const stereographicShader = {
+    uniforms: {
+      uTime: { value: 0 },
+      uFOV: { value: 2.0 } // Controls projection scale / field of view
+    },
+    vertexShader: `
+      uniform float uTime;
+      uniform float uFOV;
+      varying vec3 vColor;
 
-  // 2. Define the parametric surface function: f(u, v) -> (x, y, z)
-  // u and v range from 0 to 1
-  function waveFunction(u, v, target) {
-    const x = (u - 0.5) * 10;
-    const z = (v - 0.5) * 10;
-    // Mathematical surface equation: y = sin(x) * cos(z)
-    const y = Math.sin(x) * Math.cos(z);
+      void main() {
+        // Simple rotation of the object in world space
+        float c = cos(uTime);
+        float s = sin(uTime);
+        mat3 rotY = mat3(
+          c, 0.0, s,
+          0.0, 1.0, 0.0,
+         -s, 0.0, c
+        );
+        
+        // Translate world position slightly forward along Z
+        vec3 worldPos = rotY * position + vec3(0.0, 0.0, 3.0);
+        
+        // --- Stereographic Projection Formula ---
+        // Normalize vector to get point on unit sphere
+        vec3 p = normalize(worldPos);
+        
+        // Project onto 2D plane: X = x / (1 + z), Y = y / (1 + z)
+        vec2 stereoPos = p.xy / (1.0 + p.z) * uFOV;
 
-    target.set(x, y, z);
+        vColor = color;
+        gl_Position = vec4(stereoPos, 0.0, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      void main() {
+        gl_FragColor = vec4(vColor, 1.0);
+      }
+    `
+  };
+
+  // 3. Create High-Subdivision Geometry
+  // Non-linear projection requires dense vertices so straight edges curve smoothly
+  const geometry = new THREE.IcosahedronGeometry(1.5, 5);
+  
+  // Assign vertex colors for visualization
+  const colors = [];
+  const posAttr = geometry.attributes.position;
+  for (let i = 0; i < posAttr.count; i++) {
+    colors.push(
+      Math.abs(posAttr.getX(i)),
+      Math.abs(posAttr.getY(i)),
+      Math.abs(posAttr.getZ(i))
+    );
   }
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-  // 3. Create ParametricGeometry (slices, stacks determine smoothness)
-  const slices = 60; // Resolution along U
-  const stacks = 60; // Resolution along V
-  const geometry = new ParametricGeometry(waveFunction, slices, stacks);
-
-  // Compute smooth normals so lighting updates seamlessly across vertices
-  geometry.computeVertexNormals();
-
-  // 4. Create material with double-sided rendering and smooth shading
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x00aaff,
-    roughness: 0.3,
-    metalness: 0.2,
-    side: THREE.DoubleSide,
-    flatShading: false // Ensures smooth lighting transitions
+  const material = new THREE.ShaderMaterial({
+    vertexShader: stereographicShader.vertexShader,
+    fragmentShader: stereographicShader.fragmentShader,
+    uniforms: stereographicShader.uniforms,
+    wireframe: true,
+    vertexColors: true
   });
 
   const mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
 
-  // 5. Add Lighting
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-  scene.add(ambientLight);
-
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  directionalLight.position.set(5, 10, 7);
-  scene.add(directionalLight);
-
-  const pointLight = new THREE.PointLight(0xff0055, 2, 20);
-  pointLight.position.set(-3, 2, -3);
-  scene.add(pointLight);
-
-  // Add grid helper for visual reference
-  const gridHelper = new THREE.GridHelper(12, 12, 0x444444, 0x222222);
-  gridHelper.position.y = -2;
-  scene.add(gridHelper);
-
-  // 6. Handle Window Resize
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-
-  // 7. Animation Loop
-  function animate() {
+  // 4. Animation Loop
+  function animate(time) {
     requestAnimationFrame(animate);
-    mesh.rotation.y += 0.003; // Gentle rotation
-    controls.update();
+    material.uniforms.uTime.value = time * 0.001;
     renderer.render(scene, camera);
   }
+  animate(0);
 
-  animate();
+  // Handle Window Resize
+  window.addEventListener('resize', () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
 </script>
 </body>
 </html>
