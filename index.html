@@ -1,741 +1,152 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>4D Stereographic Voxel Architect</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #030712;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            user-select: none;
-            touch-action: none;
-        }
-
-        #game-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
-        }
-
-        .hotbar-item {
-            transition: all 0.2s ease;
-        }
-
-        .hotbar-item.active {
-            transform: scale(1.15) translateY(-4px);
-            border-color: #38bdf8;
-            box-shadow: 0 0 16px rgba(56, 189, 248, 0.8);
-        }
-
-        .crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-        }
-
-        .touch-btn {
-            active: scale(0.92);
-            touch-action: manipulation;
-        }
-
-        input[type=range] {
-            accent-color: #38bdf8;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#101820">
+<title>GeoLens VR — GPS Video Recorder</title>
+<style>
+:root{color-scheme:dark;--bg:#101820;--panel:#1b2833;--accent:#57e3c2;--text:#f2f7fa;--muted:#aab8c2}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,sans-serif}
+header{padding:14px 16px;background:#14212b;display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{font-size:1.15rem;margin:0}small,.muted{color:var(--muted)}
+main{max-width:900px;margin:auto;padding:12px;display:grid;gap:12px}
+.preview-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9}
+canvas{width:100%;height:100%;display:block}
+#rawVideo{display:none}
+.status{position:absolute;left:10px;top:10px;background:#000a;padding:7px 9px;border-radius:8px;font-size:.8rem;pointer-events:none}
+.controls,.panel{background:var(--panel);padding:12px;border-radius:12px}
+.controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+button{border:0;border-radius:9px;padding:11px 14px;background:#304351;color:white;font:inherit;font-weight:600}
+button.primary{background:var(--accent);color:#06231c}button.danger{background:#d94b55}button:disabled{opacity:.45}
+label{display:flex;align-items:center;gap:8px;font-size:.9rem}
+input[type=checkbox]{width:18px;height:18px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+#gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.item{background:#101820;border-radius:10px;padding:10px;min-width:0}
+.item video{width:100%;border-radius:7px;background:#000}
+.item p{font-size:.82rem;color:var(--muted);overflow-wrap:anywhere}
+.item button{margin:3px 3px 0 0;padding:8px 10px;font-size:.85rem}
+a{color:var(--accent)}.notice{line-height:1.45;font-size:.88rem;color:var(--muted)}
+</style>
 </head>
 <body>
-
-    <!-- WebGL Canvas -->
-    <canvas id="game-canvas"></canvas>
-
-    <!-- Crosshair HUD -->
-    <div class="crosshair z-20 flex items-center justify-center">
-        <div class="w-6 h-0.5 bg-cyan-400 opacity-90 shadow-[0_0_10px_#06b6d4]"></div>
-        <div class="h-6 w-0.5 bg-cyan-400 opacity-90 shadow-[0_0_10px_#06b6d4] absolute"></div>
-        <div class="w-1.5 h-1.5 bg-white rounded-full absolute shadow-[0_0_8px_#fff]"></div>
-    </div>
-
-    <!-- HUD Top Metrics -->
-    <div class="absolute top-3 left-3 z-30 flex flex-col gap-2 pointer-events-none">
-        <div class="glass-panel px-3.5 py-2 rounded-xl flex items-center gap-3 text-xs font-mono text-cyan-300">
-            <div>FPS: <span id="fps-counter" class="text-white font-bold">60</span></div>
-            <div class="w-px h-4 bg-slate-700"></div>
-            <div>4D VOXELS: <span id="block-counter" class="text-white font-bold">0</span></div>
-            <div class="w-px h-4 bg-slate-700"></div>
-            <div>4D POS: <span id="pos-display" class="text-amber-300">X:0 Y:0 Z:0 W:0</span></div>
-        </div>
-    </div>
-
-    <!-- Collapsible 4D Control Panel -->
-    <div id="settings-panel" class="absolute top-3 right-3 z-30 w-72 md:w-80 glass-panel rounded-2xl p-3.5 text-white text-xs transition-all duration-300 shadow-2xl">
-        <div class="flex items-center justify-between mb-2.5 border-b border-slate-700/60 pb-2">
-            <h2 class="font-bold text-xs tracking-wider text-cyan-400 flex items-center gap-1.5 font-mono">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-                4D STEREOGRAPHIC MATRIX
-            </h2>
-            <button id="toggle-panel" class="text-slate-400 hover:text-white p-1 rounded">
-                <svg id="chevron-icon" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-            </button>
-        </div>
-
-        <div id="panel-content" class="space-y-2.5 font-mono">
-            <div>
-                <div class="flex justify-between mb-1">
-                    <span class="text-slate-300">Projection Radius (R)</span>
-                    <span id="radius-val" class="text-cyan-400 font-bold">10.0</span>
-                </div>
-                <input id="slider-radius" type="range" min="5.0" max="20.0" step="0.5" value="10.0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
-            </div>
-
-            <div>
-                <div class="flex justify-between mb-1">
-                    <span class="text-slate-300">Rotation XW Plane</span>
-                    <span id="xw-val" class="text-cyan-400 font-bold">0°</span>
-                </div>
-                <input id="slider-rot-xw" type="range" min="-3.14" max="3.14" step="0.05" value="0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
-            </div>
-
-            <div>
-                <div class="flex justify-between mb-1">
-                    <span class="text-slate-300">Rotation YW Plane</span>
-                    <span id="yw-val" class="text-cyan-400 font-bold">0°</span>
-                </div>
-                <input id="slider-rot-yw" type="range" min="-3.14" max="3.14" step="0.05" value="0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
-            </div>
-
-            <div>
-                <div class="flex justify-between mb-1">
-                    <span class="text-slate-300">Rotation ZW Plane</span>
-                    <span id="zw-val" class="text-cyan-400 font-bold">0°</span>
-                </div>
-                <input id="slider-rot-zw" type="range" min="-3.14" max="3.14" step="0.05" value="0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
-            </div>
-
-            <div>
-                <label class="block text-slate-300 mb-1">Presets</label>
-                <select id="preset-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-cyan-300 text-xs focus:outline-none focus:border-cyan-500">
-                    <option value="default">Default 4D Platform & Tesseract</option>
-                    <option value="tesseract">Tesseract Lattice</option>
-                    <option value="ring">4D Ring World</option>
-                    <option value="sphere">4D Spherical Shell</option>
-                </select>
-            </div>
-
-            <div class="pt-2 border-t border-slate-700/60 flex gap-2">
-                <button id="btn-reset" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg text-xs font-semibold transition-colors">
-                    Reset Camera/4D
-                </button>
-                <button id="btn-clear" class="flex-1 py-1.5 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/40 rounded-lg text-xs font-semibold transition-colors">
-                    Clear Blocks
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- TOUCH & MOBILE ON-SCREEN CONTROLS -->
-    <!-- Left Side: D-Pad & 4th Dimension (W-Axis) Controls -->
-    <div class="absolute bottom-20 left-4 z-30 flex flex-col gap-2 pointer-events-auto">
-        <div class="glass-panel p-2 rounded-2xl flex flex-col items-center gap-1">
-            <div class="text-[10px] font-mono text-cyan-400 mb-0.5">MOVE XYZ</div>
-            <div class="flex gap-1">
-                <button id="btn-up-y" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">Y+</button>
-                <button id="btn-fwd" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">W</button>
-                <button id="btn-dn-y" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">Y-</button>
-            </div>
-            <div class="flex gap-1">
-                <button id="btn-left" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">A</button>
-                <button id="btn-back" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">S</button>
-                <button id="btn-right" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">D</button>
-            </div>
-        </div>
-
-        <div class="glass-panel p-2 rounded-2xl flex items-center justify-between gap-1">
-            <span class="text-[10px] font-mono text-amber-400 pl-1">4D W-AXIS:</span>
-            <button id="btn-w-dn" class="touch-btn px-3 py-2 bg-amber-950/80 active:bg-amber-600 border border-amber-600/40 text-amber-300 rounded-xl font-bold text-xs">W -</button>
-            <button id="btn-w-up" class="touch-btn px-3 py-2 bg-amber-950/80 active:bg-amber-600 border border-amber-600/40 text-amber-300 rounded-xl font-bold text-xs">W +</button>
-        </div>
-    </div>
-
-    <!-- Right Side: Big Block Interaction Buttons -->
-    <div class="absolute bottom-20 right-4 z-30 flex flex-col gap-2.5 pointer-events-auto">
-        <button id="btn-place" class="touch-btn px-5 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 active:from-cyan-400 active:to-blue-500 text-white font-black text-sm tracking-wide rounded-2xl shadow-lg shadow-cyan-500/30 border border-cyan-300/40 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-            PLACE BLOCK
-        </button>
-        <button id="btn-break" class="touch-btn px-5 py-3.5 bg-gradient-to-r from-rose-600 to-red-700 active:from-rose-500 active:to-red-600 text-white font-black text-sm tracking-wide rounded-2xl shadow-lg shadow-rose-600/30 border border-rose-300/40 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-            BREAK BLOCK
-        </button>
-    </div>
-
-    <!-- 4D Material Hotbar -->
-    <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-        <div class="glass-panel p-1.5 rounded-2xl flex items-center gap-1.5 border border-slate-700/60 shadow-2xl pointer-events-auto" id="hotbar">
-            <!-- Populated via JS -->
-        </div>
-    </div>
-
-    <!-- Three.js Setup -->
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-        }
-      }
-    </script>
-
-    <script type="module">
-        import * as THREE from 'three';
-
-        // --- 4D BLOCK MATERIALS ---
-        const HYPER_MATERIALS = [
-            { id: 1, name: 'Cyan Crystal', color: 0x06b6d4, emissive: 0x0891b2 },
-            { id: 2, name: 'Hyper Gold', color: 0xeab308, emissive: 0xca8a04 },
-            { id: 3, name: 'Cosmic Slate', color: 0x64748b, emissive: 0x334155 },
-            { id: 4, name: 'Neon Magenta', color: 0xec4899, emissive: 0xbe185d },
-            { id: 5, name: 'Plasma Green', color: 0x10b981, emissive: 0x059669 },
-            { id: 6, name: 'Quantum Indigo', color: 0x6366f1, emissive: 0x4338ca }
-        ];
-
-        let selectedMaterialId = 1;
-
-        // --- GLOBAL STATE ---
-        const state = {
-            focalR: 10.0,
-            rotXW: 0.0,
-            rotYW: 0.0,
-            rotZW: 0.0,
-            isLocked: false,
-            blockCount: 0,
-            fps: 60
-        };
-
-        // --- 4D VECTOR & TRANSFORM CALCULATIONS ---
-        class Vector4D {
-            constructor(x = 0, y = 0, z = 0, w = 0) {
-                this.x = x;
-                this.y = y;
-                this.z = z;
-                this.w = w;
-            }
-
-            // Rotates point in 4D space across XW, YW, and ZW planes
-            apply4DRotation(rxw, ryw, rzw) {
-                let { x, y, z, w } = this;
-
-                // XW Plane
-                if (rxw !== 0) {
-                    const c = Math.cos(rxw), s = Math.sin(rxw);
-                    const nx = x * c - w * s;
-                    const nw = x * s + w * c;
-                    x = nx; w = nw;
-                }
-                // YW Plane
-                if (ryw !== 0) {
-                    const c = Math.cos(ryw), s = Math.sin(ryw);
-                    const ny = y * c - w * s;
-                    const nw = y * s + w * c;
-                    y = ny; w = nw;
-                }
-                // ZW Plane
-                if (rzw !== 0) {
-                    const c = Math.cos(rzw), s = Math.sin(rzw);
-                    const nz = z * c - w * s;
-                    const nw = z * s + w * c;
-                    z = nz; w = nw;
-                }
-
-                this.x = x; this.y = y; this.z = z; this.w = w;
-                return this;
-            }
-
-            // 4D Stereographic Projection Formula:
-            // P_3d = (x / (R - w), y / (R - w), z / (R - w)) * R
-            projectStereographic(R) {
-                const denominator = Math.max(0.1, R - this.w);
-                const scale = R / denominator;
-                return new THREE.Vector3(
-                    this.x * scale,
-                    this.y * scale,
-                    this.z * scale
-                );
-            }
-        }
-
-        // --- THREE.JS SCENE SETUP ---
-        const canvas = document.getElementById('game-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x030712);
-
-        // Fixed Camera Setup at (0, 2, 8) looking at center target (0,0,0)
-        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2, 8);
-        camera.lookAt(0, 0, 0);
-
-        // Lights
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
-
-        const dirLight1 = new THREE.DirectionalLight(0x38bdf8, 1.2);
-        dirLight1.position.set(10, 20, 15);
-        scene.add(dirLight1);
-
-        const dirLight2 = new THREE.DirectionalLight(0xec4899, 0.8);
-        dirLight2.position.set(-10, -10, -10);
-        scene.add(dirLight2);
-
-        // Placement Preview Wireframe Cube
-        const previewGeo = new THREE.BoxGeometry(1.05, 1.05, 1.05);
-        const previewMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true });
-        const targetPreviewMesh = new THREE.Mesh(previewGeo, previewMat);
-        targetPreviewMesh.visible = false;
-        scene.add(targetPreviewMesh);
-
-        // --- 4D VOXEL WORLD ENGINE ---
-        class VoxelWorld4D {
-            constructor() {
-                this.grid = new Map();
-                this.meshGroup = new THREE.Group();
-                scene.add(this.meshGroup);
-            }
-
-            getKey(x, y, z, w) {
-                return `${x},${y},${z},${w}`;
-            }
-
-            setBlock(x, y, z, w, materialId) {
-                const key = this.getKey(x, y, z, w);
-                if (materialId === 0) {
-                    this.grid.delete(key);
-                } else {
-                    this.grid.set(key, { x, y, z, w, materialId });
-                }
-            }
-
-            clear() {
-                this.grid.clear();
-                this.rebuildMesh();
-            }
-
-            // Initializes world with guaranteed visible platform & central structure
-            initDefaultWorld() {
-                this.grid.clear();
-
-                // 1. Guaranteed 5x5 floor platform at Y = -2 directly in front of camera
-                for (let x = -2; x <= 2; x++) {
-                    for (let z = -2; z <= 2; z++) {
-                        const matId = ((Math.abs(x) + Math.abs(z)) % 2 === 0) ? 3 : 1;
-                        this.setBlock(x, -2, z, 0, matId);
-                    }
-                }
-
-                // 2. Central 4D Tesseract Structure at Y = 0..1
-                this.setBlock(0, 0, 0, 0, 2);  // Gold center
-                this.setBlock(1, 0, 0, 0, 1);
-                this.setBlock(-1, 0, 0, 0, 1);
-                this.setBlock(0, 1, 0, 0, 4);
-                this.setBlock(0, 0, 1, 0, 5);
-                this.setBlock(0, 0, -1, 0, 5);
-                
-                // Hyper-dimension W slice blocks
-                this.setBlock(0, 0, 0, 1, 6);
-                this.setBlock(0, 0, 0, -1, 6);
-
-                this.rebuildMesh();
-            }
-
-            rebuildMesh() {
-                // Clear active meshes
-                while (this.meshGroup.children.length > 0) {
-                    const child = this.meshGroup.children.pop();
-                    if (child.geometry) child.geometry.dispose();
-                    if (child.material) child.material.dispose();
-                }
-
-                state.blockCount = this.grid.size;
-                document.getElementById('block-counter').innerText = state.blockCount;
-
-                if (this.grid.size === 0) return;
-
-                // Subdivided Box geometry template for stereographic vertex distortion
-                const baseBoxGeo = new THREE.BoxGeometry(0.95, 0.95, 0.95, 3, 3, 3);
-
-                this.grid.forEach((voxel) => {
-                    const matDef = HYPER_MATERIALS.find(m => m.id === voxel.materialId) || HYPER_MATERIALS[0];
-
-                    const geo = baseBoxGeo.clone();
-                    const posAttr = geo.attributes.position;
-
-                    // Project each vertex of the voxel box from 4D -> 3D stereographically
-                    for (let i = 0; i < posAttr.count; i++) {
-                        const vx = posAttr.getX(i) + voxel.x;
-                        const vy = posAttr.getY(i) + voxel.y;
-                        const vz = posAttr.getZ(i) + voxel.z;
-                        const vw = voxel.w;
-
-                        const v4 = new Vector4D(vx, vy, vz, vw);
-                        v4.apply4DRotation(state.rotXW, state.rotYW, state.rotZW);
-                        const p3 = v4.projectStereographic(state.focalR);
-
-                        posAttr.setXYZ(i, p3.x, p3.y, p3.z);
-                    }
-
-                    geo.computeVertexNormals();
-
-                    // W-depth slice dynamic hue shift
-                    const wHueShift = voxel.w * 0.08;
-                    const baseCol = new THREE.Color(matDef.color);
-                    baseCol.offsetHSL(wHueShift, 0, 0);
-
-                    const material = new THREE.MeshStandardMaterial({
-                        color: baseCol,
-                        emissive: new THREE.Color(matDef.emissive),
-                        emissiveIntensity: 0.3,
-                        roughness: 0.3,
-                        metalness: 0.7,
-                        side: THREE.DoubleSide
-                    });
-
-                    const mesh = new THREE.Mesh(geo, material);
-                    mesh.userData = { voxel };
-                    this.meshGroup.add(mesh);
-                });
-            }
-        }
-
-        const world4D = new VoxelWorld4D();
-        world4D.initDefaultWorld();
-
-        // --- PLAYER & CAMERA CONTROLLER ---
-        class PlayerController {
-            constructor() {
-                this.pos4D = new Vector4D(0, 2, 8, 0);
-                this.pitch = -0.2;
-                this.yaw = 0;
-                this.keys = {};
-            }
-
-            update(dt) {
-                const speed = 8.0;
-                const moveVec = new THREE.Vector3();
-
-                if (this.keys['KeyW']) moveVec.z -= 1;
-                if (this.keys['KeyS']) moveVec.z += 1;
-                if (this.keys['KeyA']) moveVec.x -= 1;
-                if (this.keys['KeyD']) moveVec.x += 1;
-                if (this.keys['KeyR']) moveVec.y += 1;
-                if (this.keys['KeyF']) moveVec.y -= 1;
-
-                moveVec.normalize();
-                moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
-
-                this.pos4D.x += moveVec.x * speed * dt;
-                this.pos4D.y += moveVec.y * speed * dt;
-                this.pos4D.z += moveVec.z * speed * dt;
-
-                // 4D W-Axis Navigation (Q/E)
-                if (this.keys['KeyQ']) this.pos4D.w -= speed * dt;
-                if (this.keys['KeyE']) this.pos4D.w += speed * dt;
-
-                // Sync Three.js Camera position via 4D stereographic mapping
-                const projPos = this.pos4D.projectStereographic(state.focalR);
-                camera.position.copy(projPos);
-
-                const lookDir = new THREE.Vector3(
-                    -Math.sin(this.yaw) * Math.cos(this.pitch),
-                    Math.sin(this.pitch),
-                    -Math.cos(this.yaw) * Math.cos(this.pitch)
-                );
-                camera.lookAt(projPos.clone().add(lookDir));
-
-                // Update HUD Text
-                document.getElementById('pos-display').innerText = 
-                    `X:${this.pos4D.x.toFixed(1)} Y:${this.pos4D.y.toFixed(1)} Z:${this.pos4D.z.toFixed(1)} W:${this.pos4D.w.toFixed(1)}`;
-
-                // Update Raycast Target Highlight Preview
-                this.updateRaycastPreview();
-            }
-
-            updateRaycastPreview() {
-                const raycaster = new THREE.Raycaster();
-                raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-
-                const intersects = raycaster.intersectObjects(world4D.meshGroup.children);
-                if (intersects.length > 0) {
-                    const hit = intersects[0];
-                    targetPreviewMesh.position.copy(hit.object.position);
-                    targetPreviewMesh.visible = true;
-                } else {
-                    targetPreviewMesh.visible = false;
-                }
-            }
-        }
-
-        const player = new PlayerController();
-
-        // --- BLOCK INTERACTION ENGINE (PLACE / BREAK) ---
-        function executeBlockAction(isBreak) {
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-
-            const intersects = raycaster.intersectObjects(world4D.meshGroup.children);
-            if (intersects.length > 0) {
-                const hit = intersects[0];
-                const targetVoxel = hit.object.userData.voxel;
-
-                if (isBreak) {
-                    // Remove targeted voxel
-                    world4D.setBlock(targetVoxel.x, targetVoxel.y, targetVoxel.z, targetVoxel.w, 0);
-                    world4D.rebuildMesh();
-                } else {
-                    // Place new block adjacent to targeted voxel face
-                    const normal = hit.face.normal.clone();
-                    const newX = targetVoxel.x + Math.round(normal.x);
-                    const newY = targetVoxel.y + Math.round(normal.y);
-                    const newZ = targetVoxel.z + Math.round(normal.z);
-                    const newW = Math.round(player.pos4D.w);
-
-                    world4D.setBlock(newX, newY, newZ, newW, selectedMaterialId);
-                    world4D.rebuildMesh();
-                }
-            } else if (!isBreak) {
-                // If aiming into empty space, place block 3 units in front of player
-                const dir = new THREE.Vector3(
-                    -Math.sin(player.yaw) * Math.cos(player.pitch),
-                    Math.sin(player.pitch),
-                    -Math.cos(player.yaw) * Math.cos(player.pitch)
-                ).normalize();
-
-                const spawnX = Math.round(player.pos4D.x + dir.x * 3);
-                const spawnY = Math.round(player.pos4D.y + dir.y * 3);
-                const spawnZ = Math.round(player.pos4D.z + dir.z * 3);
-                const spawnW = Math.round(player.pos4D.w);
-
-                world4D.setBlock(spawnX, spawnY, spawnZ, spawnW, selectedMaterialId);
-                world4D.rebuildMesh();
-            }
-        }
-
-        // --- INPUT & CONTROLS BINDING ---
-        // Mouse Look & Pointer Lock
-        canvas.addEventListener('click', () => {
-            if (!state.isLocked) canvas.requestPointerLock();
-        });
-
-        document.addEventListener('pointerlockchange', () => {
-            state.isLocked = (document.pointerLockElement === canvas);
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!state.isLocked) return;
-            const sensitivity = 0.0025;
-            player.yaw -= e.movementX * sensitivity;
-            player.pitch -= e.movementY * sensitivity;
-            player.pitch = Math.max(-Math.PI / 2.05, Math.min(Math.PI / 2.05, player.pitch));
-        });
-
-        window.addEventListener('keydown', (e) => {
-            player.keys[e.code] = true;
-            if (e.code.startsWith('Digit')) {
-                const num = parseInt(e.code.replace('Digit', ''));
-                if (num >= 1 && num <= 6) selectMaterial(num);
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            player.keys[e.code] = false;
-        });
-
-        canvas.addEventListener('mousedown', (e) => {
-            if (!state.isLocked) return;
-            if (e.button === 0) executeBlockAction(true);  // Left Click: Break
-            if (e.button === 2) executeBlockAction(false); // Right Click: Place
-        });
-
-        window.addEventListener('contextmenu', e => e.preventDefault());
-
-        // --- ON-SCREEN TOUCH & ACTION BUTTONS ---
-        document.getElementById('btn-place').onclick = () => executeBlockAction(false);
-        document.getElementById('btn-break').onclick = () => executeBlockAction(true);
-
-        const bindTouchKey = (btnId, keyCode) => {
-            const btn = document.getElementById(btnId);
-            btn.addEventListener('pointerdown', (e) => { e.preventDefault(); player.keys[keyCode] = true; });
-            btn.addEventListener('pointerup', (e) => { e.preventDefault(); player.keys[keyCode] = false; });
-            btn.addEventListener('pointerleave', () => { player.keys[keyCode] = false; });
-        };
-
-        bindTouchKey('btn-fwd', 'KeyW');
-        bindTouchKey('btn-back', 'KeyS');
-        bindTouchKey('btn-left', 'KeyA');
-        bindTouchKey('btn-right', 'KeyD');
-        bindTouchKey('btn-up-y', 'KeyR');
-        bindTouchKey('btn-dn-y', 'KeyF');
-        bindTouchKey('btn-w-up', 'KeyE');
-        bindTouchKey('btn-w-dn', 'KeyQ');
-
-        // --- HOTBAR GENERATION ---
-        const hotbarContainer = document.getElementById('hotbar');
-        HYPER_MATERIALS.forEach((mat, idx) => {
-            const btn = document.createElement('button');
-            btn.className = `hotbar-item w-9 h-9 rounded-xl flex flex-col items-center justify-center font-bold text-xs border border-slate-700 glass-panel ${idx === 0 ? 'active' : ''}`;
-            btn.style.backgroundColor = `#${mat.color.toString(16).padStart(6, '0')}44`;
-            btn.innerHTML = `<span class="text-[10px] text-slate-300 font-mono">${idx + 1}</span>`;
-            btn.onclick = () => selectMaterial(idx + 1);
-            hotbarContainer.appendChild(btn);
-        });
-
-        function selectMaterial(slotIndex) {
-            selectedMaterialId = slotIndex;
-            const items = hotbarContainer.querySelectorAll('.hotbar-item');
-            items.forEach((item, idx) => {
-                if (idx === slotIndex - 1) item.classList.add('active');
-                else item.classList.remove('active');
-            });
-        }
-
-        // --- PANEL CONTROL SLIDERS ---
-        document.getElementById('slider-radius').addEventListener('input', (e) => {
-            state.focalR = parseFloat(e.target.value);
-            document.getElementById('radius-val').innerText = state.focalR.toFixed(1);
-            world4D.rebuildMesh();
-        });
-
-        document.getElementById('slider-rot-xw').addEventListener('input', (e) => {
-            state.rotXW = parseFloat(e.target.value);
-            document.getElementById('xw-val').innerText = `${Math.round(state.rotXW * 57.3)}°`;
-            world4D.rebuildMesh();
-        });
-
-        document.getElementById('slider-rot-yw').addEventListener('input', (e) => {
-            state.rotYW = parseFloat(e.target.value);
-            document.getElementById('yw-val').innerText = `${Math.round(state.rotYW * 57.3)}°`;
-            world4D.rebuildMesh();
-        });
-
-        document.getElementById('slider-rot-zw').addEventListener('input', (e) => {
-            state.rotZW = parseFloat(e.target.value);
-            document.getElementById('zw-val').innerText = `${Math.round(state.rotZW * 57.3)}°`;
-            world4D.rebuildMesh();
-        });
-
-        document.getElementById('preset-select').addEventListener('change', (e) => {
-            const val = e.target.value;
-            if (val === 'default') world4D.initDefaultWorld();
-            else if (val === 'tesseract') {
-                world4D.grid.clear();
-                for (let x = -1; x <= 1; x++)
-                    for (let y = -1; y <= 1; y++)
-                        for (let z = -1; z <= 1; z++)
-                            for (let w = -1; w <= 1; w++)
-                                world4D.setBlock(x*2, y*2, z*2, w*2, ((Math.abs(w)+Math.abs(x))%6)+1);
-                world4D.rebuildMesh();
-            } else if (val === 'ring') {
-                world4D.grid.clear();
-                for (let a = 0; a < Math.PI * 2; a += 0.4) {
-                    const x = Math.round(Math.cos(a) * 4);
-                    const z = Math.round(Math.sin(a) * 4);
-                    world4D.setBlock(x, 0, z, 0, 1);
-                    world4D.setBlock(x, 0, z, 1, 4);
-                }
-                world4D.rebuildMesh();
-            } else if (val === 'sphere') {
-                world4D.grid.clear();
-                for (let x = -2; x <= 2; x++)
-                    for (let y = -2; y <= 2; y++)
-                        for (let z = -2; z <= 2; z++)
-                            for (let w = -2; w <= 2; w++)
-                                if (x*x + y*y + z*z + w*w === 4)
-                                    world4D.setBlock(x, y, z, w, 2);
-                world4D.rebuildMesh();
-            }
-        });
-
-        document.getElementById('btn-reset').addEventListener('click', () => {
-            player.pos4D = new Vector4D(0, 2, 8, 0);
-            player.pitch = -0.2;
-            player.yaw = 0;
-            state.rotXW = state.rotYW = state.rotZW = 0;
-            document.getElementById('slider-rot-xw').value = 0;
-            document.getElementById('slider-rot-yw').value = 0;
-            document.getElementById('slider-rot-zw').value = 0;
-            document.getElementById('xw-val').innerText = '0°';
-            document.getElementById('yw-val').innerText = '0°';
-            document.getElementById('zw-val').innerText = '0°';
-            world4D.rebuildMesh();
-        });
-
-        document.getElementById('btn-clear').addEventListener('click', () => {
-            world4D.clear();
-        });
-
-        // Collapsible Panel Drawer
-        const togglePanelBtn = document.getElementById('toggle-panel');
-        const panelContent = document.getElementById('panel-content');
-        const chevronIcon = document.getElementById('chevron-icon');
-        let isPanelOpen = true;
-
-        togglePanelBtn.addEventListener('click', () => {
-            isPanelOpen = !isPanelOpen;
-            panelContent.style.display = isPanelOpen ? 'block' : 'none';
-            chevronIcon.style.transform = isPanelOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-        });
-
-        // --- ANIMATION & RENDER LOOP ---
-        let lastTime = performance.now();
-        let frameCount = 0;
-        let fpsTimer = 0;
-
-        function animate(currentTime) {
-            requestAnimationFrame(animate);
-
-            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
-            lastTime = currentTime;
-
-            frameCount++;
-            fpsTimer += dt;
-            if (fpsTimer >= 0.5) {
-                state.fps = Math.round(frameCount / fpsTimer);
-                document.getElementById('fps-counter').innerText = state.fps;
-                frameCount = 0;
-                fpsTimer = 0;
-            }
-
-            player.update(dt);
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // Start main loop
-        animate(performance.now());
-    </script>
+<header><h1>🌍 GeoLens VR</h1><small>GPS-tagged camera recorder</small></header>
+<main>
+<section class="preview-wrap">
+<video id="rawVideo" playsinline muted></video>
+<canvas id="view" aria-label="Live camera preview"></canvas>
+<div class="status" id="status">Camera not started</div>
+</section>
+<section class="controls">
+<button id="start" class="primary">Start camera + GPS</button>
+<button id="record" class="danger" disabled>● Record</button>
+<button id="stop" disabled>Stop</button>
+<label><input id="stereo" type="checkbox" checked> VR Box split-screen</label>
+<label><input id="overlay" type="checkbox" checked> GPS / reticle overlay</label>
+</section>
+<section class="panel">
+<div class="row"><strong>Current location</strong><span id="gps" class="muted">Waiting for GPS…</span></div>
+<p class="notice">Videos are saved on this device in this browser (IndexedDB). GPS coordinates and timestamps are stored with each clip. Use Export to download a video; browser storage can be cleared by Android or the browser, so export important clips.</p>
+<p class="notice"><b>VR Box note:</b> This creates a simple split-screen camera AR view for a passive VR viewer. It is not depth-aware AR; the phone's GPS and compass/orientation sensors are not used to anchor objects to real-world surfaces.</p>
+</section>
+<section class="panel">
+<div class="row"><strong>Saved recordings</strong><button id="refresh">Refresh</button></div>
+<div id="gallery"><p class="muted">No recordings yet.</p></div>
+</section>
+</main>
+<script>
+(() => {
+const video=document.getElementById('rawVideo'), canvas=document.getElementById('view'), ctx=canvas.getContext('2d');
+const startBtn=document.getElementById('start'), recBtn=document.getElementById('record'), stopBtn=document.getElementById('stop');
+const statusEl=document.getElementById('status'), gpsEl=document.getElementById('gps'), stereoEl=document.getElementById('stereo'), overlayEl=document.getElementById('overlay');
+let stream=null, gpsWatch=null, latestGPS=null, recorder=null, chunks=[], recordingStart=null, raf=0;
+const DB_NAME='geolens-vr-db', STORE='clips';
+function dbOpen(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>req.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+async function dbAdd(item){const db=await dbOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).add(item);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}
+async function dbAll(){const db=await dbOpen();return new Promise((resolve,reject)=>{const req=db.transaction(STORE).objectStore(STORE).getAll();req.onsuccess=()=>resolve(req.result.sort((a,b)=>b.id-a.id));req.onerror=()=>reject(req.error);});}
+async function dbDelete(id){const db=await dbOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
+function gpsSnapshot(){return latestGPS?{latitude:latestGPS.latitude,longitude:latestGPS.longitude,accuracy:latestGPS.accuracy,altitude:latestGPS.altitude,timestamp:latestGPS.timestamp}:null;}
+function setStatus(s){statusEl.textContent=s;}
+function resize(){const w=canvas.clientWidth||640,h=canvas.clientHeight||360;const d=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(w*d);canvas.height=Math.round(h*d);}
+function draw(){
+ if(!canvas.width||!canvas.height)resize();
+ const W=canvas.width,H=canvas.height;ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+ if(video.readyState>=2){
+  if(stereoEl.checked){
+   drawCameraHalf(0,0,W/2,H);drawCameraHalf(W/2,0,W/2,H);
+   if(overlayEl.checked){drawOverlay(W/2,H,0);drawOverlay(W/2,H,W/2);}
+   ctx.fillStyle='#000';ctx.fillRect(W/2-1,0,2,H);
+  }else{drawCameraHalf(0,0,W,H);if(overlayEl.checked)drawOverlay(W,H,0);}
+ }
+ raf=requestAnimationFrame(draw);
+}
+function drawCameraHalf(x,y,w,h){
+ const vw=video.videoWidth||1,vh=video.videoHeight||1,scale=Math.max(w/vw,h/vh),dw=vw*scale,dh=vh*scale;
+ ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+ // Fill frame with center-cropped live camera image
+ ctx.drawImage(video,x+(w-dw)/2,y+(h-dh)/2,dw,dh);ctx.restore();
+}
+function drawOverlay(w,h,x){
+ const cx=x+w/2,cy=h/2,unit=Math.min(w,h);
+ ctx.save();ctx.strokeStyle='#57e3c2';ctx.lineWidth=Math.max(1.5,unit*.003);ctx.beginPath();
+ ctx.moveTo(cx-unit*.055,cy);ctx.lineTo(cx-unit*.018,cy);ctx.moveTo(cx+unit*.018,cy);ctx.lineTo(cx+unit*.055,cy);
+ ctx.moveTo(cx,cy-unit*.055);ctx.lineTo(cx,cy-unit*.018);ctx.moveTo(cx,cy+unit*.018);ctx.lineTo(cx,cy+unit*.055);ctx.stroke();
+ ctx.font=`${Math.max(11,unit*.035)}px system-ui`;ctx.textAlign='center';ctx.fillStyle='#57e3c2';
+ let text=latestGPS?`${latestGPS.latitude.toFixed(5)}, ${latestGPS.longitude.toFixed(5)}  ±${Math.round(latestGPS.accuracy)}m`:'GPS unavailable';
+ ctx.fillText(text,cx,h-Math.max(14,unit*.04));ctx.restore();
+}
+async function start(){
+ try{
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error('Camera API unavailable. Open this page on HTTPS (GitHub Pages) in a supported browser.');
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:true});
+  video.srcObject=stream;await video.play();resize();cancelAnimationFrame(raf);draw();
+  recBtn.disabled=false;startBtn.disabled=true;setStatus('Camera active');
+  if('geolocation' in navigator){
+   gpsWatch=navigator.geolocation.watchPosition(pos=>{
+    latestGPS={latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy,altitude:pos.coords.altitude,timestamp:pos.timestamp};
+    gpsEl.textContent=`${latestGPS.latitude.toFixed(6)}, ${latestGPS.longitude.toFixed(6)} (±${Math.round(latestGPS.accuracy)} m)`;
+   },err=>{gpsEl.textContent='GPS error: '+err.message;},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
+  }else gpsEl.textContent='Geolocation unavailable';
+ }catch(e){setStatus(e.message);alert(e.message);}
+}
+function startRecording(){
+ if(!stream)return;
+ const canvasStream=canvas.captureStream(30);
+ // Keep microphone/camera audio tracks if the browser supplied them.
+ stream.getAudioTracks().forEach(t=>canvasStream.addTrack(t));
+ const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
+ try{recorder=new MediaRecorder(canvasStream,mime?{mimeType:mime}:{});}catch(e){alert('Recording is not supported by this browser.');return;}
+ chunks=[];recordingStart=new Date().toISOString();const startGPS=gpsSnapshot();
+ recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+ recorder.onerror=e=>{setStatus('Recorder error');console.error(e);};
+ recorder.onstop=async()=>{
+  const blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
+  if(blob.size){try{await dbAdd({blob,type:blob.type,startedAt:recordingStart,endedAt:new Date().toISOString(),startGPS,endGPS:gpsSnapshot(),durationMs:Date.now()-Date.parse(recordingStart)});setStatus('Saved recording locally');await renderGallery();}catch(e){alert('Could not save clip. Storage may be full: '+e.message);}}
+  canvasStream.getTracks().forEach(t=>t.stop());recBtn.disabled=false;stopBtn.disabled=true;
+ };
+ recorder.start(1000);recBtn.disabled=true;stopBtn.disabled=false;setStatus('● Recording…');
+}
+function stopRecording(){if(recorder&&recorder.state!=='inactive')recorder.stop();setStatus('Finishing and saving…');}
+function fmtDate(s){return new Date(s).toLocaleString();}
+async function renderGallery(){
+ const gallery=document.getElementById('gallery');const items=await dbAll();gallery.innerHTML='';
+ if(!items.length){gallery.innerHTML='<p class="muted">No recordings yet.</p>';return;}
+ for(const item of items){
+  const card=document.createElement('article');card.className='item';
+  const player=document.createElement('video');player.controls=true;player.playsInline=true;player.src=URL.createObjectURL(item.blob);
+  const p=document.createElement('p');p.textContent=`${fmtDate(item.startedAt)} · ${(item.blob.size/1024/1024).toFixed(1)} MB`;
+  const gps=document.createElement('p');const g=item.startGPS;gps.textContent=g?`Start GPS: ${g.latitude.toFixed(6)}, ${g.longitude.toFixed(6)} (±${Math.round(g.accuracy)}m)`:'Start GPS: not captured';
+  const exp=document.createElement('button');exp.textContent='Export video';exp.onclick=()=>{const a=document.createElement('a');a.href=player.src;a.download=`geolens-${item.id}-${item.startedAt.replace(/[:.]/g,'-')}.webm`;a.click();};
+  const meta=document.createElement('button');meta.textContent='Export GPS data';meta.onclick=()=>{const blob=new Blob([JSON.stringify({id:item.id,startedAt:item.startedAt,endedAt:item.endedAt,durationMs:item.durationMs,startGPS:item.startGPS,endGPS:item.endGPS},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`geolens-${item.id}-gps.json`;a.click();};
+  const del=document.createElement('button');del.textContent='Delete';del.onclick=async()=>{if(confirm('Delete this saved clip?')){await dbDelete(item.id);await renderGallery();}};
+  card.append(player,p,gps,exp,meta,del);gallery.append(card);
+ }
+}
+startBtn.addEventListener('click',start);recBtn.addEventListener('click',startRecording);stopBtn.addEventListener('click',stopRecording);
+document.getElementById('refresh').addEventListener('click',renderGallery);window.addEventListener('resize',resize);
+renderGallery().catch(e=>console.error(e));
+})();
+</script>
 </body>
 </html>
-```
