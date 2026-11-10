@@ -1,152 +1,622 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#101820">
-<title>GeoLens VR — GPS Video Recorder</title>
-<style>
-:root{color-scheme:dark;--bg:#101820;--panel:#1b2833;--accent:#57e3c2;--text:#f2f7fa;--muted:#aab8c2}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,sans-serif}
-header{padding:14px 16px;background:#14212b;display:flex;justify-content:space-between;align-items:center;gap:12px}
-h1{font-size:1.15rem;margin:0}small,.muted{color:var(--muted)}
-main{max-width:900px;margin:auto;padding:12px;display:grid;gap:12px}
-.preview-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9}
-canvas{width:100%;height:100%;display:block}
-#rawVideo{display:none}
-.status{position:absolute;left:10px;top:10px;background:#000a;padding:7px 9px;border-radius:8px;font-size:.8rem;pointer-events:none}
-.controls,.panel{background:var(--panel);padding:12px;border-radius:12px}
-.controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
-button{border:0;border-radius:9px;padding:11px 14px;background:#304351;color:white;font:inherit;font-weight:600}
-button.primary{background:var(--accent);color:#06231c}button.danger{background:#d94b55}button:disabled{opacity:.45}
-label{display:flex;align-items:center;gap:8px;font-size:.9rem}
-input[type=checkbox]{width:18px;height:18px}
-.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-#gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.item{background:#101820;border-radius:10px;padding:10px;min-width:0}
-.item video{width:100%;border-radius:7px;background:#000}
-.item p{font-size:.82rem;color:var(--muted);overflow-wrap:anywhere}
-.item button{margin:3px 3px 0 0;padding:8px 10px;font-size:.85rem}
-a{color:var(--accent)}.notice{line-height:1.45;font-size:.88rem;color:var(--muted)}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebXR Infinite Voxel Land</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #vr-button-container {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+        }
+        /* Custom styling to ensure default Three.js VRButton integrates cleanly */
+        #VRButton {
+            position: static !important;
+            font-family: inherit !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            padding: 12px 24px !important;
+            border-radius: 9999px !important;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+            color: white !important;
+            border: none !important;
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.5) !important;
+            cursor: pointer !important;
+            transition: transform 0.2s, box-shadow 0.2s !important;
+        }
+        #VRButton:hover {
+            transform: scale(1.05) !important;
+            box-shadow: 0 15px 30px -5px rgba(168, 85, 247, 0.6) !important;
+        }
+    </style>
+
+    <!-- Import Three.js and addons using ES Modules -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+        }
+    }
+    </script>
 </head>
-<body>
-<header><h1>🌍 GeoLens VR</h1><small>GPS-tagged camera recorder</small></header>
-<main>
-<section class="preview-wrap">
-<video id="rawVideo" playsinline muted></video>
-<canvas id="view" aria-label="Live camera preview"></canvas>
-<div class="status" id="status">Camera not started</div>
-</section>
-<section class="controls">
-<button id="start" class="primary">Start camera + GPS</button>
-<button id="record" class="danger" disabled>● Record</button>
-<button id="stop" disabled>Stop</button>
-<label><input id="stereo" type="checkbox" checked> VR Box split-screen</label>
-<label><input id="overlay" type="checkbox" checked> GPS / reticle overlay</label>
-</section>
-<section class="panel">
-<div class="row"><strong>Current location</strong><span id="gps" class="muted">Waiting for GPS…</span></div>
-<p class="notice">Videos are saved on this device in this browser (IndexedDB). GPS coordinates and timestamps are stored with each clip. Use Export to download a video; browser storage can be cleared by Android or the browser, so export important clips.</p>
-<p class="notice"><b>VR Box note:</b> This creates a simple split-screen camera AR view for a passive VR viewer. It is not depth-aware AR; the phone's GPS and compass/orientation sensors are not used to anchor objects to real-world surfaces.</p>
-</section>
-<section class="panel">
-<div class="row"><strong>Saved recordings</strong><button id="refresh">Refresh</button></div>
-<div id="gallery"><p class="muted">No recordings yet.</p></div>
-</section>
-</main>
-<script>
-(() => {
-const video=document.getElementById('rawVideo'), canvas=document.getElementById('view'), ctx=canvas.getContext('2d');
-const startBtn=document.getElementById('start'), recBtn=document.getElementById('record'), stopBtn=document.getElementById('stop');
-const statusEl=document.getElementById('status'), gpsEl=document.getElementById('gps'), stereoEl=document.getElementById('stereo'), overlayEl=document.getElementById('overlay');
-let stream=null, gpsWatch=null, latestGPS=null, recorder=null, chunks=[], recordingStart=null, raf=0;
-const DB_NAME='geolens-vr-db', STORE='clips';
-function dbOpen(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>req.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
-async function dbAdd(item){const db=await dbOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).add(item);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}
-async function dbAll(){const db=await dbOpen();return new Promise((resolve,reject)=>{const req=db.transaction(STORE).objectStore(STORE).getAll();req.onsuccess=()=>resolve(req.result.sort((a,b)=>b.id-a.id));req.onerror=()=>reject(req.error);});}
-async function dbDelete(id){const db=await dbOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
-function gpsSnapshot(){return latestGPS?{latitude:latestGPS.latitude,longitude:latestGPS.longitude,accuracy:latestGPS.accuracy,altitude:latestGPS.altitude,timestamp:latestGPS.timestamp}:null;}
-function setStatus(s){statusEl.textContent=s;}
-function resize(){const w=canvas.clientWidth||640,h=canvas.clientHeight||360;const d=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(w*d);canvas.height=Math.round(h*d);}
-function draw(){
- if(!canvas.width||!canvas.height)resize();
- const W=canvas.width,H=canvas.height;ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
- if(video.readyState>=2){
-  if(stereoEl.checked){
-   drawCameraHalf(0,0,W/2,H);drawCameraHalf(W/2,0,W/2,H);
-   if(overlayEl.checked){drawOverlay(W/2,H,0);drawOverlay(W/2,H,W/2);}
-   ctx.fillStyle='#000';ctx.fillRect(W/2-1,0,2,H);
-  }else{drawCameraHalf(0,0,W,H);if(overlayEl.checked)drawOverlay(W,H,0);}
- }
- raf=requestAnimationFrame(draw);
-}
-function drawCameraHalf(x,y,w,h){
- const vw=video.videoWidth||1,vh=video.videoHeight||1,scale=Math.max(w/vw,h/vh),dw=vw*scale,dh=vh*scale;
- ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
- // Fill frame with center-cropped live camera image
- ctx.drawImage(video,x+(w-dw)/2,y+(h-dh)/2,dw,dh);ctx.restore();
-}
-function drawOverlay(w,h,x){
- const cx=x+w/2,cy=h/2,unit=Math.min(w,h);
- ctx.save();ctx.strokeStyle='#57e3c2';ctx.lineWidth=Math.max(1.5,unit*.003);ctx.beginPath();
- ctx.moveTo(cx-unit*.055,cy);ctx.lineTo(cx-unit*.018,cy);ctx.moveTo(cx+unit*.018,cy);ctx.lineTo(cx+unit*.055,cy);
- ctx.moveTo(cx,cy-unit*.055);ctx.lineTo(cx,cy-unit*.018);ctx.moveTo(cx,cy+unit*.018);ctx.lineTo(cx,cy+unit*.055);ctx.stroke();
- ctx.font=`${Math.max(11,unit*.035)}px system-ui`;ctx.textAlign='center';ctx.fillStyle='#57e3c2';
- let text=latestGPS?`${latestGPS.latitude.toFixed(5)}, ${latestGPS.longitude.toFixed(5)}  ±${Math.round(latestGPS.accuracy)}m`:'GPS unavailable';
- ctx.fillText(text,cx,h-Math.max(14,unit*.04));ctx.restore();
-}
-async function start(){
- try{
-  if(!navigator.mediaDevices?.getUserMedia)throw new Error('Camera API unavailable. Open this page on HTTPS (GitHub Pages) in a supported browser.');
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:true});
-  video.srcObject=stream;await video.play();resize();cancelAnimationFrame(raf);draw();
-  recBtn.disabled=false;startBtn.disabled=true;setStatus('Camera active');
-  if('geolocation' in navigator){
-   gpsWatch=navigator.geolocation.watchPosition(pos=>{
-    latestGPS={latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy,altitude:pos.coords.altitude,timestamp:pos.timestamp};
-    gpsEl.textContent=`${latestGPS.latitude.toFixed(6)}, ${latestGPS.longitude.toFixed(6)} (±${Math.round(latestGPS.accuracy)} m)`;
-   },err=>{gpsEl.textContent='GPS error: '+err.message;},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
-  }else gpsEl.textContent='Geolocation unavailable';
- }catch(e){setStatus(e.message);alert(e.message);}
-}
-function startRecording(){
- if(!stream)return;
- const canvasStream=canvas.captureStream(30);
- // Keep microphone/camera audio tracks if the browser supplied them.
- stream.getAudioTracks().forEach(t=>canvasStream.addTrack(t));
- const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
- try{recorder=new MediaRecorder(canvasStream,mime?{mimeType:mime}:{});}catch(e){alert('Recording is not supported by this browser.');return;}
- chunks=[];recordingStart=new Date().toISOString();const startGPS=gpsSnapshot();
- recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
- recorder.onerror=e=>{setStatus('Recorder error');console.error(e);};
- recorder.onstop=async()=>{
-  const blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
-  if(blob.size){try{await dbAdd({blob,type:blob.type,startedAt:recordingStart,endedAt:new Date().toISOString(),startGPS,endGPS:gpsSnapshot(),durationMs:Date.now()-Date.parse(recordingStart)});setStatus('Saved recording locally');await renderGallery();}catch(e){alert('Could not save clip. Storage may be full: '+e.message);}}
-  canvasStream.getTracks().forEach(t=>t.stop());recBtn.disabled=false;stopBtn.disabled=true;
- };
- recorder.start(1000);recBtn.disabled=true;stopBtn.disabled=false;setStatus('● Recording…');
-}
-function stopRecording(){if(recorder&&recorder.state!=='inactive')recorder.stop();setStatus('Finishing and saving…');}
-function fmtDate(s){return new Date(s).toLocaleString();}
-async function renderGallery(){
- const gallery=document.getElementById('gallery');const items=await dbAll();gallery.innerHTML='';
- if(!items.length){gallery.innerHTML='<p class="muted">No recordings yet.</p>';return;}
- for(const item of items){
-  const card=document.createElement('article');card.className='item';
-  const player=document.createElement('video');player.controls=true;player.playsInline=true;player.src=URL.createObjectURL(item.blob);
-  const p=document.createElement('p');p.textContent=`${fmtDate(item.startedAt)} · ${(item.blob.size/1024/1024).toFixed(1)} MB`;
-  const gps=document.createElement('p');const g=item.startGPS;gps.textContent=g?`Start GPS: ${g.latitude.toFixed(6)}, ${g.longitude.toFixed(6)} (±${Math.round(g.accuracy)}m)`:'Start GPS: not captured';
-  const exp=document.createElement('button');exp.textContent='Export video';exp.onclick=()=>{const a=document.createElement('a');a.href=player.src;a.download=`geolens-${item.id}-${item.startedAt.replace(/[:.]/g,'-')}.webm`;a.click();};
-  const meta=document.createElement('button');meta.textContent='Export GPS data';meta.onclick=()=>{const blob=new Blob([JSON.stringify({id:item.id,startedAt:item.startedAt,endedAt:item.endedAt,durationMs:item.durationMs,startGPS:item.startGPS,endGPS:item.endGPS},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`geolens-${item.id}-gps.json`;a.click();};
-  const del=document.createElement('button');del.textContent='Delete';del.onclick=async()=>{if(confirm('Delete this saved clip?')){await dbDelete(item.id);await renderGallery();}};
-  card.append(player,p,gps,exp,meta,del);gallery.append(card);
- }
-}
-startBtn.addEventListener('click',start);recBtn.addEventListener('click',startRecording);stopBtn.addEventListener('click',stopRecording);
-document.getElementById('refresh').addEventListener('click',renderGallery);window.addEventListener('resize',resize);
-renderGallery().catch(e=>console.error(e));
-})();
-</script>
+<body class="text-white">
+
+    <!-- Desktop HUD & Controls Overlay -->
+    <div id="ui-overlay" class="absolute top-4 left-4 z-40 bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700/50 shadow-2xl max-w-sm pointer-events-auto">
+        <h1 class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+            Voxel World VR
+        </h1>
+        <p class="text-xs text-slate-400 mt-1">Infinite procedurally generated voxel terrain.</p>
+        
+        <div class="mt-3 text-xs space-y-1 text-slate-300 border-t border-slate-700/50 pt-2">
+            <div class="flex items-center justify-between">
+                <span class="font-semibold text-slate-400">Desktop:</span>
+                <span>Left Click Break / Right Click Place</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="font-semibold text-slate-400">Camera:</span>
+                <span>Drag to Orbit, Scroll to Zoom</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="font-semibold text-purple-400">VR Mode:</span>
+                <span>Right Trigger = Place, Left Trigger = Break</span>
+            </div>
+        </div>
+
+        <!-- Block Selection Palette -->
+        <div class="mt-4">
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Active Material</label>
+            <div class="grid grid-cols-4 gap-2" id="palette">
+                <button data-type="1" class="block-btn ring-2 ring-indigo-500 bg-emerald-600 hover:bg-emerald-500 h-10 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold shadow-md transition">
+                    Grass
+                </button>
+                <button data-type="2" class="block-btn bg-amber-800 hover:bg-amber-700 h-10 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold shadow-md transition">
+                    Dirt
+                </button>
+                <button data-type="3" class="block-btn bg-slate-500 hover:bg-slate-400 h-10 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold shadow-md transition">
+                    Stone
+                </button>
+                <button data-type="4" class="block-btn bg-amber-950 hover:bg-amber-900 h-10 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold shadow-md transition">
+                    Wood
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VR Button Container -->
+    <div id="vr-button-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { VRButton } from 'three/addons/webxr/VRButton.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Fast 2D Simplex Noise Implementation for Smooth Infinite Terrain ---
+        const SimplexNoise = function() {
+            const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
+            const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
+            const p = new Uint8Array(256);
+            for (let i = 0; i < 256; i++) p[i] = Math.floor(Math.random() * 256);
+            const perm = new Uint8Array(512);
+            const permMod12 = new Uint8Array(512);
+            for (let i = 0; i < 512; i++) {
+                perm[i] = p[i & 255];
+                permMod12[i] = (perm[i] % 12);
+            }
+            const grad3 = new Float32Array([
+                1,1,0, -1,1,0, 1,-1,0, -1,-1,0,
+                1,0,1, -1,0,1, 1,0,-1, -1,0,-1,
+                0,1,1, 0,-1,1, 0,1,-1, 0,-1,-1
+            ]);
+
+            return {
+                noise2D: function(xin, yin) {
+                    let n0, n1, n2;
+                    const s = (xin + yin) * F2;
+                    const i = Math.floor(xin + s);
+                    const j = Math.floor(yin + s);
+                    const t = (i + j) * G2;
+                    const X0 = i - t;
+                    const Y0 = j - t;
+                    const x0 = xin - X0;
+                    const y0 = yin - Y0;
+
+                    let i1, j1;
+                    if (x0 > y0) { i1 = 1; j1 = 0; }
+                    else { i1 = 0; j1 = 1; }
+
+                    const x1 = x0 - i1 + G2;
+                    const y1 = y0 - j1 + G2;
+                    const x2 = x0 - 1.0 + 2.0 * G2;
+                    const y2 = y0 - 1.0 + 2.0 * G2;
+
+                    const ii = i & 255;
+                    const jj = j & 255;
+
+                    let t0 = 0.5 - x0*x0 - y0*y0;
+                    if (t0 < 0) n0 = 0.0;
+                    else {
+                        t0 *= t0;
+                        const gi0 = permMod12[ii + perm[jj]] * 3;
+                        n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0+1] * y0);
+                    }
+
+                    let t1 = 0.5 - x1*x1 - y1*y1;
+                    if (t1 < 0) n1 = 0.0;
+                    else {
+                        t1 *= t1;
+                        const gi1 = permMod12[ii + i1 + perm[jj + j1]] * 3;
+                        n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1+1] * y1);
+                    }
+
+                    let t2 = 0.5 - x2*x2 - y2*y2;
+                    if (t2 < 0) n2 = 0.0;
+                    else {
+                        t2 *= t2;
+                        const gi2 = permMod12[ii + 1 + perm[jj + 1]] * 3;
+                        n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2+1] * y2);
+                    }
+
+                    return 70.0 * (n0 + n1 + n2);
+                }
+            };
+        };
+
+        const simplex = SimplexNoise();
+
+        // --- Game Constants & Materials ---
+        const CHUNK_SIZE = 8;
+        const RENDER_DISTANCE = 3; // Chunks around player
+        const BLOCK_SIZE = 1;
+
+        const BLOCK_TYPES = {
+            AIR: 0,
+            GRASS: 1,
+            DIRT: 2,
+            STONE: 3,
+            WOOD: 4,
+            LEAVES: 5
+        };
+
+        // Stylized voxel materials
+        const materials = {
+            [BLOCK_TYPES.GRASS]: new THREE.MeshStandardMaterial({ color: 0x2ecc71, roughness: 0.8 }),
+            [BLOCK_TYPES.DIRT]: new THREE.MeshStandardMaterial({ color: 0x8e5d38, roughness: 0.9 }),
+            [BLOCK_TYPES.STONE]: new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.6 }),
+            [BLOCK_TYPES.WOOD]: new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.7 }),
+            [BLOCK_TYPES.LEAVES]: new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.5, transparent: true, opacity: 0.9 })
+        };
+
+        const sharedGeometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        let selectedBlockType = BLOCK_TYPES.GRASS;
+
+        // Global Scene & Engine Setup
+        let scene, camera, renderer, controls;
+        let userGroup; // VR Rig parent
+        const chunks = new Map(); // Dynamic chunk tracking: "x,z" -> Chunk
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Highlight box for block placement/destruction target
+        let targetBox;
+
+        // VR Controllers
+        let controller1, controller2;
+        let controllerGradients = [];
+
+        // Dynamic modifications store (blocks added or destroyed by user)
+        const blockModifications = new Map(); // "x,y,z" -> type (0 for destroyed)
+
+        // --- Core Application Initialization ---
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            // User VR Rig Container
+            userGroup = new THREE.Group();
+            userGroup.position.set(0, 15, 0); // Position player above initial terrain height
+            scene.add(userGroup);
+            userGroup.add(camera);
+
+            // Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.xr.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            // VR Button Setup
+            const vrBtnContainer = document.getElementById('vr-button-container');
+            const vrButton = VRButton.createButton(renderer);
+            vrBtnContainer.appendChild(vrButton);
+
+            // Desktop Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.target.set(0, 12, -5);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Lighting Setup
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.75);
+            hemiLight.position.set(0, 50, 0);
+            scene.add(hemiLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(30, 60, 30);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 150;
+            const d = 40;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            scene.add(dirLight);
+
+            // Target Highlight Outline Box
+            const wireframeGeo = new THREE.BoxGeometry(1.02, 1.02, 1.02);
+            const wireframeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+            targetBox = new THREE.Mesh(wireframeGeo, wireframeMat);
+            targetBox.visible = false;
+            scene.add(targetBox);
+
+            // Setup VR Controllers
+            setupVRControllers();
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('pointerdown', onPointerDown);
+
+            // Setup Palette UI Click Listeners
+            document.querySelectorAll('.block-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.block-btn').forEach(b => b.classList.remove('ring-2', 'ring-indigo-500'));
+                    const target = e.currentTarget;
+                    target.classList.add('ring-2', 'ring-indigo-500');
+                    selectedBlockType = parseInt(target.getAttribute('data-type'));
+                });
+            });
+
+            // Start Animation Loop (Compatible with WebXR)
+            renderer.setAnimationLoop(render);
+        }
+
+        // --- VR Controller Setup & Visual Rays ---
+        function setupVRControllers() {
+            controller1 = renderer.xr.getController(0);
+            controller1.addEventListener('selectstart', () => onVRTrigger(controller1, false)); // Right trigger: Place
+            userGroup.add(controller1);
+
+            controller2 = renderer.xr.getController(1);
+            controller2.addEventListener('selectstart', () => onVRTrigger(controller2, true)); // Left trigger: Break
+            userGroup.add(controller2);
+
+            // Laser Pointer Line Visuals
+            const laserGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -5)]);
+            const laserMat = new THREE.LineBasicMaterial({ color: 0x6366f1, opacity: 0.7, transparent: true });
+
+            const line1 = new THREE.Line(laserGeo, laserMat);
+            line1.name = 'line';
+            line1.scale.z = 10;
+            controller1.add(line1);
+
+            const line2 = new THREE.Line(laserGeo, laserMat);
+            line2.name = 'line';
+            line2.scale.z = 10;
+            controller2.add(line2);
+        }
+
+        // Helper to evaluate terrain height at world (x, z)
+        function getTerrainHeight(x, z) {
+            const nx = x * 0.05;
+            const nz = z * 0.05;
+            let elevation = simplex.noise2D(nx, nz) * 6 + simplex.noise2D(nx * 2, nz * 2) * 2;
+            return Math.floor(elevation) + 8; // Base height of 8 blocks
+        }
+
+        // --- Procedural Instanced Chunk Generator ---
+        class Chunk {
+            constructor(cx, cz) {
+                this.cx = cx;
+                this.cz = cz;
+                this.meshGroup = new THREE.Group();
+                this.instancedMeshes = {};
+                this.generate();
+            }
+
+            generate() {
+                const blockCounts = {};
+                const blockTransforms = {};
+
+                // Initial pass: Compute block types and count instances per material
+                for (let x = 0; x < CHUNK_SIZE; x++) {
+                    for (let z = 0; z < CHUNK_SIZE; z++) {
+                        const worldX = this.cx * CHUNK_SIZE + x;
+                        const worldZ = this.cz * CHUNK_SIZE + z;
+                        const height = getTerrainHeight(worldX, worldZ);
+
+                        for (let y = 0; y <= height; y++) {
+                            const key = `${worldX},${y},${worldZ}`;
+                            let type = BLOCK_TYPES.AIR;
+
+                            // Check user override modifications
+                            if (blockModifications.has(key)) {
+                                type = blockModifications.get(key);
+                            } else {
+                                if (y === height) type = BLOCK_TYPES.GRASS;
+                                else if (y >= height - 2) type = BLOCK_TYPES.DIRT;
+                                else type = BLOCK_TYPES.STONE;
+                            }
+
+                            if (type !== BLOCK_TYPES.AIR) {
+                                if (!blockCounts[type]) {
+                                    blockCounts[type] = 0;
+                                    blockTransforms[type] = [];
+                                }
+                                blockCounts[type]++;
+                                blockTransforms[type].push({ x: worldX, y, z: worldZ });
+                            }
+                        }
+
+                        // Simple tree generation logic
+                        if (Math.random() < 0.015 && getTerrainHeight(worldX, worldZ) > 6) {
+                            const trunkHeight = 3 + Math.floor(Math.random() * 2);
+                            for (let ty = 1; ty <= trunkHeight; ty++) {
+                                const treeY = height + ty;
+                                const key = `${worldX},${treeY},${worldZ}`;
+                                if (!blockModifications.has(key)) {
+                                    const type = BLOCK_TYPES.WOOD;
+                                    if (!blockCounts[type]) { blockCounts[type] = 0; blockTransforms[type] = []; }
+                                    blockCounts[type]++;
+                                    blockTransforms[type].push({ x: worldX, y: treeY, z: worldZ });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check for user-added blocks outside terrain limits inside this chunk boundaries
+                blockModifications.forEach((type, key) => {
+                    if (type === BLOCK_TYPES.AIR) return;
+                    const [mx, my, mz] = key.split(',').map(Number);
+                    const mcx = Math.floor(mx / CHUNK_SIZE);
+                    const mcz = Math.floor(mz / CHUNK_SIZE);
+                    if (mcx === this.cx && mcz === this.cz) {
+                        // Avoid duplicates if already counted
+                        const h = getTerrainHeight(mx, mz);
+                        if (my > h || blockModifications.has(key)) {
+                            if (!blockCounts[type]) { blockCounts[type] = 0; blockTransforms[type] = []; }
+                            blockCounts[type]++;
+                            blockTransforms[type].push({ x: mx, y: my, z: mz });
+                        }
+                    }
+                });
+
+                // Second pass: Create instanced meshes for optimization
+                const dummy = new THREE.Object3D();
+                for (const type in blockCounts) {
+                    const count = blockCounts[type];
+                    const instancedMesh = new THREE.InstancedMesh(sharedGeometry, materials[type], count);
+                    instancedMesh.castShadow = true;
+                    instancedMesh.receiveShadow = true;
+
+                    const transforms = blockTransforms[type];
+                    for (let i = 0; i < transforms.length; i++) {
+                        const { x, y, z } = transforms[i];
+                        dummy.position.set(x, y, z);
+                        dummy.updateMatrix();
+                        instancedMesh.setMatrixAt(i, dummy.matrix);
+                    }
+
+                    instancedMesh.instanceMatrix.needsUpdate = true;
+                    instancedMesh.userData = { blockType: parseInt(type) };
+                    this.instancedMeshes[type] = instancedMesh;
+                    this.meshGroup.add(instancedMesh);
+                }
+
+                scene.add(this.meshGroup);
+            }
+
+            destroy() {
+                scene.remove(this.meshGroup);
+                for (const type in this.instancedMeshes) {
+                    this.instancedMeshes[type].geometry.dispose();
+                }
+            }
+        }
+
+        // --- Terrain Dynamic Loading/Unloading ---
+        function updateChunks() {
+            // Find current chunk player is residing in
+            const playerPos = renderer.xr.isPresenting ? userGroup.position : camera.position;
+            const currentChunkX = Math.floor(playerPos.x / CHUNK_SIZE);
+            const currentChunkZ = Math.floor(playerPos.z / CHUNK_SIZE);
+
+            const activeChunkKeys = new Set();
+
+            for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
+                for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
+                    const cx = currentChunkX + x;
+                    const cz = currentChunkZ + z;
+                    const key = `${cx},${cz}`;
+                    activeChunkKeys.add(key);
+
+                    if (!chunks.has(key)) {
+                        chunks.set(key, new Chunk(cx, cz));
+                    }
+                }
+            }
+
+            // Garbage collect distant chunks
+            for (const [key, chunk] of chunks.entries()) {
+                if (!activeChunkKeys.has(key)) {
+                    chunk.destroy();
+                    chunks.delete(key);
+                }
+            }
+        }
+
+        function rebuildAffectedChunk(worldX, worldZ) {
+            const cx = Math.floor(worldX / CHUNK_SIZE);
+            const cz = Math.floor(worldZ / CHUNK_SIZE);
+            const key = `${cx},${cz}`;
+            if (chunks.has(key)) {
+                chunks.get(key).destroy();
+                chunks.delete(key);
+                chunks.set(key, new Chunk(cx, cz));
+            }
+        }
+
+        // --- Raycasting & Block Interaction Logic ---
+        function getIntersection(raycasterSource) {
+            const interactables = [];
+            chunks.forEach(chunk => {
+                chunk.meshGroup.children.forEach(mesh => interactables.push(mesh));
+            });
+            const intersects = raycasterSource.intersectObjects(interactables);
+            return intersects.length > 0 ? intersects[0] : null;
+        }
+
+        // Desktop mouse click handler
+        function onPointerDown(event) {
+            if (renderer.xr.isPresenting) return; // Ignore desktop mouse input in VR mode
+            if (event.target.tagName === 'BUTTON' || event.target.closest('#ui-overlay')) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const hit = getIntersection(raycaster);
+
+            if (hit) {
+                const matrix = new THREE.Matrix4();
+                hit.object.getMatrixAt(hit.instanceId, matrix);
+                const position = new THREE.Vector3().setFromMatrixPosition(matrix);
+
+                if (event.button === 0) {
+                    // Left Click: Break Block
+                    blockModifications.set(`${position.x},${position.y},${position.z}`, BLOCK_TYPES.AIR);
+                    rebuildAffectedChunk(position.x, position.z);
+                } else if (event.button === 2) {
+                    // Right Click: Place Block
+                    const normal = hit.face.normal;
+                    const placePos = position.clone().add(normal);
+                    blockModifications.set(`${placePos.x},${placePos.y},${placePos.z}`, selectedBlockType);
+                    rebuildAffectedChunk(placePos.x, placePos.z);
+                }
+            }
+        }
+
+        // Disable Context Menu for Smooth Right Clicking
+        window.addEventListener('contextmenu', e => e.preventDefault());
+
+        // VR Trigger Handler
+        function onVRTrigger(controller, isDestroy) {
+            const tempMatrix = new THREE.Matrix4();
+            tempMatrix.identity().extractRotation(controller.matrixWorld);
+
+            const ray = new THREE.Raycaster();
+            ray.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+            ray.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+            const hit = getIntersection(ray);
+            if (hit) {
+                const matrix = new THREE.Matrix4();
+                hit.object.getMatrixAt(hit.instanceId, matrix);
+                const position = new THREE.Vector3().setFromMatrixPosition(matrix);
+
+                if (isDestroy) {
+                    // Destroy block
+                    blockModifications.set(`${position.x},${position.y},${position.z}`, BLOCK_TYPES.AIR);
+                    rebuildAffectedChunk(position.x, position.z);
+                } else {
+                    // Place block
+                    const normal = hit.face.normal;
+                    const placePos = position.clone().add(normal);
+                    blockModifications.set(`${placePos.x},${placePos.y},${placePos.z}`, selectedBlockType);
+                    rebuildAffectedChunk(placePos.x, placePos.z);
+                }
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- Main Render & Animation Loop ---
+        function render() {
+            // Update OrbitControls when in desktop preview mode
+            if (!renderer.xr.isPresenting) {
+                controls.update();
+            }
+
+            // Handle dynamic landscape generation
+            updateChunks();
+
+            // Update Target Wireframe Box Highlight
+            if (!renderer.xr.isPresenting) {
+                raycaster.setFromCamera(mouse, camera);
+                const hit = getIntersection(raycaster);
+                if (hit) {
+                    const matrix = new THREE.Matrix4();
+                    hit.object.getMatrixAt(hit.instanceId, matrix);
+                    targetBox.position.setFromMatrixPosition(matrix);
+                    targetBox.visible = true;
+                } else {
+                    targetBox.visible = false;
+                }
+            } else {
+                // VR Controller Beam Raycasting Highlight
+                const tempMatrix = new THREE.Matrix4();
+                tempMatrix.identity().extractRotation(controller1.matrixWorld);
+                const ray = new THREE.Raycaster();
+                ray.ray.origin.setFromMatrixPosition(controller1.matrixWorld);
+                ray.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+                const hit = getIntersection(ray);
+                if (hit) {
+                    const matrix = new THREE.Matrix4();
+                    hit.object.getMatrixAt(hit.instanceId, matrix);
+                    targetBox.position.setFromMatrixPosition(matrix);
+                    targetBox.visible = true;
+                } else {
+                    targetBox.visible = false;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Boot system once loaded
+        window.onload = init;
+    </script>
 </body>
 </html>
+```
