@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>4D Stereographic Voxel Architect</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -16,6 +16,7 @@
             background-color: #030712;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             user-select: none;
+            touch-action: none;
         }
 
         #game-canvas {
@@ -25,21 +26,21 @@
         }
 
         .glass-panel {
-            background: rgba(15, 23, 42, 0.75);
+            background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(56, 189, 248, 0.2);
+            border: 1px solid rgba(56, 189, 248, 0.25);
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
         }
 
         .hotbar-item {
-            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: all 0.2s ease;
         }
 
         .hotbar-item.active {
             transform: scale(1.15) translateY(-4px);
             border-color: #38bdf8;
-            box-shadow: 0 0 18px rgba(56, 189, 248, 0.7);
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.8);
         }
 
         .crosshair {
@@ -50,7 +51,11 @@
             pointer-events: none;
         }
 
-        /* Custom range styling */
+        .touch-btn {
+            active: scale(0.92);
+            touch-action: manipulation;
+        }
+
         input[type=range] {
             accent-color: #38bdf8;
         }
@@ -63,43 +68,14 @@
 
     <!-- Crosshair HUD -->
     <div class="crosshair z-20 flex items-center justify-center">
-        <div class="w-5 h-0.5 bg-cyan-400 opacity-90 shadow-[0_0_10px_#06b6d4]"></div>
-        <div class="h-5 w-0.5 bg-cyan-400 opacity-90 shadow-[0_0_10px_#06b6d4] absolute"></div>
+        <div class="w-6 h-0.5 bg-cyan-400 opacity-90 shadow-[0_0_10px_#06b6d4]"></div>
+        <div class="h-6 w-0.5 bg-cyan-400 opacity-90 shadow-[0_0_10px_#06b6d4] absolute"></div>
         <div class="w-1.5 h-1.5 bg-white rounded-full absolute shadow-[0_0_8px_#fff]"></div>
     </div>
 
-    <!-- Start Overlay / Controls guide -->
-    <div id="start-overlay" class="absolute inset-0 z-40 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center text-white cursor-pointer transition-opacity duration-300">
-        <div class="glass-panel p-8 rounded-2xl max-w-lg text-center border border-cyan-500/40 shadow-[0_0_60px_rgba(6,182,212,0.2)]">
-            <div class="inline-flex p-3 bg-cyan-500/10 rounded-2xl text-cyan-400 mb-4 ring-1 ring-cyan-500/30">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                </svg>
-            </div>
-            <h1 class="text-3xl font-extrabold tracking-wider bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent mb-2">
-                4D STEREOGRAPHIC VOXEL ARCHITECT
-            </h1>
-            <p class="text-slate-300 text-sm mb-6 leading-relaxed">
-                Build and explore inside a 4-dimensional hyper-space grid $(X, Y, Z, W)$. Coordinates are dynamically mapped down to 3D space using <span class="text-cyan-300 font-semibold">4D Stereographic Projection</span>:
-                $$\vec{P}_{3D} = \frac{\vec{P}_{4D}(x,y,z)}{R - w}$$
-            </p>
-            <button class="w-full py-3.5 px-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 font-bold text-sm tracking-wide rounded-xl shadow-lg shadow-cyan-500/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] mb-6">
-                CLICK TO START & LOCK MOUSE
-            </button>
-            <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 text-left bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 font-mono">
-                <div><span class="text-cyan-400 font-bold">WASD:</span> Move XYZ</div>
-                <div><span class="text-cyan-400 font-bold">Q / E:</span> Move W (4th Dim)</div>
-                <div><span class="text-cyan-400 font-bold">R / F:</span> Fly Up / Down</div>
-                <div><span class="text-cyan-400 font-bold">LEFT CLICK:</span> Destroy 4D Block</div>
-                <div><span class="text-cyan-400 font-bold">RIGHT CLICK:</span> Place 4D Block</div>
-                <div><span class="text-cyan-400 font-bold">1 - 6:</span> Select Hyper-Material</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- HUD Top Info -->
-    <div class="absolute top-4 left-4 z-30 flex flex-col gap-2 pointer-events-none">
-        <div class="glass-panel px-4 py-2.5 rounded-xl flex items-center gap-4 text-xs font-mono text-cyan-300">
+    <!-- HUD Top Metrics -->
+    <div class="absolute top-3 left-3 z-30 flex flex-col gap-2 pointer-events-none">
+        <div class="glass-panel px-3.5 py-2 rounded-xl flex items-center gap-3 text-xs font-mono text-cyan-300">
             <div>FPS: <span id="fps-counter" class="text-white font-bold">60</span></div>
             <div class="w-px h-4 bg-slate-700"></div>
             <div>4D VOXELS: <span id="block-counter" class="text-white font-bold">0</span></div>
@@ -108,27 +84,30 @@
         </div>
     </div>
 
-    <!-- 4D Control & Shader Panel -->
-    <div id="settings-panel" class="absolute top-4 right-4 z-30 w-80 glass-panel rounded-2xl p-4 text-white text-xs transition-all duration-300 shadow-2xl">
-        <div class="flex items-center justify-between mb-3 border-b border-slate-700/60 pb-2">
-            <h2 class="font-bold text-xs tracking-wider text-cyan-400 flex items-center gap-2 font-mono">
+    <!-- Collapsible 4D Control Panel -->
+    <div id="settings-panel" class="absolute top-3 right-3 z-30 w-72 md:w-80 glass-panel rounded-2xl p-3.5 text-white text-xs transition-all duration-300 shadow-2xl">
+        <div class="flex items-center justify-between mb-2.5 border-b border-slate-700/60 pb-2">
+            <h2 class="font-bold text-xs tracking-wider text-cyan-400 flex items-center gap-1.5 font-mono">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
                 4D STEREOGRAPHIC MATRIX
             </h2>
+            <button id="toggle-panel" class="text-slate-400 hover:text-white p-1 rounded">
+                <svg id="chevron-icon" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
         </div>
 
-        <div class="space-y-3 font-mono">
+        <div id="panel-content" class="space-y-2.5 font-mono">
             <div>
                 <div class="flex justify-between mb-1">
-                    <span class="text-slate-300">Hyper-Radius Focal R</span>
-                    <span id="radius-val" class="text-cyan-400 font-bold">12.0</span>
+                    <span class="text-slate-300">Projection Radius (R)</span>
+                    <span id="radius-val" class="text-cyan-400 font-bold">10.0</span>
                 </div>
-                <input id="slider-radius" type="range" min="6.0" max="24.0" step="0.5" value="12.0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+                <input id="slider-radius" type="range" min="5.0" max="20.0" step="0.5" value="10.0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
             </div>
 
             <div>
                 <div class="flex justify-between mb-1">
-                    <span class="text-slate-300">4D Plane Rotation (XW)</span>
+                    <span class="text-slate-300">Rotation XW Plane</span>
                     <span id="xw-val" class="text-cyan-400 font-bold">0°</span>
                 </div>
                 <input id="slider-rot-xw" type="range" min="-3.14" max="3.14" step="0.05" value="0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
@@ -136,7 +115,7 @@
 
             <div>
                 <div class="flex justify-between mb-1">
-                    <span class="text-slate-300">4D Plane Rotation (YW)</span>
+                    <span class="text-slate-300">Rotation YW Plane</span>
                     <span id="yw-val" class="text-cyan-400 font-bold">0°</span>
                 </div>
                 <input id="slider-rot-yw" type="range" min="-3.14" max="3.14" step="0.05" value="0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
@@ -144,37 +123,72 @@
 
             <div>
                 <div class="flex justify-between mb-1">
-                    <span class="text-slate-300">4D Plane Rotation (ZW)</span>
+                    <span class="text-slate-300">Rotation ZW Plane</span>
                     <span id="zw-val" class="text-cyan-400 font-bold">0°</span>
                 </div>
                 <input id="slider-rot-zw" type="range" min="-3.14" max="3.14" step="0.05" value="0" class="w-full accent-cyan-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
             </div>
 
             <div>
-                <label class="block text-slate-300 mb-1">Preset 4D Structure Generator</label>
-                <select id="preset-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-cyan-300 text-xs focus:outline-none focus:border-cyan-500">
-                    <option value="none">-- Select Preset --</option>
-                    <option value="tesseract">Tesseract Hypercube Lattice</option>
+                <label class="block text-slate-300 mb-1">Presets</label>
+                <select id="preset-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-cyan-300 text-xs focus:outline-none focus:border-cyan-500">
+                    <option value="default">Default 4D Platform & Tesseract</option>
+                    <option value="tesseract">Tesseract Lattice</option>
                     <option value="ring">4D Ring World</option>
-                    <option value="pyramid">4D Hyper-Pyramid</option>
                     <option value="sphere">4D Spherical Shell</option>
                 </select>
             </div>
 
             <div class="pt-2 border-t border-slate-700/60 flex gap-2">
-                <button id="btn-reset-rot" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg text-xs font-semibold transition-colors">
-                    Reset 4D Rot
+                <button id="btn-reset" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg text-xs font-semibold transition-colors">
+                    Reset Camera/4D
                 </button>
                 <button id="btn-clear" class="flex-1 py-1.5 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/40 rounded-lg text-xs font-semibold transition-colors">
-                    Clear Voxels
+                    Clear Blocks
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- 4D Hyper-Material Inventory Bar -->
-    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-        <div class="glass-panel p-2 rounded-2xl flex items-center gap-2 border border-slate-700/60 shadow-2xl pointer-events-auto" id="hotbar">
+    <!-- TOUCH & MOBILE ON-SCREEN CONTROLS -->
+    <!-- Left Side: D-Pad & 4th Dimension (W-Axis) Controls -->
+    <div class="absolute bottom-20 left-4 z-30 flex flex-col gap-2 pointer-events-auto">
+        <div class="glass-panel p-2 rounded-2xl flex flex-col items-center gap-1">
+            <div class="text-[10px] font-mono text-cyan-400 mb-0.5">MOVE XYZ</div>
+            <div class="flex gap-1">
+                <button id="btn-up-y" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">Y+</button>
+                <button id="btn-fwd" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">W</button>
+                <button id="btn-dn-y" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">Y-</button>
+            </div>
+            <div class="flex gap-1">
+                <button id="btn-left" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">A</button>
+                <button id="btn-back" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">S</button>
+                <button id="btn-right" class="touch-btn w-10 h-10 bg-slate-800 active:bg-cyan-600 rounded-xl font-bold text-xs text-white border border-slate-700">D</button>
+            </div>
+        </div>
+
+        <div class="glass-panel p-2 rounded-2xl flex items-center justify-between gap-1">
+            <span class="text-[10px] font-mono text-amber-400 pl-1">4D W-AXIS:</span>
+            <button id="btn-w-dn" class="touch-btn px-3 py-2 bg-amber-950/80 active:bg-amber-600 border border-amber-600/40 text-amber-300 rounded-xl font-bold text-xs">W -</button>
+            <button id="btn-w-up" class="touch-btn px-3 py-2 bg-amber-950/80 active:bg-amber-600 border border-amber-600/40 text-amber-300 rounded-xl font-bold text-xs">W +</button>
+        </div>
+    </div>
+
+    <!-- Right Side: Big Block Interaction Buttons -->
+    <div class="absolute bottom-20 right-4 z-30 flex flex-col gap-2.5 pointer-events-auto">
+        <button id="btn-place" class="touch-btn px-5 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 active:from-cyan-400 active:to-blue-500 text-white font-black text-sm tracking-wide rounded-2xl shadow-lg shadow-cyan-500/30 border border-cyan-300/40 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            PLACE BLOCK
+        </button>
+        <button id="btn-break" class="touch-btn px-5 py-3.5 bg-gradient-to-r from-rose-600 to-red-700 active:from-rose-500 active:to-red-600 text-white font-black text-sm tracking-wide rounded-2xl shadow-lg shadow-rose-600/30 border border-rose-300/40 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            BREAK BLOCK
+        </button>
+    </div>
+
+    <!-- 4D Material Hotbar -->
+    <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+        <div class="glass-panel p-1.5 rounded-2xl flex items-center gap-1.5 border border-slate-700/60 shadow-2xl pointer-events-auto" id="hotbar">
             <!-- Populated via JS -->
         </div>
     </div>
@@ -191,21 +205,21 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- 4D BLOCK MATERIALS DEFINITION ---
+        // --- 4D BLOCK MATERIALS ---
         const HYPER_MATERIALS = [
-            { id: 1, name: 'Quantum Glass', color: 0x06b6d4, emissive: 0x0891b2, opacity: 0.75 },
-            { id: 2, name: 'Hyper Gold', color: 0xeab308, emissive: 0xca8a04, opacity: 0.95 },
-            { id: 3, name: 'Cosmic Stone', color: 0x64748b, emissive: 0x334155, opacity: 1.0 },
-            { id: 4, name: 'Neon Crystal', color: 0xec4899, emissive: 0xbe185d, opacity: 0.85 },
-            { id: 5, name: 'Plasma Energy', color: 0x10b981, emissive: 0x059669, opacity: 0.9 },
-            { id: 6, name: 'Dark Matter', color: 0x6366f1, emissive: 0x4338ca, opacity: 0.95 }
+            { id: 1, name: 'Cyan Crystal', color: 0x06b6d4, emissive: 0x0891b2 },
+            { id: 2, name: 'Hyper Gold', color: 0xeab308, emissive: 0xca8a04 },
+            { id: 3, name: 'Cosmic Slate', color: 0x64748b, emissive: 0x334155 },
+            { id: 4, name: 'Neon Magenta', color: 0xec4899, emissive: 0xbe185d },
+            { id: 5, name: 'Plasma Green', color: 0x10b981, emissive: 0x059669 },
+            { id: 6, name: 'Quantum Indigo', color: 0x6366f1, emissive: 0x4338ca }
         ];
 
         let selectedMaterialId = 1;
 
-        // --- GAME GLOBAL STATE ---
+        // --- GLOBAL STATE ---
         const state = {
-            focalR: 12.0,
+            focalR: 10.0,
             rotXW: 0.0,
             rotYW: 0.0,
             rotZW: 0.0,
@@ -214,7 +228,7 @@
             fps: 60
         };
 
-        // --- 4D VECTOR & TRANSFORM MATH ---
+        // --- 4D VECTOR & TRANSFORM CALCULATIONS ---
         class Vector4D {
             constructor(x = 0, y = 0, z = 0, w = 0) {
                 this.x = x;
@@ -223,31 +237,25 @@
                 this.w = w;
             }
 
-            clone() {
-                return new Vector4D(this.x, this.y, this.z, this.w);
-            }
-
-            // Apply 4D Rotations across XW, YW, and ZW planes
+            // Rotates point in 4D space across XW, YW, and ZW planes
             apply4DRotation(rxw, ryw, rzw) {
                 let { x, y, z, w } = this;
 
-                // XW Plane Rotation
+                // XW Plane
                 if (rxw !== 0) {
                     const c = Math.cos(rxw), s = Math.sin(rxw);
                     const nx = x * c - w * s;
                     const nw = x * s + w * c;
                     x = nx; w = nw;
                 }
-
-                // YW Plane Rotation
+                // YW Plane
                 if (ryw !== 0) {
                     const c = Math.cos(ryw), s = Math.sin(ryw);
                     const ny = y * c - w * s;
                     const nw = y * s + w * c;
                     y = ny; w = nw;
                 }
-
-                // ZW Plane Rotation
+                // ZW Plane
                 if (rzw !== 0) {
                     const c = Math.cos(rzw), s = Math.sin(rzw);
                     const nz = z * c - w * s;
@@ -259,7 +267,8 @@
                 return this;
             }
 
-            // Stereographic Projection: 4D (x,y,z,w) -> 3D (X,Y,Z)
+            // 4D Stereographic Projection Formula:
+            // P_3d = (x / (R - w), y / (R - w), z / (R - w)) * R
             projectStereographic(R) {
                 const denominator = Math.max(0.1, R - this.w);
                 const scale = R / denominator;
@@ -280,25 +289,33 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x030712);
 
-        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 0, 15);
+        // Fixed Camera Setup at (0, 2, 8) looking at center target (0,0,0)
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 8);
+        camera.lookAt(0, 0, 0);
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambientLight);
 
         const dirLight1 = new THREE.DirectionalLight(0x38bdf8, 1.2);
-        dirLight1.position.set(20, 40, 20);
+        dirLight1.position.set(10, 20, 15);
         scene.add(dirLight1);
 
         const dirLight2 = new THREE.DirectionalLight(0xec4899, 0.8);
-        dirLight2.position.set(-20, -20, -20);
+        dirLight2.position.set(-10, -10, -10);
         scene.add(dirLight2);
 
-        // --- 4D VOXEL GRID DATABASE & ENGINE ---
-        class VoxelGrid4D {
+        // Placement Preview Wireframe Cube
+        const previewGeo = new THREE.BoxGeometry(1.05, 1.05, 1.05);
+        const previewMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true });
+        const targetPreviewMesh = new THREE.Mesh(previewGeo, previewMat);
+        targetPreviewMesh.visible = false;
+        scene.add(targetPreviewMesh);
+
+        // --- 4D VOXEL WORLD ENGINE ---
+        class VoxelWorld4D {
             constructor() {
-                // Key format: "x,y,z,w" -> materialId
                 this.grid = new Map();
                 this.meshGroup = new THREE.Group();
                 scene.add(this.meshGroup);
@@ -317,18 +334,40 @@
                 }
             }
 
-            getBlock(x, y, z, w) {
-                return this.grid.get(this.getKey(x, y, z, w));
-            }
-
             clear() {
                 this.grid.clear();
                 this.rebuildMesh();
             }
 
-            // Rebuilds 3D projected geometry from 4D block coordinates
+            // Initializes world with guaranteed visible platform & central structure
+            initDefaultWorld() {
+                this.grid.clear();
+
+                // 1. Guaranteed 5x5 floor platform at Y = -2 directly in front of camera
+                for (let x = -2; x <= 2; x++) {
+                    for (let z = -2; z <= 2; z++) {
+                        const matId = ((Math.abs(x) + Math.abs(z)) % 2 === 0) ? 3 : 1;
+                        this.setBlock(x, -2, z, 0, matId);
+                    }
+                }
+
+                // 2. Central 4D Tesseract Structure at Y = 0..1
+                this.setBlock(0, 0, 0, 0, 2);  // Gold center
+                this.setBlock(1, 0, 0, 0, 1);
+                this.setBlock(-1, 0, 0, 0, 1);
+                this.setBlock(0, 1, 0, 0, 4);
+                this.setBlock(0, 0, 1, 0, 5);
+                this.setBlock(0, 0, -1, 0, 5);
+                
+                // Hyper-dimension W slice blocks
+                this.setBlock(0, 0, 0, 1, 6);
+                this.setBlock(0, 0, 0, -1, 6);
+
+                this.rebuildMesh();
+            }
+
             rebuildMesh() {
-                // Clear existing meshes
+                // Clear active meshes
                 while (this.meshGroup.children.length > 0) {
                     const child = this.meshGroup.children.pop();
                     if (child.geometry) child.geometry.dispose();
@@ -340,22 +379,22 @@
 
                 if (this.grid.size === 0) return;
 
-                // Build geometry for each 4D voxel cell transformed stereographically
+                // Subdivided Box geometry template for stereographic vertex distortion
+                const baseBoxGeo = new THREE.BoxGeometry(0.95, 0.95, 0.95, 3, 3, 3);
+
                 this.grid.forEach((voxel) => {
                     const matDef = HYPER_MATERIALS.find(m => m.id === voxel.materialId) || HYPER_MATERIALS[0];
 
-                    // Subdivided Box Geometry for hyper-curvature mapping
-                    const baseGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9, 3, 3, 3);
-                    const posAttr = baseGeo.attributes.position;
+                    const geo = baseBoxGeo.clone();
+                    const posAttr = geo.attributes.position;
 
-                    // Compute projected positions for each vertex of the voxel
+                    // Project each vertex of the voxel box from 4D -> 3D stereographically
                     for (let i = 0; i < posAttr.count; i++) {
                         const vx = posAttr.getX(i) + voxel.x;
                         const vy = posAttr.getY(i) + voxel.y;
                         const vz = posAttr.getZ(i) + voxel.z;
                         const vw = voxel.w;
 
-                        // Create 4D vector and apply rotation & stereographic projection
                         const v4 = new Vector4D(vx, vy, vz, vw);
                         v4.apply4DRotation(state.rotXW, state.rotYW, state.rotZW);
                         const p3 = v4.projectStereographic(state.focalR);
@@ -363,127 +402,51 @@
                         posAttr.setXYZ(i, p3.x, p3.y, p3.z);
                     }
 
-                    baseGeo.computeVertexNormals();
+                    geo.computeVertexNormals();
 
-                    // Dynamic W-depth color spectrum effect
-                    const wColorShift = Math.sin(voxel.w * 0.5) * 0.2;
+                    // W-depth slice dynamic hue shift
+                    const wHueShift = voxel.w * 0.08;
                     const baseCol = new THREE.Color(matDef.color);
-                    baseCol.offsetHSL(wColorShift, 0, 0);
+                    baseCol.offsetHSL(wHueShift, 0, 0);
 
                     const material = new THREE.MeshStandardMaterial({
                         color: baseCol,
                         emissive: new THREE.Color(matDef.emissive),
-                        emissiveIntensity: 0.25,
-                        roughness: 0.2,
-                        metalness: 0.8,
-                        transparent: matDef.opacity < 1.0,
-                        opacity: matDef.opacity,
-                        wireframe: false
+                        emissiveIntensity: 0.3,
+                        roughness: 0.3,
+                        metalness: 0.7,
+                        side: THREE.DoubleSide
                     });
 
-                    const mesh = new THREE.Mesh(baseGeo, material);
+                    const mesh = new THREE.Mesh(geo, material);
+                    mesh.userData = { voxel };
                     this.meshGroup.add(mesh);
-
-                    // Add subtle wireframe accent to highlight 4D edge curvature
-                    const wireMat = new THREE.MeshBasicMaterial({
-                        color: 0x38bdf8,
-                        wireframe: true,
-                        transparent: true,
-                        opacity: 0.15
-                    });
-                    const wireMesh = new THREE.Mesh(baseGeo, wireMat);
-                    this.meshGroup.add(wireMesh);
                 });
             }
         }
 
-        const world4D = new VoxelGrid4D();
+        const world4D = new VoxelWorld4D();
+        world4D.initDefaultWorld();
 
-        // --- PRESET 4D GENERATORS ---
-        function generatePreset(type) {
-            world4D.grid.clear();
-
-            if (type === 'tesseract') {
-                // 4D Hypercube Lattice (Tesseract border cells)
-                for (let x = -2; x <= 2; x++) {
-                    for (let y = -2; y <= 2; y++) {
-                        for (let z = -2; z <= 2; z++) {
-                            for (let w = -2; w <= 2; w++) {
-                                const onBoundary = (Math.abs(x) === 2) + (Math.abs(y) === 2) + (Math.abs(z) === 2) + (Math.abs(w) === 2);
-                                if (onBoundary >= 3) {
-                                    const matId = ((Math.abs(w) + Math.abs(x)) % 6) + 1;
-                                    world4D.setBlock(x * 2, y * 2, z * 2, w * 2, matId);
-                                }
-                            }
-                        }
-                    }
-                }
-            } else if (type === 'ring') {
-                // 4D Ring World
-                const radius = 5;
-                for (let angle = 0; angle < Math.PI * 2; angle += 0.3) {
-                    for (let w = -2; w <= 2; w += 2) {
-                        const x = Math.round(Math.cos(angle) * radius);
-                        const z = Math.round(Math.sin(angle) * radius);
-                        world4D.setBlock(x, 0, z, w, (Math.abs(w) % 6) + 1);
-                    }
-                }
-            } else if (type === 'pyramid') {
-                // 4D Hyper-Pyramid
-                for (let h = 0; h < 5; h++) {
-                    const span = 4 - h;
-                    for (let x = -span; x <= span; x++) {
-                        for (let z = -span; z <= span; z++) {
-                            for (let w = -span; w <= span; w++) {
-                                if (Math.abs(x) === span || Math.abs(z) === span || Math.abs(w) === span) {
-                                    world4D.setBlock(x * 2, h * 2 - 4, z * 2, w * 2, (h % 6) + 1);
-                                }
-                            }
-                        }
-                    }
-                }
-            } else if (type === 'sphere') {
-                // 4D Spherical Shell
-                for (let x = -3; x <= 3; x++) {
-                    for (let y = -3; y <= 3; y++) {
-                        for (let z = -3; z <= 3; z++) {
-                            for (let w = -3; w <= 3; w++) {
-                                const distSq = x * x + y * y + z * z + w * w;
-                                if (distSq >= 7 && distSq <= 11) {
-                                    world4D.setBlock(x * 2, y * 2, z * 2, w * 2, ((x + y + z + w) % 6) + 1);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            world4D.rebuildMesh();
-        }
-
-        // Initialize with default Tesseract Lattice
-        generatePreset('tesseract');
-
-        // --- 4D FIRST PERSON PLAYER CONTROLLER ---
-        class Player4DController {
+        // --- PLAYER & CAMERA CONTROLLER ---
+        class PlayerController {
             constructor() {
-                this.pos4D = new Vector4D(0, 0, 15, 0);
-                this.pitch = 0;
+                this.pos4D = new Vector4D(0, 2, 8, 0);
+                this.pitch = -0.2;
                 this.yaw = 0;
                 this.keys = {};
             }
 
             update(dt) {
-                const speed = 12.0;
+                const speed = 8.0;
                 const moveVec = new THREE.Vector3();
 
-                // 3D Direction vector
                 if (this.keys['KeyW']) moveVec.z -= 1;
                 if (this.keys['KeyS']) moveVec.z += 1;
                 if (this.keys['KeyA']) moveVec.x -= 1;
                 if (this.keys['KeyD']) moveVec.x += 1;
-                if (this.keys['KeyR']) moveVec.y += 1; // Fly up
-                if (this.keys['KeyF']) moveVec.y -= 1; // Fly down
+                if (this.keys['KeyR']) moveVec.y += 1;
+                if (this.keys['KeyF']) moveVec.y -= 1;
 
                 moveVec.normalize();
                 moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
@@ -492,98 +455,109 @@
                 this.pos4D.y += moveVec.y * speed * dt;
                 this.pos4D.z += moveVec.z * speed * dt;
 
-                // 4D W-Axis Movement (Q/E)
+                // 4D W-Axis Navigation (Q/E)
                 if (this.keys['KeyQ']) this.pos4D.w -= speed * dt;
                 if (this.keys['KeyE']) this.pos4D.w += speed * dt;
 
-                // Update Three.js camera position in projected 3D space
+                // Sync Three.js Camera position via 4D stereographic mapping
                 const projPos = this.pos4D.projectStereographic(state.focalR);
                 camera.position.copy(projPos);
 
-                const target = projPos.clone().add(new THREE.Vector3(
+                const lookDir = new THREE.Vector3(
                     -Math.sin(this.yaw) * Math.cos(this.pitch),
                     Math.sin(this.pitch),
                     -Math.cos(this.yaw) * Math.cos(this.pitch)
-                ));
-                camera.lookAt(target);
+                );
+                camera.lookAt(projPos.clone().add(lookDir));
 
-                // HUD Position display
+                // Update HUD Text
                 document.getElementById('pos-display').innerText = 
                     `X:${this.pos4D.x.toFixed(1)} Y:${this.pos4D.y.toFixed(1)} Z:${this.pos4D.z.toFixed(1)} W:${this.pos4D.w.toFixed(1)}`;
+
+                // Update Raycast Target Highlight Preview
+                this.updateRaycastPreview();
+            }
+
+            updateRaycastPreview() {
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+                const intersects = raycaster.intersectObjects(world4D.meshGroup.children);
+                if (intersects.length > 0) {
+                    const hit = intersects[0];
+                    targetPreviewMesh.position.copy(hit.object.position);
+                    targetPreviewMesh.visible = true;
+                } else {
+                    targetPreviewMesh.visible = false;
+                }
             }
         }
 
-        const player = new Player4DController();
+        const player = new PlayerController();
 
-        // --- 4D RAYCAST BLOCK INTERACTION ---
-        function raycast4DInteraction(destroy = false) {
+        // --- BLOCK INTERACTION ENGINE (PLACE / BREAK) ---
+        function executeBlockAction(isBreak) {
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
             const intersects = raycaster.intersectObjects(world4D.meshGroup.children);
             if (intersects.length > 0) {
                 const hit = intersects[0];
-                const p = hit.point;
+                const targetVoxel = hit.object.userData.voxel;
 
-                // Inverse project approximate 3D hit point back to 4D grid integer space
-                const targetX = Math.round(p.x / (state.focalR / (state.focalR - player.pos4D.w)));
-                const targetY = Math.round(p.y / (state.focalR / (state.focalR - player.pos4D.w)));
-                const targetZ = Math.round(p.z / (state.focalR / (state.focalR - player.pos4D.w)));
-                const targetW = Math.round(player.pos4D.w);
-
-                if (destroy) {
-                    // Find and remove block closest to hit point
-                    let targetKey = null;
-                    let minDist = Infinity;
-                    world4D.grid.forEach((b, k) => {
-                        const d = Math.hypot(b.x - targetX, b.y - targetY, b.z - targetZ, b.w - targetW);
-                        if (d < minDist) {
-                            minDist = d;
-                            targetKey = k;
-                        }
-                    });
-
-                    if (targetKey && minDist < 4.0) {
-                        world4D.grid.delete(targetKey);
-                        world4D.rebuildMesh();
-                    }
+                if (isBreak) {
+                    // Remove targeted voxel
+                    world4D.setBlock(targetVoxel.x, targetVoxel.y, targetVoxel.z, targetVoxel.w, 0);
+                    world4D.rebuildMesh();
                 } else {
-                    // Place new block adjacent to hit face
-                    const norm = hit.face.normal.clone();
-                    const placeX = targetX + Math.round(norm.x * 2);
-                    const placeY = targetY + Math.round(norm.y * 2);
-                    const placeZ = targetZ + Math.round(norm.z * 2);
-                    const placeW = targetW;
+                    // Place new block adjacent to targeted voxel face
+                    const normal = hit.face.normal.clone();
+                    const newX = targetVoxel.x + Math.round(normal.x);
+                    const newY = targetVoxel.y + Math.round(normal.y);
+                    const newZ = targetVoxel.z + Math.round(normal.z);
+                    const newW = Math.round(player.pos4D.w);
 
-                    world4D.setBlock(placeX, placeY, placeZ, placeW, selectedMaterialId);
+                    world4D.setBlock(newX, newY, newZ, newW, selectedMaterialId);
                     world4D.rebuildMesh();
                 }
+            } else if (!isBreak) {
+                // If aiming into empty space, place block 3 units in front of player
+                const dir = new THREE.Vector3(
+                    -Math.sin(player.yaw) * Math.cos(player.pitch),
+                    Math.sin(player.pitch),
+                    -Math.cos(player.yaw) * Math.cos(player.pitch)
+                ).normalize();
+
+                const spawnX = Math.round(player.pos4D.x + dir.x * 3);
+                const spawnY = Math.round(player.pos4D.y + dir.y * 3);
+                const spawnZ = Math.round(player.pos4D.z + dir.z * 3);
+                const spawnW = Math.round(player.pos4D.w);
+
+                world4D.setBlock(spawnX, spawnY, spawnZ, spawnW, selectedMaterialId);
+                world4D.rebuildMesh();
             }
         }
 
-        // --- UI & EVENT CONTROLLERS ---
-        const startOverlay = document.getElementById('start-overlay');
-        startOverlay.addEventListener('click', () => {
-            canvas.requestPointerLock();
+        // --- INPUT & CONTROLS BINDING ---
+        // Mouse Look & Pointer Lock
+        canvas.addEventListener('click', () => {
+            if (!state.isLocked) canvas.requestPointerLock();
         });
 
         document.addEventListener('pointerlockchange', () => {
             state.isLocked = (document.pointerLockElement === canvas);
-            startOverlay.style.opacity = state.isLocked ? '0' : '1';
-            startOverlay.style.pointerEvents = state.isLocked ? 'none' : 'auto';
         });
 
         window.addEventListener('mousemove', (e) => {
             if (!state.isLocked) return;
-            const sens = 0.0025;
-            player.yaw -= e.movementX * sens;
-            player.pitch -= e.movementY * sens;
+            const sensitivity = 0.0025;
+            player.yaw -= e.movementX * sensitivity;
+            player.pitch -= e.movementY * sensitivity;
             player.pitch = Math.max(-Math.PI / 2.05, Math.min(Math.PI / 2.05, player.pitch));
         });
 
         window.addEventListener('keydown', (e) => {
             player.keys[e.code] = true;
-
             if (e.code.startsWith('Digit')) {
                 const num = parseInt(e.code.replace('Digit', ''));
                 if (num >= 1 && num <= 6) selectMaterial(num);
@@ -594,19 +568,39 @@
             player.keys[e.code] = false;
         });
 
-        window.addEventListener('mousedown', (e) => {
+        canvas.addEventListener('mousedown', (e) => {
             if (!state.isLocked) return;
-            if (e.button === 0) raycast4DInteraction(true);  // Left click: Destroy
-            if (e.button === 2) raycast4DInteraction(false); // Right click: Place
+            if (e.button === 0) executeBlockAction(true);  // Left Click: Break
+            if (e.button === 2) executeBlockAction(false); // Right Click: Place
         });
 
         window.addEventListener('contextmenu', e => e.preventDefault());
 
-        // Dynamic Hotbar Generation
+        // --- ON-SCREEN TOUCH & ACTION BUTTONS ---
+        document.getElementById('btn-place').onclick = () => executeBlockAction(false);
+        document.getElementById('btn-break').onclick = () => executeBlockAction(true);
+
+        const bindTouchKey = (btnId, keyCode) => {
+            const btn = document.getElementById(btnId);
+            btn.addEventListener('pointerdown', (e) => { e.preventDefault(); player.keys[keyCode] = true; });
+            btn.addEventListener('pointerup', (e) => { e.preventDefault(); player.keys[keyCode] = false; });
+            btn.addEventListener('pointerleave', () => { player.keys[keyCode] = false; });
+        };
+
+        bindTouchKey('btn-fwd', 'KeyW');
+        bindTouchKey('btn-back', 'KeyS');
+        bindTouchKey('btn-left', 'KeyA');
+        bindTouchKey('btn-right', 'KeyD');
+        bindTouchKey('btn-up-y', 'KeyR');
+        bindTouchKey('btn-dn-y', 'KeyF');
+        bindTouchKey('btn-w-up', 'KeyE');
+        bindTouchKey('btn-w-dn', 'KeyQ');
+
+        // --- HOTBAR GENERATION ---
         const hotbarContainer = document.getElementById('hotbar');
         HYPER_MATERIALS.forEach((mat, idx) => {
             const btn = document.createElement('button');
-            btn.className = `hotbar-item w-10 h-10 rounded-xl flex flex-col items-center justify-center font-bold text-xs border border-slate-700 glass-panel ${idx === 0 ? 'active' : ''}`;
+            btn.className = `hotbar-item w-9 h-9 rounded-xl flex flex-col items-center justify-center font-bold text-xs border border-slate-700 glass-panel ${idx === 0 ? 'active' : ''}`;
             btn.style.backgroundColor = `#${mat.color.toString(16).padStart(6, '0')}44`;
             btn.innerHTML = `<span class="text-[10px] text-slate-300 font-mono">${idx + 1}</span>`;
             btn.onclick = () => selectMaterial(idx + 1);
@@ -622,7 +616,7 @@
             });
         }
 
-        // Panel Control Sliders
+        // --- PANEL CONTROL SLIDERS ---
         document.getElementById('slider-radius').addEventListener('input', (e) => {
             state.focalR = parseFloat(e.target.value);
             document.getElementById('radius-val').innerText = state.focalR.toFixed(1);
@@ -648,10 +642,41 @@
         });
 
         document.getElementById('preset-select').addEventListener('change', (e) => {
-            if (e.target.value !== 'none') generatePreset(e.target.value);
+            const val = e.target.value;
+            if (val === 'default') world4D.initDefaultWorld();
+            else if (val === 'tesseract') {
+                world4D.grid.clear();
+                for (let x = -1; x <= 1; x++)
+                    for (let y = -1; y <= 1; y++)
+                        for (let z = -1; z <= 1; z++)
+                            for (let w = -1; w <= 1; w++)
+                                world4D.setBlock(x*2, y*2, z*2, w*2, ((Math.abs(w)+Math.abs(x))%6)+1);
+                world4D.rebuildMesh();
+            } else if (val === 'ring') {
+                world4D.grid.clear();
+                for (let a = 0; a < Math.PI * 2; a += 0.4) {
+                    const x = Math.round(Math.cos(a) * 4);
+                    const z = Math.round(Math.sin(a) * 4);
+                    world4D.setBlock(x, 0, z, 0, 1);
+                    world4D.setBlock(x, 0, z, 1, 4);
+                }
+                world4D.rebuildMesh();
+            } else if (val === 'sphere') {
+                world4D.grid.clear();
+                for (let x = -2; x <= 2; x++)
+                    for (let y = -2; y <= 2; y++)
+                        for (let z = -2; z <= 2; z++)
+                            for (let w = -2; w <= 2; w++)
+                                if (x*x + y*y + z*z + w*w === 4)
+                                    world4D.setBlock(x, y, z, w, 2);
+                world4D.rebuildMesh();
+            }
         });
 
-        document.getElementById('btn-reset-rot').addEventListener('click', () => {
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            player.pos4D = new Vector4D(0, 2, 8, 0);
+            player.pitch = -0.2;
+            player.yaw = 0;
             state.rotXW = state.rotYW = state.rotZW = 0;
             document.getElementById('slider-rot-xw').value = 0;
             document.getElementById('slider-rot-yw').value = 0;
@@ -664,6 +689,18 @@
 
         document.getElementById('btn-clear').addEventListener('click', () => {
             world4D.clear();
+        });
+
+        // Collapsible Panel Drawer
+        const togglePanelBtn = document.getElementById('toggle-panel');
+        const panelContent = document.getElementById('panel-content');
+        const chevronIcon = document.getElementById('chevron-icon');
+        let isPanelOpen = true;
+
+        togglePanelBtn.addEventListener('click', () => {
+            isPanelOpen = !isPanelOpen;
+            panelContent.style.display = isPanelOpen ? 'block' : 'none';
+            chevronIcon.style.transform = isPanelOpen ? 'rotate(0deg)' : 'rotate(180deg)';
         });
 
         // --- ANIMATION & RENDER LOOP ---
@@ -696,7 +733,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Start render loop
+        // Start main loop
         animate(performance.now());
     </script>
 </body>
