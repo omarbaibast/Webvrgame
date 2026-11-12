@@ -1,267 +1,261 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0,
-      maximum-scale=1.0, user-scalable=no">
-
-<title>VR Camera Viewer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>VR Camera</title>
 
 <style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
-    background: #000;
-    color: white;
-    font-family: Arial, sans-serif;
-    overflow: hidden;
-}
-
-#screen {
-    position: fixed;
-    inset: 0;
-    display: flex;
+    margin: 0;
     background: black;
-}
-
-.eye {
-    position: relative;
-    width: 50%;
-    height: 100%;
     overflow: hidden;
-    border-right: 1px solid #222;
+    font-family: Arial;
+    color: white;
 }
 
-video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+canvas {
+    width: 100vw;
+    height: 100vh;
+    display: block;
+}
+
+#video {
+    display: none;
 }
 
 #controls {
     position: fixed;
-    z-index: 10;
     bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    width: 100%;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
-    width: 95%;
+    z-index: 5;
 }
 
 button {
-    border: 1px solid #444;
-    border-radius: 12px;
-    background: #171717;
+    background: #202020;
     color: white;
-    padding: 13px 16px;
-    font-size: 14px;
-}
-
-button:active {
-    background: #333;
+    border: 1px solid #555;
+    border-radius: 10px;
+    padding: 14px;
 }
 
 #status {
     position: fixed;
-    z-index: 10;
     top: 15px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #111c;
-    padding: 10px 14px;
-    border-radius: 10px;
-    font-size: 12px;
+    left: 10px;
+    right: 10px;
     text-align: center;
+    z-index: 5;
+    background: #222c;
+    padding: 12px;
+    border-radius: 8px;
 }
 
-#settings {
+#zoomBox {
     position: fixed;
-    z-index: 10;
     top: 65px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #111c;
-    padding: 10px;
-    border-radius: 10px;
-    font-size: 12px;
-    width: 230px;
+    left: 10px;
+    right: 10px;
+    text-align: center;
+    z-index: 5;
 }
 
-input[type=range] {
-    width: 100%;
+#zoom {
+    width: 180px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="status">
-    VR CAMERA VIEWER — CAMERA OFF
-</div>
+<video id="video" autoplay playsinline muted></video>
+<canvas id="view"></canvas>
 
-<div id="settings">
-    VR Zoom
-    <input type="range" id="zoom"
-           min="1" max="3" step="0.1" value="1">
-</div>
+<div id="status">VR CAMERA — CAMERA OFF</div>
 
-<div id="screen">
-
-    <div class="eye">
-        <video id="leftEye"
-               autoplay playsinline muted></video>
-    </div>
-
-    <div class="eye">
-        <video id="rightEye"
-               autoplay playsinline muted></video>
-    </div>
-
+<div id="zoomBox">
+    Zoom <input id="zoom" type="range"
+    min="1" max="3" value="1" step="0.1">
 </div>
 
 <div id="controls">
-    <button onclick="startCamera()">📷 Start Camera</button>
-    <button onclick="switchCamera()">🔄 Switch Camera</button>
-    <button onclick="toggleVR()">🥽 VR Mode</button>
-    <button onclick="stopCamera()">⏹ Stop</button>
+    <button onclick="startCamera()">START CAMERA</button>
+    <button onclick="switchCamera()">SWITCH CAMERA</button>
+    <button onclick="enterVR()">ENTER VR</button>
+    <button onclick="stopCamera()">STOP</button>
 </div>
 
 <script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("view");
+const ctx = canvas.getContext("2d");
+
+const status = document.getElementById("status");
+const controls = document.getElementById("controls");
+const zoom = document.getElementById("zoom");
+const zoomBox = document.getElementById("zoomBox");
 
 let stream = null;
 let facing = "environment";
 let vr = false;
+let animation = null;
 
-const leftEye = document.getElementById("leftEye");
-const rightEye = document.getElementById("rightEye");
-const status = document.getElementById("status");
-const zoom = document.getElementById("zoom");
+function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+function drawEye(x, width, height) {
+    if (!video.videoWidth || !video.videoHeight) return;
+
+    const z = Number(zoom.value);
+
+    const sourceRatio = video.videoWidth / video.videoHeight;
+    const targetRatio = width / height;
+
+    let sw, sh;
+
+    if (sourceRatio > targetRatio) {
+        sh = video.videoHeight / z;
+        sw = sh * targetRatio;
+    } else {
+        sw = video.videoWidth / z;
+        sh = sw / targetRatio;
+    }
+
+    const sx = (video.videoWidth - sw) / 2;
+    const sy = (video.videoHeight - sh) / 2;
+
+    ctx.drawImage(
+        video,
+        sx, sy, sw, sh,
+        x, 0, width, height
+    );
+}
+
+function render() {
+    animation = requestAnimationFrame(render);
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const half = Math.floor(w / 2);
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, w, h);
+
+    if (video.readyState >= 2) {
+        drawEye(0, half, h);
+        drawEye(half, w - half, h);
+    }
+
+    ctx.fillStyle = "#444";
+    ctx.fillRect(half - 1, 0, 2, h);
+}
+
+render();
 
 async function startCamera() {
-
     try {
+        if (!navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia) {
+            throw new Error("Camera unavailable. Open using localhost or HTTPS in Chrome.");
+        }
 
         if (stream) {
-            stream.getTracks().forEach(t => t.stop());
+            stream.getTracks().forEach(track => track.stop());
         }
+
+        status.textContent = "REQUESTING CAMERA...";
 
         stream = await navigator.mediaDevices.getUserMedia({
             audio: false,
             video: {
                 facingMode: facing,
                 width: { ideal: 1280 },
-                height: { ideal: 720 },
-                frameRate: { ideal: 30 }
+                height: { ideal: 720 }
             }
         });
 
-        leftEye.srcObject = stream;
-        rightEye.srcObject = stream;
-
-        await leftEye.play();
-        await rightEye.play();
-
-        status.textContent = "VR CAMERA VIEWER — CAMERA ON";
-
-    } catch (error) {
+        video.srcObject = stream;
+        await video.play();
 
         status.textContent =
-            "Camera error: " + error.message;
+            "CAMERA ACTIVE — VR READY";
 
-        alert(
-            "Camera access failed. Allow camera permission " +
-            "and open this app using HTTPS or localhost."
-        );
+    } catch (error) {
+        status.textContent = "ERROR: " + error.message;
+        alert(error.message);
     }
 }
 
 async function switchCamera() {
-
     facing = facing === "environment"
-        ? "user"
-        : "environment";
+        ? "user" : "environment";
 
     await startCamera();
 }
 
 function stopCamera() {
-
     if (stream) {
-
         stream.getTracks().forEach(t => t.stop());
-
         stream = null;
-
-        leftEye.srcObject = null;
-        rightEye.srcObject = null;
-
-        status.textContent =
-            "VR CAMERA VIEWER — CAMERA OFF";
     }
+
+    video.srcObject = null;
+    status.textContent = "CAMERA OFF";
 }
 
-async function toggleVR() {
+async function enterVR() {
+    if (!stream) {
+        alert("Start the camera first!");
+        return;
+    }
 
     vr = !vr;
 
     if (vr) {
+        try {
+            await document.documentElement.requestFullscreen();
+        } catch(e) {}
 
         try {
+            await screen.orientation.lock("landscape");
+        } catch(e) {}
 
-            if (document.documentElement.requestFullscreen) {
-                await document.documentElement.requestFullscreen();
-            }
-
-        } catch (error) {
-            console.log("Fullscreen unavailable");
-        }
-
-        if (screen.orientation &&
-            screen.orientation.lock) {
-
-            try {
-                await screen.orientation.lock("landscape");
-            } catch (error) {
-                console.log("Orientation lock unavailable");
-            }
-        }
-
-        document.getElementById("controls").style.display = "none";
-        document.getElementById("settings").style.display = "none";
+        controls.style.display = "none";
+        zoomBox.style.display = "none";
         status.style.display = "none";
-
     } else {
-
-        document.getElementById("controls").style.display = "flex";
-        document.getElementById("settings").style.display = "block";
+        controls.style.display = "flex";
+        zoomBox.style.display = "block";
         status.style.display = "block";
 
         if (document.fullscreenElement) {
             await document.exitFullscreen();
         }
     }
+
+    resize();
 }
 
-zoom.addEventListener("input", () => {
-
-    const value = zoom.value;
-
-    leftEye.style.transform =
-        "scale(" + value + ")";
-
-    rightEye.style.transform =
-        "scale(" + value + ")";
+canvas.addEventListener("click", () => {
+    if (vr) {
+        enterVR();
+    }
 });
-
 </script>
 
 </body>
