@@ -1,112 +1,5 @@
 ```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aetheria VR — Infinite World Explorer</title>
-    <!-- Tailwind CSS for crisp responsive UI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Three.js r128 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Google Font: Inter & Orbitron -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
-    <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
-        }
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #070b14;
-            font-family: 'Inter', sans-serif;
-            color: #f8fafc;
-        }
-        .font-display {
-            font-family: 'Orbitron', sans-serif;
-        }
-        #game-canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            position: fixed;
-            inset: 0;
-            z-index: 1;
-        }
-        /* VR Box Lens Vignette & Center Divider Overlay */
-        #vr-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 10;
-            pointer-events: none;
-            display: none;
-        }
-        #vr-overlay.active {
-            display: flex;
-        }
-        .vr-lens {
-            flex: 1;
-            height: 100%;
-            position: relative;
-            box-shadow: inset 0 0 65px 22px rgba(0, 0, 0, 0.92);
-            border-radius: 36px;
-            overflow: hidden;
-        }
-        .vr-divider {
-            width: 4px;
-            height: 100%;
-            background: #000;
-            box-shadow: 0 0 12px #000;
-        }
-        /* Stereoscopic Dual-Eye HUD inside each VR lens */
-        .vr-eye-hud {
-            position: absolute;
-            bottom: 18px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(10, 15, 28, 0.55);
-            backdrop-filter: blur(4px);
-            padding: 4px 12px;
-            border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            color: rgba(255, 255, 255, 0.9);
-            white-space: nowrap;
-        }
-        .vr-reticle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 6px;
-            height: 6px;
-            margin: -3px 0 0 -3px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.55);
-            box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
-        }
-        /* Custom scrollbar for start modal on small phones */
-        .custom-scroll::-webkit-scrollbar {
-            width: 5px;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb {
-            background: rgba(148, 163, 184, 0.35);
-            border-radius: 999px;
-        }
-        @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 22px rgba(56, 189, 248, 0.45); }
-            50% { box-shadow: 0 0 36px rgba(168, 85, 247, 0.65); }
-        }
+<!-- ... existing code ... -->
         .btn-vr-glow {
             animation: pulseGlow 3s infinite ease-in-out;
         }
@@ -121,6 +14,8 @@
         <div class="vr-lens" id="vr-lens-left">
             <div class="vr-reticle"></div>
             <div class="vr-eye-hud">
+                <span class="text-emerald-400">● <span class="hud-online-count">1</span></span>
+                <span>•</span>
                 <span class="text-sky-400">✦ <span class="hud-orbs">0</span></span>
                 <span>•</span>
                 <span class="hud-compass">N</span>
@@ -134,6 +29,8 @@
         <div class="vr-lens" id="vr-lens-right">
             <div class="vr-reticle"></div>
             <div class="vr-eye-hud">
+                <span class="text-emerald-400">● <span class="hud-online-count">1</span></span>
+                <span>•</span>
                 <span class="text-sky-400">✦ <span class="hud-orbs">0</span></span>
                 <span>•</span>
                 <span class="hud-compass">N</span>
@@ -148,34 +45,58 @@
     <!-- 2D / Desktop HUD (Hidden when in VR Box split-screen mode) -->
     <div id="hud-2d" class="fixed inset-0 z-20 pointer-events-none hidden flex-col justify-between p-4 sm:p-6">
         <!-- Top Bar -->
-        <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-3 bg-slate-950/65 backdrop-blur-md border border-white/10 px-4 py-2 rounded-2xl shadow-lg">
-                <div class="flex items-center gap-1.5">
-                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-sky-400 animate-ping"></span>
-                    <span class="text-xs sm:text-sm font-semibold text-sky-300">ORBS: <span class="hud-orbs text-white font-bold">0</span></span>
+        <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="flex flex-col gap-2">
+                <div class="flex flex-wrap items-center gap-2.5 bg-slate-950/70 backdrop-blur-md border border-white/10 px-4 py-2 rounded-2xl shadow-lg">
+                    <div class="flex items-center gap-1.5">
+                        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="text-xs sm:text-sm font-semibold text-emerald-300">ONLINE: <span class="hud-online-count text-white font-bold">1</span></span>
+                    </div>
+                    <span class="text-slate-600">|</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs sm:text-sm font-semibold text-sky-300">ORBS: <span class="hud-orbs text-white font-bold">0</span></span>
+                    </div>
+                    <span class="text-slate-600">|</span>
+                    <div class="text-xs sm:text-sm font-medium text-slate-300">
+                        DIR: <span class="hud-compass text-white font-bold">N</span>
+                    </div>
+                    <span class="text-slate-600">|</span>
+                    <div class="text-xs sm:text-sm font-medium text-slate-300">
+                        ALT: <span class="hud-alt text-amber-300 font-bold">0m</span>
+                    </div>
+                    <span class="text-slate-600 hidden md:inline">|</span>
+                    <div class="text-xs font-medium text-purple-300 hidden md:block">
+                        ROOM: <span class="hud-room-name font-semibold text-white">public</span>
+                    </div>
                 </div>
-                <span class="text-slate-600">|</span>
-                <div class="text-xs sm:text-sm font-medium text-slate-300">
-                    DIR: <span class="hud-compass text-white font-bold">N</span>
-                </div>
-                <span class="text-slate-600">|</span>
-                <div class="text-xs sm:text-sm font-medium text-slate-300">
-                    ALT: <span class="hud-alt text-amber-300 font-bold">0m</span>
-                </div>
-                <span class="text-slate-600 hidden sm:inline">|</span>
-                <div class="text-xs font-medium text-purple-300 hidden sm:block">
-                    SKY: <span id="hud-sky-name" class="font-semibold">Golden Sunset</span>
+
+                <!-- Nearby Travelers Live Radar List -->
+                <div id="hud-players-panel" class="pointer-events-auto bg-slate-950/65 backdrop-blur-md border border-white/10 px-3.5 py-2.5 rounded-2xl shadow-lg max-w-xs">
+                    <div class="flex items-center justify-between gap-3 mb-1.5">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Travelers in Shard</span>
+                        <button id="btn-hud-warp" class="text-[11px] font-semibold text-sky-300 hover:text-sky-200 underline decoration-sky-400/50">Warp Next (L1)</button>
+                    </div>
+                    <div id="hud-player-list" class="space-y-1 text-xs text-slate-300 max-h-28 overflow-y-auto custom-scroll">
+                        <div class="text-slate-400 italic text-[11px]">Scanning shard for travelers...</div>
+                    </div>
                 </div>
             </div>
 
             <!-- Quick Action Buttons (Pointer Events Auto) -->
-            <div class="flex items-center gap-2 pointer-events-auto">
+            <div class="flex flex-wrap items-center gap-2 pointer-events-auto">
+                <button id="btn-hud-wave" class="bg-indigo-600/85 hover:bg-indigo-500 active:scale-95 text-white border border-indigo-400/30 font-semibold text-xs sm:text-sm px-3 py-2 rounded-xl shadow-lg transition flex items-center gap-1.5" title="Send Pulse Wave (PS4 R1 / E)">
+                    <span>👋</span>
+                    <span class="hidden sm:inline">Wave (R1)</span>
+                </button>
+                <button id="btn-hud-copy-invite" class="bg-slate-900/80 hover:bg-slate-800 active:scale-95 text-emerald-300 border border-emerald-400/25 font-semibold text-xs sm:text-sm px-3 py-2 rounded-xl shadow-lg transition">
+                    Invite
+                </button>
                 <button id="btn-hud-vr" class="bg-sky-500/90 hover:bg-sky-400 active:scale-95 text-slate-950 font-bold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow-lg transition flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h14a2 2 0 012 2v6a2 2 0 01-2 2h-4.5l-1.8-2.4a.9.9 0 00-1.4 0L9.5 17H5a2 2 0 01-2-2V9z"/><circle cx="7.5" cy="12" r="1.5"/><circle cx="16.5" cy="12" r="1.5"/></svg>
-                    <span>VR Box Mode</span>
+                    <span>VR Box</span>
                 </button>
                 <button id="btn-hud-menu" class="bg-slate-900/80 hover:bg-slate-800 active:scale-95 text-white border border-white/15 font-semibold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow-lg transition">
-                    Controls / Menu
+                    Menu
                 </button>
             </div>
         </div>
@@ -190,7 +111,7 @@
                 <div id="touch-move-knob" class="w-11 h-11 rounded-full bg-sky-400/70 border border-white/50 shadow-md"></div>
             </div>
 
-            <!-- Live Gamepad Pill -->
+            <!-- Live Gamepad & Network Pill -->
             <div class="mx-auto bg-slate-950/65 backdrop-blur-md border border-white/10 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs text-slate-300 flex items-center gap-2">
                 <span id="hud-pad-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
                 <span id="hud-pad-text">PS4 Controller: Press any button to wake</span>
@@ -215,7 +136,7 @@
 
     <!-- Toast Notification Banner -->
     <div id="toast-banner" class="fixed top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-none opacity-0 transition-opacity duration-300 bg-slate-950/90 border border-sky-400/40 text-sky-100 px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold shadow-2xl backdrop-blur-md whitespace-nowrap">
-        PS4 DualShock 4 Connected
+        Connected to Aetheria Live Shard
     </div>
 
     <!-- Start / Settings Overlay Modal -->
@@ -224,27 +145,70 @@
             <!-- Header -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
                 <div>
-                    <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-400/30 text-sky-300 text-[11px] font-semibold tracking-wider uppercase mb-1.5">
-                        WebVR • Stereoscopic • DualShock 4
+                    <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[11px] font-semibold tracking-wider uppercase mb-1.5">
+                        Multiplayer Live • WebVR • DualShock 4
                     </div>
                     <h1 class="font-display text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-sky-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent">
                         AETHERIA VR
                     </h1>
-                    <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Infinite procedural world built for smartphone VR Box headsets &amp; PS4 controllers.</p>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Explore an infinite shared world with live 3D avatars, VR Box headsets &amp; PS4 controllers.</p>
                 </div>
 
-                <!-- Live PS4 Controller Status Card -->
-                <div id="modal-pad-card" class="flex items-center gap-2.5 bg-slate-950/80 border border-white/10 px-3.5 py-2.5 rounded-2xl shrink-0">
-                    <span id="modal-pad-dot" class="w-3 h-3 rounded-full bg-amber-400 shrink-0"></span>
-                    <div>
-                        <div id="modal-pad-title" class="text-xs font-bold text-slate-200">Waiting for PS4 Pad</div>
-                        <div id="modal-pad-sub" class="text-[11px] text-slate-400">Pair via Bluetooth &amp; press X</div>
+                <!-- Live PS4 Controller & Multiplayer Status Card -->
+                <div class="flex flex-col gap-1.5 shrink-0">
+                    <div id="modal-pad-card" class="flex items-center gap-2.5 bg-slate-950/80 border border-white/10 px-3.5 py-2 rounded-2xl">
+                        <span id="modal-pad-dot" class="w-3 h-3 rounded-full bg-amber-400 shrink-0"></span>
+                        <div>
+                            <div id="modal-pad-title" class="text-xs font-bold text-slate-200">Waiting for PS4 Pad</div>
+                            <div id="modal-pad-sub" class="text-[11px] text-slate-400">Pair via Bluetooth &amp; press X</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between gap-2 bg-slate-950/80 border border-white/10 px-3.5 py-1.5 rounded-xl text-[11px]">
+                        <span class="flex items-center gap-1.5 text-emerald-300 font-semibold">
+                            <span id="modal-net-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                            <span id="modal-net-status">Connecting Shard...</span>
+                        </span>
+                        <span class="text-slate-400"><strong class="hud-online-count text-white">1</strong> Online</span>
                     </div>
                 </div>
             </div>
 
+            <!-- Traveler Identity & Multiplayer Room Customization -->
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 mt-4 bg-slate-950/65 border border-white/10 rounded-2xl p-3.5">
+                <div class="sm:col-span-5">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Traveler Name</label>
+                    <input id="input-player-name" type="text" maxlength="18" placeholder="SkyWalker_01" class="w-full bg-slate-900 border border-white/15 focus:border-sky-400 focus:outline-none rounded-xl px-3 py-2 text-xs sm:text-sm text-white font-medium">
+                </div>
+                <div class="sm:col-span-4">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">World Room / Shard</label>
+                    <div class="flex gap-1.5">
+                        <input id="input-room-code" type="text" maxlength="16" value="public" placeholder="public" class="w-full bg-slate-900 border border-white/15 focus:border-sky-400 focus:outline-none rounded-xl px-3 py-2 text-xs sm:text-sm text-white font-medium">
+                        <button id="btn-join-room" class="px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-300 text-xs font-bold shrink-0">Join</button>
+                    </div>
+                </div>
+                <div class="sm:col-span-3">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Aura Color</label>
+                    <div id="color-swatch-row" class="flex items-center gap-1.5 h-9">
+                        <button type="button" data-color="#38bdf8" class="w-6 h-6 rounded-full bg-sky-400 ring-2 ring-white scale-110 transition"></button>
+                        <button type="button" data-color="#a855f7" class="w-6 h-6 rounded-full bg-purple-500 opacity-75 hover:opacity-100 transition"></button>
+                        <button type="button" data-color="#10b981" class="w-6 h-6 rounded-full bg-emerald-500 opacity-75 hover:opacity-100 transition"></button>
+                        <button type="button" data-color="#f43f5e" class="w-6 h-6 rounded-full bg-rose-500 opacity-75 hover:opacity-100 transition"></button>
+                        <button type="button" data-color="#f59e0b" class="w-6 h-6 rounded-full bg-amber-500 opacity-75 hover:opacity-100 transition"></button>
+                    </div>
+                </div>
+                <div class="sm:col-span-12 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/5 text-xs">
+                    <label class="inline-flex items-center gap-2 cursor-pointer text-slate-300">
+                        <input id="toggle-ambient-bots" type="checkbox" class="accent-sky-400 w-4 h-4 rounded">
+                        <span>Spawn Ambient AI Echo Travelers (for solo exploration)</span>
+                    </label>
+                    <button id="btn-modal-copy-invite" class="text-sky-300 hover:text-sky-200 font-semibold flex items-center gap-1">
+                        <span>📋 Copy Multiplayer Invite Link</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- Primary Launch Buttons -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
                 <button id="btn-start-vr" class="btn-vr-glow w-full py-4 px-5 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-[0.99] text-white font-bold text-sm sm:text-base shadow-xl transition flex items-center justify-center gap-2.5">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h14a2 2 0 012 2v6a2 2 0 01-2 2h-4.5l-1.8-2.4a.9.9 0 00-1.4 0L9.5 17H5a2 2 0 01-2-2V9z"/><circle cx="7.5" cy="12" r="1.5"/><circle cx="16.5" cy="12" r="1.5"/></svg>
                     <span>ENTER VR BOX MODE</span>
@@ -256,21 +220,11 @@
                 </button>
             </div>
 
-            <!-- VR Box Quick Setup Steps -->
-            <div class="bg-sky-950/35 border border-sky-400/20 rounded-2xl p-3.5 mb-5">
-                <div class="text-xs font-bold text-sky-300 uppercase tracking-wider mb-1.5">Smartphone VR Box Quick Setup</div>
-                <ol class="text-xs text-slate-300 space-y-1 list-decimal list-inside">
-                    <li>Hold <strong class="text-white">PS + Share</strong> on your PS4 DualShock 4 until the lightbar flashes, then pair it in your phone's Bluetooth settings.</li>
-                    <li>Tap <strong class="text-sky-300">ENTER VR BOX MODE</strong> above (grants gyroscope head-tracking, locks landscape, and opens split-screen).</li>
-                    <li>Slide your phone into your VR Box headset. Press <strong class="text-white">Options</strong> on the PS4 controller anytime to recenter forward view!</li>
-                </ol>
-            </div>
-
             <!-- PS4 DualShock 4 Controls Grid -->
-            <div class="mb-5">
-                <div class="flex items-center justify-between mb-2.5">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">PS4 DualShock 4 Controls</span>
-                    <span class="text-[11px] text-slate-500">Keyboard: WASD + Mouse + Space</span>
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">PS4 DualShock 4 Multiplayer &amp; VR Controls</span>
+                    <span class="text-[11px] text-slate-500">Keyboard: WASD + E (Wave) + P (Warp)</span>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                     <div class="bg-slate-950/70 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
@@ -286,8 +240,16 @@
                         <div><div class="font-semibold text-white">Cross / R2</div><div class="text-[11px] text-slate-400">Jump &amp; Jetpack Fly</div></div>
                     </div>
                     <div class="bg-slate-950/70 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
+                        <span class="w-7 h-7 rounded-lg bg-amber-500/25 border border-amber-400/40 font-bold text-amber-300 flex items-center justify-center shrink-0">R1</span>
+                        <div><div class="font-semibold text-white">R1 Bumper</div><div class="text-[11px] text-slate-400">Wave / Pulse Emote</div></div>
+                    </div>
+                    <div class="bg-slate-950/70 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
+                        <span class="w-7 h-7 rounded-lg bg-teal-500/25 border border-teal-400/40 font-bold text-teal-300 flex items-center justify-center shrink-0">L1</span>
+                        <div><div class="font-semibold text-white">L1 Bumper</div><div class="text-[11px] text-slate-400">Warp to Player</div></div>
+                    </div>
+                    <div class="bg-slate-950/70 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
                         <span class="w-7 h-7 rounded-lg bg-rose-500/25 border border-rose-400/40 font-bold text-rose-300 flex items-center justify-center shrink-0">○</span>
-                        <div><div class="font-semibold text-white">Circle</div><div class="text-[11px] text-slate-400">Drop Light Beacon</div></div>
+                        <div><div class="font-semibold text-white">Circle</div><div class="text-[11px] text-slate-400">Drop Shared Beacon</div></div>
                     </div>
                     <div class="bg-slate-950/70 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
                         <span class="w-7 h-7 rounded-lg bg-emerald-500/25 border border-emerald-400/40 font-bold text-emerald-300 flex items-center justify-center shrink-0">△</span>
@@ -298,16 +260,8 @@
                         <div><div class="font-semibold text-white">Square</div><div class="text-[11px] text-slate-400">Toggle VR / 2D</div></div>
                     </div>
                     <div class="bg-slate-950/70 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
-                        <span class="w-7 h-7 rounded-lg bg-slate-800 font-bold text-amber-300 flex items-center justify-center shrink-0">↕</span>
-                        <div><div class="font-semibold text-white">D-Pad Up/Dn</div><div class="text-[11px] text-slate-400">Adjust Eye IPD</div></div>
-                    </div>
-                    <div class="bg-slate-950/70 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
                         <span class="w-7 h-7 rounded-lg bg-slate-800 font-bold text-purple-300 flex items-center justify-center shrink-0">OPT</span>
                         <div><div class="font-semibold text-white">Options</div><div class="text-[11px] text-slate-400">Recenter VR View</div></div>
-                    </div>
-                    <div class="bg-slate-950/70 border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5">
-                        <span class="w-7 h-7 rounded-lg bg-slate-800 font-bold text-teal-300 flex items-center justify-center shrink-0">L1</span>
-                        <div><div class="font-semibold text-white">L1 / L2</div><div class="text-[11px] text-slate-400">Turbo Sprint</div></div>
                     </div>
                 </div>
             </div>
@@ -316,216 +270,34 @@
             <div class="bg-slate-950/70 border border-white/10 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <div class="text-xs font-bold text-white">VR Lens Eye Separation (IPD): <span id="modal-ipd-val" class="text-sky-400">64 mm</span></div>
-                    <div class="text-[11px] text-slate-400">Fine-tune stereo depth for your smartphone screen &amp; VR Box lenses.</div>
+                    <div class="text-[11px] text-slate-400">Adjust with D-Pad Up/Down anytime inside your VR Box headset.</div>
                 </div>
                 <input id="ipd-slider" type="range" min="45" max="80" value="64" class="w-full sm:w-44 accent-sky-400 cursor-pointer">
             </div>
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            setDoc,
+            deleteDoc,
+            addDoc,
+            onSnapshot,
+            collection
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         /**
          * ============================================================================
-         * AETHERIA VR — INFINITE PROCEDURAL WORLD EXPLORER
-         * Optimized for Mobile VR Box Headsets (Stereoscopic Split-Screen + Gyroscope)
-         * & PlayStation 4 DualShock 4 Controller (HTML5 Gamepad API)
+         * AETHERIA VR — MULTIPLAYER INFINITE PROCEDURAL WORLD EXPLORER
+         * Real-Time Firebase Firestore Sync + Expressive 3D Cyber-Traveler Avatars
+         * Smartphone VR Box Stereoscopic Mode + PlayStation 4 DualShock 4 Support
          * ============================================================================
          */
-
-        // ----------------------------------------------------------------------------
-        // 1. DETERMINISTIC 2D SIMPLEX / GRADIENT NOISE ENGINE
-        // ----------------------------------------------------------------------------
-        class SimplexNoise2D {
-            constructor(seed = 1337) {
-                this.grad3 = [
-                    [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
-                    [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
-                    [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
-                ];
-                this.p = new Uint8Array(256);
-                for (let i = 0; i < 256; i++) this.p[i] = i;
-                let s = seed >>> 0;
-                for (let i = 255; i > 0; i--) {
-                    s = (s * 1664525 + 1013904223) >>> 0;
-                    const j = s % (i + 1);
-                    const tmp = this.p[i];
-                    this.p[i] = this.p[j];
-                    this.p[j] = tmp;
-                }
-                this.perm = new Uint8Array(512);
-                for (let i = 0; i < 512; i++) this.perm[i] = this.p[i & 255];
-            }
-
-            noise(xin, yin) {
-                const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
-                const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
-                let n0, n1, n2;
-                const s = (xin + yin) * F2;
-                const i = Math.floor(xin + s);
-                const j = Math.floor(yin + s);
-                const t = (i + j) * G2;
-                const X0 = i - t;
-                const Y0 = j - t;
-                const x0 = xin - X0;
-                const y0 = yin - Y0;
-                let i1, j1;
-                if (x0 > y0) { i1 = 1; j1 = 0; }
-                else { i1 = 0; j1 = 1; }
-                const x1 = x0 - i1 + G2;
-                const y1 = y0 - j1 + G2;
-                const x2 = x0 - 1.0 + 2.0 * G2;
-                const y2 = y0 - 1.0 + 2.0 * G2;
-                const ii = i & 255;
-                const jj = j & 255;
-                const gi0 = this.perm[ii + this.perm[jj]] % 12;
-                const gi1 = this.perm[ii + i1 + this.perm[jj + j1]] % 12;
-                const gi2 = this.perm[ii + 1 + this.perm[jj + 1]] % 12;
-
-                let t0 = 0.5 - x0 * x0 - y0 * y0;
-                if (t0 < 0) n0 = 0.0;
-                else {
-                    t0 *= t0;
-                    n0 = t0 * t0 * (this.grad3[gi0][0] * x0 + this.grad3[gi0][1] * y0);
-                }
-                let t1 = 0.5 - x1 * x1 - y1 * y1;
-                if (t1 < 0) n1 = 0.0;
-                else {
-                    t1 *= t1;
-                    n1 = t1 * t1 * (this.grad3[gi1][0] * x1 + this.grad3[gi1][1] * y1);
-                }
-                let t2 = 0.5 - x2 * x2 - y2 * y2;
-                if (t2 < 0) n2 = 0.0;
-                else {
-                    t2 *= t2;
-                    n2 = t2 * t2 * (this.grad3[gi2][0] * x2 + this.grad3[gi2][1] * y2);
-                }
-                return 70.0 * (n0 + n1 + n2);
-            }
-
-            fbm(x, y, octaves = 4) {
-                let value = 0;
-                let amp = 0.5;
-                let freq = 1.0;
-                for (let i = 0; i < octaves; i++) {
-                    value += amp * this.noise(x * freq, y * freq);
-                    freq *= 2.05;
-                    amp *= 0.48;
-                }
-                return value;
-            }
-        }
-
-        // Deterministic hash helper for chunk props
-        function seededRandom(x, z, salt = 0) {
-            let n = Math.sin(x * 127.1 + z * 311.7 + salt * 74.7) * 43758.5453123;
-            return n - Math.floor(n);
-        }
-
-        // ----------------------------------------------------------------------------
-        // 2. PROCEDURAL WEB AUDIO ENGINE (Wind, Footsteps, Jetpack, Chimes)
-        // ----------------------------------------------------------------------------
-        class SoundEngine {
-            constructor() {
-                this.ctx = null;
-                this.initialized = false;
-                this.windGain = null;
-                this.jetGain = null;
-                this.stepTimer = 0;
-            }
-
-            init() {
-                if (this.initialized) {
-                    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-                    return;
-                }
-                try {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    this.ctx = new AudioCtx();
-
-                    // Generate pink-ish noise buffer for gentle wind & jetpack
-                    const bufferSize = this.ctx.sampleRate * 2;
-                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                    const data = buffer.getChannelData(0);
-                    let lastOut = 0.0;
-                    for (let i = 0; i < bufferSize; i++) {
-                        const white = Math.random() * 2 - 1;
-                        data[i] = (lastOut + (0.04 * white)) / 1.04;
-                        lastOut = data[i];
-                        data[i] *= 2.5;
-                    }
-
-                    // Ambient Wind Loop
-                    const windNoise = this.ctx.createBufferSource();
-                    windNoise.buffer = buffer;
-                    windNoise.loop = true;
-
-                    const windFilter = this.ctx.createBiquadFilter();
-                    windFilter.type = 'bandpass';
-                    windFilter.frequency.value = 340;
-                    windFilter.Q.value = 2.2;
-
-                    this.windGain = this.ctx.createGain();
-                    this.windGain.gain.value = 0.025;
-
-                    windNoise.connect(windFilter);
-                    windFilter.connect(this.windGain);
-                    this.windGain.connect(this.ctx.destination);
-                    windNoise.start();
-
-                    // Jetpack Whoosh Loop
-                    const jetNoise = this.ctx.createBufferSource();
-                    jetNoise.buffer = buffer;
-                    jetNoise.loop = true;
-
-                    const jetFilter = this.ctx.createBiquadFilter();
-                    jetFilter.type = 'lowpass';
-                    jetFilter.frequency.value = 650;
-
-                    this.jetGain = this.ctx.createGain();
-                    this.jetGain.gain.value = 0.0;
-
-                    jetNoise.connect(jetFilter);
-                    jetFilter.connect(this.jetGain);
-                    this.jetGain.connect(this.ctx.destination);
-                    jetNoise.start();
-
-                    this.initialized = true;
-                } catch (e) {
-                    console.warn('Web Audio unavailable:', e);
-                }
-            }
-
-            update(dt, speed, isFlying, altitude) {
-                if (!this.initialized || !this.ctx) return;
-                const now = this.ctx.currentTime;
-                // Wind rises softly with altitude and speed
-                const targetWind = Math.min(0.11, 0.02 + Math.max(0, altitude) * 0.0008 + speed * 0.002);
-                this.windGain.gain.setTargetAtTime(targetWind, now, 0.15);
-
-                // Jetpack thrust audio
-                const targetJet = isFlying ? 0.16 : 0.0;
-                this.jetGain.gain.setTargetAtTime(targetJet, now, 0.08);
-            }
-
-            playChime(baseFreq = 523.25) {
-                if (!this.initialized || !this.ctx) return;
-                const now = this.ctx.currentTime;
-                const notes = [baseFreq, baseFreq * 1.25, baseFreq * 1.5, baseFreq * 2];
-                notes.forEach((freq, idx) => {
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(freq, now + idx * 0.055);
-                    gain.gain.setValueAtTime(0.001, now + idx * 0.055);
-                    gain.gain.exponentialRampToValueAtTime(0.09, now + idx * 0.055 + 0.03);
-                    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.055 + 0.55);
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    osc.start(now + idx * 0.055);
-                    osc.stop(now + idx * 0.055 + 0.6);
-                });
-            }
-
+// ... existing code ...
             playBeacon() {
                 if (!this.initialized || !this.ctx) return;
                 const now = this.ctx.currentTime;
@@ -541,79 +313,37 @@
                 osc.start(now);
                 osc.stop(now + 0.48);
             }
-        }
 
-        // ----------------------------------------------------------------------------
-        // 3. GAME CONFIGURATION & ATMOSPHERE PRESETS
-        // ----------------------------------------------------------------------------
-        const WORLD_CONFIG = {
-            CHUNK_SIZE: 64,
-            CHUNK_SEGMENTS: 20,      // 20x20 quads per chunk = super crisp 60fps on mobile
-            VIEW_RADIUS: 3,          // 7x7 = 49 active chunks around player
-            WATER_LEVEL: -2.5,
-            PLAYER_EYE_HEIGHT: 2.2,
-            GRAVITY: 24.0,
-            JUMP_VELOCITY: 11.5,
-            JETPACK_ACCEL: 34.0,
-            MAX_FLY_SPEED: 22.0,
-            WALK_SPEED: 11.0,
-            SPRINT_MULTIPLIER: 1.85
-        };
-
-        const ATMOSPHERES = [
-            {
-                name: 'Golden Sunset',
-                skyTop: 0x1b2845,
-                skyHorizon: 0xf48c5b,
-                fogColor: 0xe6845a,
-                sunColor: 0xffd28a,
-                sunIntensity: 1.45,
-                hemiSky: 0xffb88c,
-                hemiGround: 0x2c3e50,
-                waterColor: 0x1d6f8a,
-                starOpacity: 0.25
-            },
-            {
-                name: 'Crisp Morning',
-                skyTop: 0x2563eb,
-                skyHorizon: 0xbae6fd,
-                fogColor: 0xa5d8f3,
-                sunColor: 0xffffff,
-                sunIntensity: 1.4,
-                hemiSky: 0xe0f2fe,
-                hemiGround: 0x3f6212,
-                waterColor: 0x0284c7,
-                starOpacity: 0.0
-            },
-            {
-                name: 'Starry Neon Night',
-                skyTop: 0x040711,
-                skyHorizon: 0x1e1b4b,
-                fogColor: 0x131136,
-                sunColor: 0x818cf8,
-                sunIntensity: 0.85,
-                hemiSky: 0x4f46e5,
-                hemiGround: 0x0f172a,
-                waterColor: 0x0f294a,
-                starOpacity: 0.95
-            },
-            {
-                name: 'Mystic Aurora',
-                skyTop: 0x062c2b,
-                skyHorizon: 0x2dd4bf,
-                fogColor: 0x1b8a7e,
-                sunColor: 0x99f6e4,
-                sunIntensity: 1.15,
-                hemiSky: 0x5eead4,
-                hemiGround: 0x134e4a,
-                waterColor: 0x0d9488,
-                starOpacity: 0.65
+            playWavePulse(pitchOffset = 0) {
+                if (!this.initialized || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const freqs = [392 + pitchOffset, 493.88 + pitchOffset, 587.33 + pitchOffset, 783.99 + pitchOffset];
+                freqs.forEach((f, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, now + idx * 0.04);
+                    gain.gain.setValueAtTime(0.001, now + idx * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.08, now + idx * 0.04 + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.04 + 0.65);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.04);
+                    osc.stop(now + idx * 0.04 + 0.7);
+                });
             }
-        ];
-
+        }
+// ... existing code ...
         // ----------------------------------------------------------------------------
         // 4. GLOBAL STATE
         // ----------------------------------------------------------------------------
+        const ADJECTIVES = ['Aero', 'Solar', 'Nebula', 'Crystal', 'Echo', 'Nova', 'Drift', 'Star', 'Zenith', 'Azure'];
+        const NOUNS = ['Walker', 'Nomad', 'Drifter', 'Pilot', 'Seeker', 'Voyager', 'Ranger', 'Strider'];
+        const defaultName = `${ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]}${NOUNS[Math.floor(Math.random() * NOUNS.length)]}_${Math.floor(10 + Math.random() * 89)}`;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialRoom = (urlParams.get('room') || 'public').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 16) || 'public';
+
         const state = {
             started: false,
             vrMode: false,
@@ -622,8 +352,19 @@
             orbsCollected: 0,
             collectedOrbIds: new Set(),
             beacons: [],
+            network: {
+                userId: null,
+                playerName: defaultName,
+                avatarColor: '#38bdf8',
+                roomCode: initialRoom,
+                connected: false,
+                lastSyncTime: 0,
+                waveTimestamp: 0,
+                warpIndex: 0,
+                spawnBots: false
+            },
             player: {
-                pos: new THREE.Vector3(0, 16, 0),
+                pos: new THREE.Vector3((Math.random() - 0.5) * 14, 16, (Math.random() - 0.5) * 14),
                 vel: new THREE.Vector3(0, 0, 0),
                 yaw: 0,
                 pitch: 0,
@@ -654,912 +395,642 @@
             }
         };
 
+        document.getElementById('input-player-name').value = state.network.playerName;
+        document.getElementById('input-room-code').value = state.network.roomCode;
+        document.querySelectorAll('.hud-room-name').forEach(el => el.textContent = state.network.roomCode);
+
         const noiseGen = new SimplexNoise2D(42077);
         const sound = new SoundEngine();
-
+// ... existing code ...
         // ----------------------------------------------------------------------------
-        // 5. THREE.JS SCENE, CAMERAS & STEREOSCOPIC RIG SETUP
+        // 9. SHARED LIGHT BEACONS & WAVE PULSE RINGS
         // ----------------------------------------------------------------------------
-        const canvas = document.getElementById('game-canvas');
-        const renderer = new THREE.WebGLRenderer({
-            canvas,
-            antialias: true,
-            powerPreference: 'high-performance'
-        });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.outputEncoding = THREE.sRGBEncoding;
+        const sharedBeaconsMap = new Map();
+        const activePulseRings = [];
 
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(ATMOSPHERES[0].fogColor, 0.0052);
-
-        // Player Head Rig (holds main camera + Left/Right stereoscopic VR cameras)
-        const playerRig = new THREE.Group();
-        scene.add(playerRig);
-
-        const mainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.2, 420);
-        const leftEyeCamera = new THREE.PerspectiveCamera(82, (window.innerWidth * 0.5) / window.innerHeight, 0.2, 420);
-        const rightEyeCamera = new THREE.PerspectiveCamera(82, (window.innerWidth * 0.5) / window.innerHeight, 0.2, 420);
-
-        playerRig.add(mainCamera);
-        playerRig.add(leftEyeCamera);
-        playerRig.add(rightEyeCamera);
-
-        function updateEyeSeparation() {
-            // Convert mm to meters (1 unit = 1 meter), slightly amplified for strong 3D depth
-            const halfSep = (state.ipdMm / 1000) * 0.65;
-            leftEyeCamera.position.set(-halfSep, 0, 0);
-            rightEyeCamera.position.set(halfSep, 0, 0);
-            document.querySelectorAll('.hud-ipd').forEach(el => {
-                el.textContent = `IPD ${state.ipdMm}mm`;
-            });
-            document.getElementById('modal-ipd-val').textContent = `${state.ipdMm} mm`;
-            document.getElementById('ipd-slider').value = state.ipdMm;
-        }
-        updateEyeSeparation();
-
-        // ----------------------------------------------------------------------------
-        // 6. LIGHTING, SKY DOME, STARS & INFINITE WATER PLANE
-        // ----------------------------------------------------------------------------
-        const hemiLight = new THREE.HemisphereLight(ATMOSPHERES[0].hemiSky, ATMOSPHERES[0].hemiGround, 0.95);
-        scene.add(hemiLight);
-
-        const sunLight = new THREE.DirectionalLight(ATMOSPHERES[0].sunColor, ATMOSPHERES[0].sunIntensity);
-        sunLight.position.set(80, 120, -90);
-        scene.add(sunLight);
-
-        // Gradient Sky Dome attached to player position
-        const skyGeo = new THREE.SphereGeometry(360, 24, 16);
-        const skyMat = new THREE.ShaderMaterial({
-            side: THREE.BackSide,
-            depthWrite: false,
-            uniforms: {
-                topColor: { value: new THREE.Color(ATMOSPHERES[0].skyTop) },
-                bottomColor: { value: new THREE.Color(ATMOSPHERES[0].skyHorizon) },
-                offset: { value: 18 },
-                exponent: { value: 0.65 }
-            },
-            vertexShader: `
-                varying vec3 vWorldPosition;
-                void main() {
-                    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                    vWorldPosition = worldPosition.xyz;
-                    gl_Position = projectionMatrix * viewMatrix * worldPosition;
-                }
-            `,
-            fragmentShader: `
-                uniform vec3 topColor;
-                uniform vec3 bottomColor;
-                uniform float offset;
-                uniform float exponent;
-                varying vec3 vWorldPosition;
-                void main() {
-                    float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
-                    gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
-                }
-            `
-        });
-        const skyDome = new THREE.Mesh(skyGeo, skyMat);
-        scene.add(skyDome);
-
-        // Glowing Sun/Moon Orb in the sky
-        const sunOrb = new THREE.Mesh(
-            new THREE.SphereGeometry(14, 16, 16),
-            new THREE.MeshBasicMaterial({ color: 0xffe4a0, fog: false })
-        );
-        scene.add(sunOrb);
-
-        // Twinkling Starfield Dome
-        const starCount = 700;
-        const starPositions = new Float32Array(starCount * 3);
-        for (let i = 0; i < starCount; i++) {
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(Math.random() * 0.88 + 0.1);
-            const r = 330;
-            starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-            starPositions[i * 3 + 1] = r * Math.cos(phi);
-            starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
-        }
-        const starGeo = new THREE.BufferGeometry();
-        starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-        const starMat = new THREE.PointsMaterial({
-            color: 0xffffff,
-            size: 1.8,
-            transparent: true,
-            opacity: ATMOSPHERES[0].starOpacity,
-            fog: false
-        });
-        const starField = new THREE.Points(starGeo, starMat);
-        scene.add(starField);
-
-        // Infinite Translucent Water Plane (follows player X/Z)
-        const waterGeo = new THREE.PlaneGeometry(800, 800, 1, 1);
-        waterGeo.rotateX(-Math.PI / 2);
-        const waterMat = new THREE.MeshStandardMaterial({
-            color: ATMOSPHERES[0].waterColor,
-            roughness: 0.22,
-            metalness: 0.45,
-            transparent: true,
-            opacity: 0.82
-        });
-        const waterMesh = new THREE.Mesh(waterGeo, waterMat);
-        waterMesh.position.y = WORLD_CONFIG.WATER_LEVEL;
-        scene.add(waterMesh);
-
-        function applyAtmosphere(index) {
-            const atm = ATMOSPHERES[index];
-            skyMat.uniforms.topColor.value.setHex(atm.skyTop);
-            skyMat.uniforms.bottomColor.value.setHex(atm.skyHorizon);
-            scene.fog.color.setHex(atm.fogColor);
-            sunLight.color.setHex(atm.sunColor);
-            sunLight.intensity = atm.sunIntensity;
-            hemiLight.color.setHex(atm.hemiSky);
-            hemiLight.groundColor.setHex(atm.hemiGround);
-            waterMat.color.setHex(atm.waterColor);
-            sunOrb.material.color.setHex(atm.sunColor);
-            starMat.opacity = atm.starOpacity;
-            const skyLabel = document.getElementById('hud-sky-name');
-            if (skyLabel) skyLabel.textContent = atm.name;
-        }
-
-        // ----------------------------------------------------------------------------
-        // 7. TERRAIN HEIGHT & BIOME VERTEX COLORING
-        // ----------------------------------------------------------------------------
-        function getTerrainHeight(wx, wz) {
-            // Continental macro hills + medium ridges + fine detail
-            const continental = noiseGen.fbm(wx * 0.0032, wz * 0.0032, 3);
-            const ridges = Math.abs(noiseGen.noise(wx * 0.0085 + 11.3, wz * 0.0085 - 7.1));
-            const detail = noiseGen.noise(wx * 0.035, wz * 0.035) * 1.4;
-
-            let h = continental * 26.0 + (1.0 - ridges) * 14.0 + detail;
-            // Carve occasional river valleys
-            const river = Math.abs(noiseGen.noise(wx * 0.0045 - 30.0, wz * 0.0045 + 19.0));
-            if (river < 0.09) {
-                h -= (0.09 - river) * 85.0;
-            }
-            // Gentle spawn clearing around (0, 0)
-            const distOrigin = Math.hypot(wx, wz);
-            if (distOrigin < 28) {
-                const blend = distOrigin / 28;
-                h = h * blend + 3.5 * (1.0 - blend);
-            }
-            return h;
-        }
-
-        function getTerrainColor(y, wx, wz) {
-            const color = new THREE.Color();
-            const variation = noiseGen.noise(wx * 0.06, wz * 0.06) * 0.05;
-
-            if (y < WORLD_CONFIG.WATER_LEVEL - 0.8) {
-                // Deep riverbed
-                color.setRGB(0.14, 0.25, 0.34);
-            } else if (y < WORLD_CONFIG.WATER_LEVEL + 1.1) {
-                // Warm sandy beach / shoreline
-                color.setRGB(0.84 + variation, 0.77 + variation, 0.56);
-            } else if (y < 12.5) {
-                // Lush emerald & olive meadows
-                color.setRGB(0.22 + variation, 0.56 + variation, 0.26);
-            } else if (y < 21.0) {
-                // Alpine rock & highland heather
-                color.setRGB(0.42 + variation, 0.43 + variation, 0.46);
-            } else {
-                // Snow-capped mountain peaks
-                color.setRGB(0.93, 0.96, 0.99);
-            }
-            return color;
-        }
-
-        // ----------------------------------------------------------------------------
-        // 8. SHARED LOW-POLY PROP GEOMETRIES & CHUNK GENERATOR
-        // ----------------------------------------------------------------------------
-        const sharedGeos = {
-            trunk: new THREE.CylinderGeometry(0.25, 0.42, 2.2, 5),
-            pineCone1: new THREE.ConeGeometry(1.6, 3.2, 6),
-            pineCone2: new THREE.ConeGeometry(1.2, 2.6, 6),
-            crystal: new THREE.OctahedronGeometry(0.9, 0),
-            ruinPillar: new THREE.BoxGeometry(1.1, 4.8, 1.1),
-            orb: new THREE.OctahedronGeometry(0.75, 1),
-            orbRing: new THREE.TorusGeometry(1.25, 0.06, 6, 20),
-            islandRock: new THREE.ConeGeometry(5.5, 7.5, 6),
-            islandTop: new THREE.CylinderGeometry(5.6, 5.5, 1.0, 6)
-        };
-
-        const sharedMats = {
-            terrain: new THREE.MeshStandardMaterial({
-                vertexColors: true,
-                roughness: 0.88,
-                metalness: 0.04,
-                flatShading: true
-            }),
-            trunk: new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9, flatShading: true }),
-            foliage: new THREE.MeshStandardMaterial({ color: 0x1b5e36, roughness: 0.8, flatShading: true }),
-            crystal: new THREE.MeshStandardMaterial({
-                color: 0x38bdf8,
-                emissive: 0x0284c7,
-                emissiveIntensity: 0.65,
-                roughness: 0.2,
-                flatShading: true
-            }),
-            ruin: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.85, flatShading: true }),
-            orb: new THREE.MeshBasicMaterial({ color: 0xfef08a }),
-            orbRing: new THREE.MeshBasicMaterial({ color: 0x38bdf8 }),
-            islandRock: new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9, flatShading: true }),
-            islandGrass: new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.8, flatShading: true })
-        };
-
-        const activeChunks = new Map();
-        const activeOrbs = []; // { id, mesh, ring, basePos }
-
-        function createChunk(cx, cz) {
-            const key = `${cx},${cz}`;
-            if (activeChunks.has(key)) return;
-
-            const chunkGroup = new THREE.Group();
-            const size = WORLD_CONFIG.CHUNK_SIZE;
-            const segs = WORLD_CONFIG.CHUNK_SEGMENTS;
-            const worldOffsetX = cx * size;
-            const worldOffsetZ = cz * size;
-
-            // 1. Procedural Terrain Mesh
-            const geo = new THREE.PlaneGeometry(size, size, segs, segs);
-            geo.rotateX(-Math.PI / 2);
-
-            const posAttr = geo.attributes.position;
-            const colors = new Float32Array(posAttr.count * 3);
-
-            for (let i = 0; i < posAttr.count; i++) {
-                const lx = posAttr.getX(i);
-                const lz = posAttr.getZ(i);
-                const wx = lx + worldOffsetX;
-                const wz = lz + worldOffsetZ;
-                const wy = getTerrainHeight(wx, wz);
-
-                posAttr.setY(i, wy);
-                const c = getTerrainColor(wy, wx, wz);
-                colors[i * 3] = c.r;
-                colors[i * 3 + 1] = c.g;
-                colors[i * 3 + 2] = c.b;
-            }
-
-            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            geo.computeVertexNormals();
-
-            const terrainMesh = new THREE.Mesh(geo, sharedMats.terrain);
-            terrainMesh.position.set(worldOffsetX, 0, worldOffsetZ);
-            chunkGroup.add(terrainMesh);
-
-            // 2. Deterministic Trees & Crystals (InstancedMesh per chunk for blazing FPS)
-            const treeMatrices = [];
-            const foliageLowerMatrices = [];
-            const foliageUpperMatrices = [];
-            const crystalMatrices = [];
-            const dummy = new THREE.Object3D();
-
-            const propAttempts = 18;
-            for (let i = 0; i < propAttempts; i++) {
-                const rx = (seededRandom(cx, cz, i * 3 + 1) - 0.5) * size;
-                const rz = (seededRandom(cx, cz, i * 3 + 2) - 0.5) * size;
-                const wx = worldOffsetX + rx;
-                const wz = worldOffsetZ + rz;
-                const wy = getTerrainHeight(wx, wz);
-                const kind = seededRandom(cx, cz, i * 3 + 3);
-
-                // Trees on grassy meadows
-                if (wy > WORLD_CONFIG.WATER_LEVEL + 1.4 && wy < 13.5 && kind < 0.68) {
-                    const scale = 0.85 + seededRandom(cx, cz, i + 99) * 0.75;
-                    const rotY = seededRandom(cx, cz, i + 55) * Math.PI * 2;
-
-                    dummy.position.set(wx, wy + 1.0 * scale, wz);
-                    dummy.rotation.set(0, rotY, 0);
-                    dummy.scale.set(scale, scale, scale);
-                    dummy.updateMatrix();
-                    treeMatrices.push(dummy.matrix.clone());
-
-                    dummy.position.set(wx, wy + 3.0 * scale, wz);
-                    dummy.updateMatrix();
-                    foliageLowerMatrices.push(dummy.matrix.clone());
-
-                    dummy.position.set(wx, wy + 4.6 * scale, wz);
-                    dummy.updateMatrix();
-                    foliageUpperMatrices.push(dummy.matrix.clone());
-                }
-                // Glowing Crystals on rocky highlands or caves
-                else if (wy >= 11.0 && wy < 22.0 && kind >= 0.75) {
-                    const scale = 0.8 + seededRandom(cx, cz, i + 77) * 1.1;
-                    dummy.position.set(wx, wy + 0.6 * scale, wz);
-                    dummy.rotation.set(
-                        (seededRandom(cx, cz, i + 12) - 0.5) * 0.5,
-                        seededRandom(cx, cz, i + 13) * Math.PI,
-                        (seededRandom(cx, cz, i + 14) - 0.5) * 0.5
-                    );
-                    dummy.scale.set(scale * 0.7, scale * 1.6, scale * 0.7);
-                    dummy.updateMatrix();
-                    crystalMatrices.push(dummy.matrix.clone());
-                }
-            }
-
-            if (treeMatrices.length > 0) {
-                const trunkInst = new THREE.InstancedMesh(sharedGeos.trunk, sharedMats.trunk, treeMatrices.length);
-                const f1Inst = new THREE.InstancedMesh(sharedGeos.pineCone1, sharedMats.foliage, treeMatrices.length);
-                const f2Inst = new THREE.InstancedMesh(sharedGeos.pineCone2, sharedMats.foliage, treeMatrices.length);
-                for (let i = 0; i < treeMatrices.length; i++) {
-                    trunkInst.setMatrixAt(i, treeMatrices[i]);
-                    f1Inst.setMatrixAt(i, foliageLowerMatrices[i]);
-                    f2Inst.setMatrixAt(i, foliageUpperMatrices[i]);
-                }
-                chunkGroup.add(trunkInst, f1Inst, f2Inst);
-            }
-
-            if (crystalMatrices.length > 0) {
-                const crysInst = new THREE.InstancedMesh(sharedGeos.crystal, sharedMats.crystal, crystalMatrices.length);
-                for (let i = 0; i < crystalMatrices.length; i++) {
-                    crysInst.setMatrixAt(i, crystalMatrices[i]);
-                }
-                chunkGroup.add(crysInst);
-            }
-
-            // 3. Occasional Ancient Stone Ruin Arch
-            if (seededRandom(cx, cz, 501) > 0.72) {
-                const rx = (seededRandom(cx, cz, 502) - 0.5) * (size * 0.6);
-                const rz = (seededRandom(cx, cz, 503) - 0.5) * (size * 0.6);
-                const wx = worldOffsetX + rx;
-                const wz = worldOffsetZ + rz;
-                const wy = getTerrainHeight(wx, wz);
-                if (wy > WORLD_CONFIG.WATER_LEVEL + 1.0) {
-                    const ruinGroup = new THREE.Group();
-                    const p1 = new THREE.Mesh(sharedGeos.ruinPillar, sharedMats.ruin);
-                    p1.position.set(-1.8, 2.2, 0);
-                    const p2 = new THREE.Mesh(sharedGeos.ruinPillar, sharedMats.ruin);
-                    p2.position.set(1.8, 2.2, 0);
-                    const lintel = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.9, 1.4), sharedMats.ruin);
-                    lintel.position.set(0, 4.7, 0);
-                    ruinGroup.add(p1, p2, lintel);
-                    ruinGroup.position.set(wx, wy, wz);
-                    ruinGroup.rotation.y = seededRandom(cx, cz, 504) * Math.PI;
-                    chunkGroup.add(ruinGroup);
-                }
-            }
-
-            // 4. Occasional Floating Sky Island (Fun to fly to with PS4 Jetpack!)
-            if (seededRandom(cx, cz, 801) > 0.80) {
-                const ix = worldOffsetX + (seededRandom(cx, cz, 802) - 0.5) * 30;
-                const iz = worldOffsetZ + (seededRandom(cx, cz, 803) - 0.5) * 30;
-                const iy = 34 + seededRandom(cx, cz, 804) * 26;
-                const island = new THREE.Group();
-                const rock = new THREE.Mesh(sharedGeos.islandRock, sharedMats.islandRock);
-                rock.rotation.x = Math.PI;
-                rock.position.y = -3.5;
-                const grass = new THREE.Mesh(sharedGeos.islandTop, sharedMats.islandGrass);
-                grass.position.y = 0.5;
-                island.add(rock, grass);
-                island.position.set(ix, iy, iz);
-                chunkGroup.add(island);
-            }
-
-            // 5. Collectible Glowing Exploration Orb
-            const orbId = `orb_${cx}_${cz}`;
-            if (!state.collectedOrbIds.has(orbId) && seededRandom(cx, cz, 901) > 0.35) {
-                const ox = worldOffsetX + (seededRandom(cx, cz, 902) - 0.5) * (size * 0.7);
-                const oz = worldOffsetZ + (seededRandom(cx, cz, 903) - 0.5) * (size * 0.7);
-                const groundY = Math.max(WORLD_CONFIG.WATER_LEVEL, getTerrainHeight(ox, oz));
-                // Some orbs float higher to reward jetpack flight!
-                const floatBonus = seededRandom(cx, cz, 904) > 0.7 ? 12.0 : 2.2;
-                const oy = groundY + floatBonus;
-
-                const orbMesh = new THREE.Mesh(sharedGeos.orb, sharedMats.orb);
-                const ringMesh = new THREE.Mesh(sharedGeos.orbRing, sharedMats.orbRing);
-                orbMesh.position.set(ox, oy, oz);
-                ringMesh.position.set(ox, oy, oz);
-                chunkGroup.add(orbMesh, ringMesh);
-
-                activeOrbs.push({
-                    id: orbId,
-                    chunkKey: key,
-                    mesh: orbMesh,
-                    ring: ringMesh,
-                    baseY: oy,
-                    pos: new THREE.Vector3(ox, oy, oz)
-                });
-            }
-
-            scene.add(chunkGroup);
-            activeChunks.set(key, { group: chunkGroup, geo });
-        }
-
-        function updateChunks() {
-            const pcx = Math.round(state.player.pos.x / WORLD_CONFIG.CHUNK_SIZE);
-            const pcz = Math.round(state.player.pos.z / WORLD_CONFIG.CHUNK_SIZE);
-            const r = WORLD_CONFIG.VIEW_RADIUS;
-
-            const needed = new Set();
-            for (let dx = -r; dx <= r; dx++) {
-                for (let dz = -r; dz <= r; dz++) {
-                    const cx = pcx + dx;
-                    const cz = pcz + dz;
-                    const key = `${cx},${cz}`;
-                    needed.add(key);
-                    if (!activeChunks.has(key)) {
-                        createChunk(cx, cz);
-                    }
-                }
-            }
-
-            // Unload far chunks
-            for (const [key, chunk] of activeChunks.entries()) {
-                if (!needed.has(key)) {
-                    scene.remove(chunk.group);
-                    chunk.geo.dispose();
-                    activeChunks.delete(key);
-                    // Remove orb references belonging to unloaded chunk
-                    for (let i = activeOrbs.length - 1; i >= 0; i--) {
-                        if (activeOrbs[i].chunkKey === key) {
-                            activeOrbs.splice(i, 1);
-                        }
-                    }
-                }
-            }
-        }
-
-        // ----------------------------------------------------------------------------
-        // 9. PLAYER BEACONS (Circle Button on PS4 Controller)
-        // ----------------------------------------------------------------------------
-        function placeLightBeacon() {
-            const bx = state.player.pos.x;
-            const bz = state.player.pos.z;
-            const by = Math.max(WORLD_CONFIG.WATER_LEVEL, getTerrainHeight(bx, bz));
-
+        function spawnVisualBeacon(x, y, z, colorHex = '#f43f5e', ownerName = '') {
             const beaconGroup = new THREE.Group();
-            const beamGeo = new THREE.CylinderGeometry(0.18, 0.45, 90, 8, 1, true);
+            const colorObj = new THREE.Color(colorHex);
+            const beamGeo = new THREE.CylinderGeometry(0.18, 0.52, 110, 8, 1, true);
             const beamMat = new THREE.MeshBasicMaterial({
-                color: 0xf43f5e,
+                color: colorObj,
                 transparent: true,
                 opacity: 0.42,
                 side: THREE.DoubleSide
             });
             const beam = new THREE.Mesh(beamGeo, beamMat);
-            beam.position.y = 45;
+            beam.position.y = 55;
 
             const baseCrystal = new THREE.Mesh(
-                new THREE.OctahedronGeometry(0.85, 0),
-                new THREE.MeshBasicMaterial({ color: 0xfda4af })
+                new THREE.OctahedronGeometry(0.95, 0),
+                new THREE.MeshBasicMaterial({ color: colorObj })
             );
-            baseCrystal.position.y = 1.0;
+            baseCrystal.position.y = 1.1;
 
             beaconGroup.add(beam, baseCrystal);
-            beaconGroup.position.set(bx, by, bz);
+            beaconGroup.position.set(x, y, z);
             scene.add(beaconGroup);
+            return beaconGroup;
+        }
 
-            state.beacons.push(beaconGroup);
-            if (state.beacons.length > 12) {
+        function spawnWavePulseEffect(pos, colorHex = '#38bdf8') {
+            const ringGeo = new THREE.RingGeometry(0.6, 1.15, 32);
+            ringGeo.rotateX(-Math.PI / 2);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(colorHex),
+                transparent: true,
+                opacity: 0.9,
+                side: THREE.DoubleSide
+            });
+            const mesh = new THREE.Mesh(ringGeo, ringMat);
+            mesh.position.copy(pos);
+            mesh.position.y -= 0.8;
+            scene.add(mesh);
+            activePulseRings.push({ mesh, age: 0, maxAge: 1.6 });
+        }
+
+        function triggerLocalWaveEmote() {
+            state.network.waveTimestamp = Date.now();
+            spawnWavePulseEffect(state.player.pos, state.network.avatarColor);
+            sound.playWavePulse(0);
+            showToast('👋 Sent Harmonic Wave Pulse!');
+            syncLocalPlayerToFirestore(true);
+        }
+
+        async function placeLightBeacon() {
+            const bx = state.player.pos.x;
+            const bz = state.player.pos.z;
+            const by = Math.max(WORLD_CONFIG.WATER_LEVEL, getTerrainHeight(bx, bz));
+
+            const localBeacon = spawnVisualBeacon(bx, by, bz, state.network.avatarColor, state.network.playerName);
+            state.beacons.push(localBeacon);
+            if (state.beacons.length > 8) {
                 const oldest = state.beacons.shift();
                 scene.remove(oldest);
             }
 
             sound.playBeacon();
-            showToast('Light Beacon Placed');
-        }
+            showToast('Light Beacon Placed (Visible to All)');
 
-        // ----------------------------------------------------------------------------
-        // 10. GYROSCOPE (VR BOX HEAD TRACKING) & CAMERA ORIENTATION
-        // ----------------------------------------------------------------------------
-        const zee = new THREE.Vector3(0, 0, 1);
-        const euler = new THREE.Euler();
-        const q0 = new THREE.Quaternion();
-        const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -PI/2 around X
-
-        function setObjectQuaternionFromDevice(quaternion, alpha, beta, gamma, orient) {
-            euler.set(beta, alpha, -gamma, 'YXZ');
-            quaternion.setFromEuler(euler);
-            quaternion.multiply(q1);
-            quaternion.multiply(q0.setFromAxisAngle(zee, -orient));
-        }
-
-        function handleDeviceOrientation(event) {
-            if (event.alpha === null || event.beta === null || event.gamma === null) return;
-            state.gyro.available = true;
-            state.gyro.alpha = THREE.MathUtils.degToRad(event.alpha);
-            state.gyro.beta = THREE.MathUtils.degToRad(event.beta);
-            state.gyro.gamma = THREE.MathUtils.degToRad(event.gamma);
-
-            if (!state.gyro.initialized) {
-                state.gyro.yawOffset = -state.gyro.alpha;
-                state.gyro.initialized = true;
-            }
-        }
-
-        async function enableGyroscope() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            // Publish beacon to shared Firestore room collection
+            if (db && state.network.userId) {
                 try {
-                    const res = await DeviceOrientationEvent.requestPermission();
-                    if (res === 'granted') {
-                        window.addEventListener('deviceorientation', handleDeviceOrientation, true);
-                        state.gyro.enabled = true;
-                    }
+                    const beaconsCol = collection(db, 'artifacts', appId, 'public', 'data', `aetheria_beacons_${state.network.roomCode}`);
+                    await addDoc(beaconsCol, {
+                        x: Number(bx.toFixed(2)),
+                        y: Number(by.toFixed(2)),
+                        z: Number(bz.toFixed(2)),
+                        color: state.network.avatarColor,
+                        ownerId: state.network.userId,
+                        ownerName: state.network.playerName,
+                        createdAt: Date.now()
+                    });
                 } catch (err) {
-                    console.warn('Gyro permission denied:', err);
+                    console.warn('Beacon sync error:', err);
                 }
-            } else if ('ondeviceorientation' in window) {
-                window.addEventListener('deviceorientation', handleDeviceOrientation, true);
-                state.gyro.enabled = true;
-            }
-        }
-
-        function recenterView() {
-            if (state.gyro.available) {
-                state.gyro.yawOffset = -state.gyro.alpha;
-            }
-            state.player.pitch = 0;
-            showToast('VR View Recentered');
-        }
-
-        const deviceQuat = new THREE.Quaternion();
-        const yawOffsetQuat = new THREE.Quaternion();
-        const upAxis = new THREE.Vector3(0, 1, 0);
-
-        function updateCameraRig() {
-            playerRig.position.copy(state.player.pos);
-
-            if (state.vrMode && state.gyro.enabled && state.gyro.available) {
-                const screenOrient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
-                setObjectQuaternionFromDevice(
-                    deviceQuat,
-                    state.gyro.alpha,
-                    state.gyro.beta,
-                    state.gyro.gamma,
-                    screenOrient
-                );
-                // Combine PS4 Right-Stick yaw + calibrated gyro offset with physical head rotation
-                yawOffsetQuat.setFromAxisAngle(upAxis, state.player.yaw + state.gyro.yawOffset);
-                playerRig.quaternion.copy(yawOffsetQuat).multiply(deviceQuat);
-            } else {
-                euler.set(state.player.pitch, state.player.yaw, 0, 'YXZ');
-                playerRig.quaternion.setFromEuler(euler);
             }
         }
 
         // ----------------------------------------------------------------------------
-        // 11. PS4 DUALSHOCK 4 GAMEPAD API POLLING & INPUT AGGREGATION
+        // 9B. EXPRESSIVE 3D CYBER-TRAVELER AVATAR SYSTEM & MULTIPLAYER SYNC
         // ----------------------------------------------------------------------------
-        function updateGamepadStatusUI(connected, name = '') {
-            const modalDot = document.getElementById('modal-pad-dot');
-            const modalTitle = document.getElementById('modal-pad-title');
-            const modalSub = document.getElementById('modal-pad-sub');
-            const hudDot = document.getElementById('hud-pad-dot');
-            const hudText = document.getElementById('hud-pad-text');
+        const remoteAvatars = new Map(); // id -> { group, headGroup, leftArm, rightArm, thrusterL, thrusterR, nameSprite, targetPos, currentPos, targetYaw, currentYaw, targetPitch, currentPitch, data, lastWaveSeen }
+        const ambientBotAvatars = new Map();
 
-            if (connected) {
-                const shortName = name.toLowerCase().includes('dualshock') || name.toLowerCase().includes('wireless controller') || name.includes('054c')
-                    ? 'PS4 DualShock 4'
-                    : (name.slice(0, 22) || 'Gamepad');
-                modalDot.className = 'w-3 h-3 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_10px_#34d399]';
-                modalTitle.textContent = `${shortName} Ready`;
-                modalSub.textContent = 'Left Stick: Move • X/R2: Fly • Opt: Recenter';
-                hudDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
-                hudText.textContent = `${shortName} Active`;
-            } else {
-                modalDot.className = 'w-3 h-3 rounded-full bg-amber-400 shrink-0';
-                modalTitle.textContent = 'Waiting for PS4 Pad';
-                modalSub.textContent = 'Pair via Bluetooth & press X';
-                hudDot.className = 'w-2 h-2 rounded-full bg-amber-400';
-                hudText.textContent = 'PS4 Controller: Press any button to wake';
+        function createNametagSprite(name, colorHex, distanceMeters = 0) {
+            const c = document.createElement('canvas');
+            c.width = 512;
+            c.height = 128;
+            const ctx = c.getContext('2d');
+
+            ctx.clearRect(0, 0, c.width, c.height);
+            // Pill background
+            ctx.fillStyle = 'rgba(7, 11, 24, 0.78)';
+            ctx.beginPath();
+            ctx.roundRect(36, 22, 440, 84, 42);
+            ctx.fill();
+
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = colorHex;
+            ctx.stroke();
+
+            // Name text
+            ctx.font = 'bold 34px Inter, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const label = distanceMeters > 0 ? `${name} • ${Math.round(distanceMeters)}m` : name;
+            ctx.fillText(label, 256, 65);
+
+            const tex = new THREE.CanvasTexture(c);
+            tex.encoding = THREE.sRGBEncoding;
+            const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+            const sprite = new THREE.Sprite(mat);
+            sprite.scale.set(3.4, 0.85, 1);
+            return { sprite, canvas: c, ctx, tex };
+        }
+
+        function updateNametagSprite(tagObj, name, colorHex, distanceMeters) {
+            const { ctx, canvas: c, tex } = tagObj;
+            ctx.clearRect(0, 0, c.width, c.height);
+            ctx.fillStyle = 'rgba(7, 11, 24, 0.78)';
+            ctx.beginPath();
+            ctx.roundRect(36, 22, 440, 84, 42);
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = colorHex;
+            ctx.stroke();
+
+            ctx.font = 'bold 32px Inter, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${name} • ${Math.round(distanceMeters)}m`, 256, 65);
+            tex.needsUpdate = true;
+        }
+
+        function createCyberTravelerAvatar(name, colorHex = '#38bdf8') {
+            const accentColor = new THREE.Color(colorHex);
+            const root = new THREE.Group();
+
+            // 1. Sleek Hovering Torso / Cloak Core
+            const torsoMat = new THREE.MeshStandardMaterial({
+                color: 0x1e293b,
+                roughness: 0.35,
+                metalness: 0.65,
+                flatShading: true
+            });
+            const accentMat = new THREE.MeshBasicMaterial({ color: accentColor });
+
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.22, 1.05, 8), torsoMat);
+            torso.position.y = -0.85;
+            root.add(torso);
+
+            // Glowing Chest Core Diamond
+            const chestCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), accentMat);
+            chestCore.position.set(0, -0.72, -0.33);
+            root.add(chestCore);
+
+            // 2. Articulated Head & Glowing VR Visor (mirrors remote player's head look!)
+            const headGroup = new THREE.Group();
+            headGroup.position.set(0, -0.05, 0);
+
+            const helmet = new THREE.Mesh(new THREE.DodecahedronGeometry(0.34, 1), torsoMat);
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.16, 0.24), accentMat);
+            visor.position.set(0, 0.02, -0.24);
+            headGroup.add(helmet, visor);
+            root.add(headGroup);
+
+            // 3. Hovering Shoulder Pauldrons / Wing Fins
+            const leftArm = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), torsoMat);
+            leftArm.scale.set(0.7, 1.6, 0.7);
+            leftArm.position.set(-0.56, -0.68, 0);
+
+            const rightArm = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), torsoMat);
+            rightArm.scale.set(0.7, 1.6, 0.7);
+            rightArm.position.set(0.56, -0.68, 0);
+            root.add(leftArm, rightArm);
+
+            // 4. Jetpack Thrusters & Animated Plumes
+            const thrusterGeo = new THREE.ConeGeometry(0.14, 0.75, 6);
+            thrusterGeo.rotateX(Math.PI);
+            const thrusterMat = new THREE.MeshBasicMaterial({
+                color: 0xfef08a,
+                transparent: true,
+                opacity: 0.88
+            });
+            const thrusterL = new THREE.Mesh(thrusterGeo, thrusterMat);
+            thrusterL.position.set(-0.22, -1.55, 0.18);
+            const thrusterR = new THREE.Mesh(thrusterGeo, thrusterMat);
+            thrusterR.position.set(0.22, -1.55, 0.18);
+            thrusterL.visible = false;
+            thrusterR.visible = false;
+            root.add(thrusterL, thrusterR);
+
+            // 5. Ground/Aura Halo Ring
+            const haloRing = new THREE.Mesh(
+                new THREE.RingGeometry(0.55, 0.68, 24),
+                new THREE.MeshBasicMaterial({ color: accentColor, side: THREE.DoubleSide, transparent: true, opacity: 0.65 })
+            );
+            haloRing.rotation.x = -Math.PI / 2;
+            haloRing.position.y = -1.65;
+            root.add(haloRing);
+
+            // 6. Floating Nametag Sprite
+            const tagObj = createNametagSprite(name, colorHex, 0);
+            tagObj.sprite.position.set(0, 0.72, 0);
+            root.add(tagObj.sprite);
+
+            scene.add(root);
+            return {
+                group: root,
+                headGroup,
+                leftArm,
+                rightArm,
+                thrusterL,
+                thrusterR,
+                haloRing,
+                tagObj,
+                accentMat,
+                visorMat: accentMat
+            };
+        }
+
+        function teleportToNextPlayer() {
+            const candidates = [];
+            for (const [id, av] of remoteAvatars.entries()) {
+                candidates.push({ id, name: av.data.name, pos: av.currentPos });
+            }
+            for (const [id, bot] of ambientBotAvatars.entries()) {
+                candidates.push({ id, name: bot.name, pos: bot.pos });
+            }
+
+            if (candidates.length === 0) {
+                showToast('No other travelers in shard yet — share Invite Link!');
+                return;
+            }
+
+            state.network.warpIndex = (state.network.warpIndex + 1) % candidates.length;
+            const target = candidates[state.network.warpIndex];
+            // Offset 4.5 meters behind/beside target traveler so we don't overlap inside them
+            const angle = Math.random() * Math.PI * 2;
+            state.player.pos.set(
+                target.pos.x + Math.cos(angle) * 4.5,
+                target.pos.y + 1.0,
+                target.pos.z + Math.sin(angle) * 4.5
+            );
+            state.player.vel.set(0, 0, 0);
+            spawnWavePulseEffect(state.player.pos, state.network.avatarColor);
+            sound.playWavePulse(110);
+            showToast(`⚡ Warped near ${target.name}`);
+            syncLocalPlayerToFirestore(true);
+        }
+
+        // ----------------------------------------------------------------------------
+        // 9C. FIREBASE FIRESTORE MULTIPLAYER ENGINE
+        // ----------------------------------------------------------------------------
+        let app = null;
+        let db = null;
+        let auth = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'aetheria-vr-default';
+        let unsubscribePlayers = null;
+        let unsubscribeBeacons = null;
+
+        async function initMultiplayer() {
+            const statusEl = document.getElementById('modal-net-status');
+            const dotEl = document.getElementById('modal-net-dot');
+
+            try {
+                if (typeof __firebase_config === 'undefined' || !__firebase_config) {
+                    statusEl.textContent = 'Offline Solo Mode';
+                    return;
+                }
+
+                const firebaseConfig = JSON.parse(__firebase_config);
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // RULE 3: Authenticate BEFORE any Firestore queries
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                state.network.userId = auth.currentUser?.uid || `traveler_${crypto.randomUUID().slice(0, 8)}`;
+                state.network.connected = true;
+
+                dotEl.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]';
+                statusEl.textContent = `Live: ${state.network.roomCode}`;
+
+                subscribeToRoom(state.network.roomCode);
+                syncLocalPlayerToFirestore(true);
+            } catch (err) {
+                console.warn('Multiplayer initialization fallback:', err);
+                statusEl.textContent = 'Local Mode (Offline)';
             }
         }
 
-        window.addEventListener('gamepadconnected', (e) => {
-            state.gamepad.connected = true;
-            state.gamepad.id = e.gamepad.id;
-            updateGamepadStatusUI(true, e.gamepad.id);
-            showToast('PS4 DualShock 4 Connected');
-        });
+        function subscribeToRoom(roomCode) {
+            if (!db || !state.network.userId) return;
 
-        window.addEventListener('gamepaddisconnected', () => {
-            state.gamepad.connected = false;
-            updateGamepadStatusUI(false);
-            showToast('Controller Disconnected');
-        });
+            // Clean old listeners & remote avatars when switching rooms
+            if (unsubscribePlayers) unsubscribePlayers();
+            if (unsubscribeBeacons) unsubscribeBeacons();
+            for (const av of remoteAvatars.values()) scene.remove(av.group);
+            remoteAvatars.clear();
+            for (const bMesh of sharedBeaconsMap.values()) scene.remove(bMesh);
+            sharedBeaconsMap.clear();
 
-        function applyDeadzone(val, dz = 0.13) {
-            if (Math.abs(val) < dz) return 0;
-            return (val - Math.sign(val) * dz) / (1 - dz);
+            document.querySelectorAll('.hud-room-name').forEach(el => el.textContent = roomCode);
+            document.getElementById('modal-net-status').textContent = `Live: ${roomCode}`;
+
+            // RULE 1: Strict public path /artifacts/{appId}/public/data/{collectionName}
+            // RULE 2: Simple collection query without orderBy/where
+            const playersCol = collection(db, 'artifacts', appId, 'public', 'data', `aetheria_players_${roomCode}`);
+            unsubscribePlayers = onSnapshot(
+                playersCol,
+                (snapshot) => {
+                    const now = Date.now();
+                    const seenIds = new Set();
+
+                    snapshot.forEach((docSnap) => {
+                        const id = docSnap.id;
+                        if (id === state.network.userId) return;
+                        const data = docSnap.data();
+                        if (!data || typeof data.x !== 'number') return;
+
+                        // Ignore stale disconnected players (> 18 seconds without heartbeat)
+                        if (data.lastSeen && now - data.lastSeen > 18000) return;
+
+                        seenIds.add(id);
+                        let av = remoteAvatars.get(id);
+                        if (!av) {
+                            const rig = createCyberTravelerAvatar(data.name || 'Traveler', data.color || '#38bdf8');
+                            av = {
+                                ...rig,
+                                currentPos: new THREE.Vector3(data.x, data.y, data.z),
+                                targetPos: new THREE.Vector3(data.x, data.y, data.z),
+                                currentYaw: data.yaw || 0,
+                                targetYaw: data.yaw || 0,
+                                currentPitch: data.pitch || 0,
+                                targetPitch: data.pitch || 0,
+                                data,
+                                lastWaveSeen: data.waveTimestamp || 0,
+                                lastTagDist: -1
+                            };
+                            rig.group.position.copy(av.currentPos);
+                            remoteAvatars.set(id, av);
+                            showToast(`✦ ${data.name || 'Traveler'} entered the world`);
+                            sound.playChime(587.33);
+                        } else {
+                            av.targetPos.set(data.x, data.y, data.z);
+                            av.targetYaw = data.yaw || 0;
+                            av.targetPitch = data.pitch || 0;
+                            if (data.color && av.data.color !== data.color) {
+                                av.accentMat.color.set(data.color);
+                            }
+                            if (data.waveTimestamp && data.waveTimestamp > av.lastWaveSeen) {
+                                av.lastWaveSeen = data.waveTimestamp;
+                                spawnWavePulseEffect(av.currentPos, data.color || '#38bdf8');
+                                const dist = state.player.pos.distanceTo(av.currentPos);
+                                if (dist < 90) {
+                                    sound.playWavePulse(80);
+                                    showToast(`👋 ${data.name || 'Traveler'} waved!`);
+                                }
+                            }
+                            av.data = data;
+                        }
+                    });
+
+                    // Remove avatars that left or timed out
+                    for (const [id, av] of remoteAvatars.entries()) {
+                        if (!seenIds.has(id)) {
+                            scene.remove(av.group);
+                            remoteAvatars.delete(id);
+                        }
+                    }
+
+                    updateOnlinePlayersHUD();
+                },
+                (error) => {
+                    console.warn('Players snapshot error:', error);
+                }
+            );
+
+            // Subscribe to shared beacons in this room
+            const beaconsCol = collection(db, 'artifacts', appId, 'public', 'data', `aetheria_beacons_${roomCode}`);
+            unsubscribeBeacons = onSnapshot(
+                beaconsCol,
+                (snapshot) => {
+                    const now = Date.now();
+                    snapshot.forEach((docSnap) => {
+                        const bid = docSnap.id;
+                        if (sharedBeaconsMap.has(bid)) return;
+                        const b = docSnap.data();
+                        if (!b || b.ownerId === state.network.userId) return;
+                        // Show beacons created in the last 30 minutes
+                        if (b.createdAt && now - b.createdAt > 30 * 60 * 1000) return;
+
+                        const mesh = spawnVisualBeacon(b.x, b.y, b.z, b.color || '#38bdf8', b.ownerName || '');
+                        sharedBeaconsMap.set(bid, mesh);
+                    });
+                },
+                (error) => {
+                    console.warn('Beacons snapshot error:', error);
+                }
+            );
         }
 
-        function pollInputs(dt) {
-            let moveX = 0;
-            let moveZ = 0;
-            let turnYaw = 0;
-            let turnPitch = 0;
-            let jumpOrFlyHeld = false;
-            let jumpJustPressed = false;
-            let sprintHeld = false;
+        async function syncLocalPlayerToFirestore(force = false) {
+            if (!db || !state.network.userId) return;
+            const now = performance.now();
+            // Throttle writes to ~11 Hz (every 90ms) for smooth low-latency sync
+            if (!force && now - state.network.lastSyncTime < 90) return;
+            state.network.lastSyncTime = now;
 
-            // 1. Keyboard Fallbacks
-            const k = state.input.keys;
-            if (k['KeyW'] || k['ArrowUp']) moveZ -= 1;
-            if (k['KeyS'] || k['ArrowDown']) moveZ += 1;
-            if (k['KeyA']) moveX -= 1;
-            if (k['KeyD']) moveX += 1;
-            if (k['ArrowLeft']) turnYaw += 1;
-            if (k['ArrowRight']) turnYaw -= 1;
-            if (k['Space']) jumpOrFlyHeld = true;
-            if (k['ShiftLeft'] || k['ShiftRight']) sprintHeld = true;
+            // Extract actual head look direction (works for both VR gyroscope & 2D stick/mouse)
+            const headEuler = new THREE.Euler().setFromQuaternion(playerRig.quaternion, 'YXZ');
 
-            // 2. Touch Virtual Joystick Fallbacks
-            moveX += state.input.touchMove.x;
-            moveZ += state.input.touchMove.y;
-            if (state.input.touchFly) jumpOrFlyHeld = true;
+            try {
+                const playerRef = doc(db, 'artifacts', appId, 'public', 'data', `aetheria_players_${state.network.roomCode}`, state.network.userId);
+                await setDoc(playerRef, {
+                    name: state.network.playerName,
+                    color: state.network.avatarColor,
+                    x: Number(state.player.pos.x.toFixed(2)),
+                    y: Number(state.player.pos.y.toFixed(2)),
+                    z: Number(state.player.pos.z.toFixed(2)),
+                    yaw: Number(headEuler.y.toFixed(3)),
+                    pitch: Number(headEuler.x.toFixed(3)),
+                    flying: Boolean(state.player.flying),
+                    waveTimestamp: state.network.waveTimestamp,
+                    lastSeen: Date.now()
+                });
+            } catch (err) {
+                // Silent retry on next tick
+            }
+        }
 
-            // 3. HTML5 Gamepad API (PlayStation 4 DualShock 4 Standard Mapping)
-            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-            let activePad = null;
-            for (let i = 0; i < gamepads.length; i++) {
-                if (gamepads[i] && gamepads[i].connected) {
-                    activePad = gamepads[i];
-                    break;
+        function cleanupLocalPlayerPresence() {
+            if (!db || !state.network.userId) return;
+            try {
+                const playerRef = doc(db, 'artifacts', appId, 'public', 'data', `aetheria_players_${state.network.roomCode}`, state.network.userId);
+                deleteDoc(playerRef).catch(() => {});
+            } catch (e) {}
+        }
+        window.addEventListener('beforeunload', cleanupLocalPlayerPresence);
+
+        // Optional Ambient AI Echo Travelers (when user toggles solo AI companions)
+        function setAmbientEchoBots(enabled) {
+            state.network.spawnBots = enabled;
+            if (!enabled) {
+                for (const bot of ambientBotAvatars.values()) scene.remove(bot.rig.group);
+                ambientBotAvatars.clear();
+                updateOnlinePlayersHUD();
+                return;
+            }
+            const botConfigs = [
+                { id: 'echo_1', name: 'Echo_Lyra', color: '#a855f7', angle: 0.4, radius: 22 },
+                { id: 'echo_2', name: 'Echo_Orion', color: '#10b981', angle: 2.6, radius: 34 }
+            ];
+            botConfigs.forEach((cfg) => {
+                const rig = createCyberTravelerAvatar(cfg.name, cfg.color);
+                const bx = state.player.pos.x + Math.cos(cfg.angle) * cfg.radius;
+                const bz = state.player.pos.z + Math.sin(cfg.angle) * cfg.radius;
+                const by = getTerrainHeight(bx, bz) + 2.4;
+                rig.group.position.set(bx, by, bz);
+                ambientBotAvatars.set(cfg.id, {
+                    ...cfg,
+                    rig,
+                    pos: new THREE.Vector3(bx, by, bz),
+                    lastTagDist: -1
+                });
+            });
+            updateOnlinePlayersHUD();
+        }
+
+        function updateRemoteAvatarsAndEffects(elapsed, dt) {
+            const lerpFactor = Math.min(1, dt * 11.5);
+
+            // 1. Interpolate Real Multiplayer Avatars
+            for (const [id, av] of remoteAvatars.entries()) {
+                av.currentPos.lerp(av.targetPos, lerpFactor);
+                // Shortest-angle yaw interpolation
+                let diffYaw = av.targetYaw - av.currentYaw;
+                while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
+                while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
+                av.currentYaw += diffYaw * lerpFactor;
+                av.currentPitch = THREE.MathUtils.lerp(av.currentPitch, av.targetPitch, lerpFactor);
+
+                const hoverBob = Math.sin(elapsed * 3.2 + av.currentPos.x * 0.2) * 0.12;
+                av.group.position.set(av.currentPos.x, av.currentPos.y + hoverBob, av.currentPos.z);
+                av.group.rotation.y = av.currentYaw;
+                av.headGroup.rotation.x = THREE.MathUtils.clamp(av.currentPitch, -1.1, 1.1);
+
+                // Shoulder pauldron gentle float
+                av.leftArm.position.y = -0.68 + Math.sin(elapsed * 4.0) * 0.05;
+                av.rightArm.position.y = -0.68 + Math.cos(elapsed * 4.0) * 0.05;
+                av.haloRing.rotation.z = elapsed * 1.2;
+
+                // Jetpack thruster flames when remote player is flying
+                const isFlying = Boolean(av.data.flying);
+                av.thrusterL.visible = isFlying;
+                av.thrusterR.visible = isFlying;
+                if (isFlying) {
+                    const flameScale = 0.8 + Math.sin(elapsed * 35) * 0.3;
+                    av.thrusterL.scale.set(1, flameScale, 1);
+                    av.thrusterR.scale.set(1, flameScale, 1);
+                }
+
+                // Update distance readout on floating nametag sprite
+                const dist = Math.round(state.player.pos.distanceTo(av.currentPos));
+                if (Math.abs(dist - av.lastTagDist) >= 2) {
+                    av.lastTagDist = dist;
+                    updateNametagSprite(av.tagObj, av.data.name || 'Traveler', av.data.color || '#38bdf8', dist);
                 }
             }
 
-            if (activePad) {
-                if (!state.gamepad.connected) {
-                    state.gamepad.connected = true;
-                    state.gamepad.id = activePad.id;
-                    updateGamepadStatusUI(true, activePad.id);
-                    showToast('PS4 DualShock 4 Connected');
+            // 2. Update Optional Ambient Echo Bots
+            for (const bot of ambientBotAvatars.values()) {
+                bot.angle += dt * 0.22;
+                const tx = state.player.pos.x + Math.cos(bot.angle) * bot.radius;
+                const tz = state.player.pos.z + Math.sin(bot.angle) * bot.radius;
+                const ty = Math.max(WORLD_CONFIG.WATER_LEVEL, getTerrainHeight(tx, tz)) + 2.5 + Math.sin(elapsed * 2 + bot.angle) * 1.4;
+                const dx = tx - bot.pos.x;
+                const dz = tz - bot.pos.z;
+                bot.pos.set(tx, ty, tz);
+                bot.rig.group.position.copy(bot.pos);
+                bot.rig.group.rotation.y = Math.atan2(-dx, -dz);
+                bot.rig.thrusterL.visible = true;
+                bot.rig.thrusterR.visible = true;
+
+                const dist = Math.round(state.player.pos.distanceTo(bot.pos));
+                if (Math.abs(dist - bot.lastTagDist) >= 2) {
+                    bot.lastTagDist = dist;
+                    updateNametagSprite(bot.rig.tagObj, bot.name, bot.color, dist);
                 }
+            }
 
-                // Axes: 0=LeftX, 1=LeftY, 2=RightX, 3=RightY
-                const lx = applyDeadzone(activePad.axes[0] || 0);
-                const ly = applyDeadzone(activePad.axes[1] || 0);
-                const rx = applyDeadzone(activePad.axes[2] || 0);
-                const ry = applyDeadzone(activePad.axes[3] || 0);
-
-                moveX += lx;
-                moveZ += ly;
-                turnYaw -= rx * 1.45;
-                if (!state.vrMode || !state.gyro.available) {
-                    turnPitch -= ry * 1.15;
+            // 3. Animate Expanding Harmonic Wave Pulse Rings
+            for (let i = activePulseRings.length - 1; i >= 0; i--) {
+                const p = activePulseRings[i];
+                p.age += dt;
+                if (p.age >= p.maxAge) {
+                    scene.remove(p.mesh);
+                    p.mesh.geometry.dispose();
+                    p.mesh.material.dispose();
+                    activePulseRings.splice(i, 1);
+                } else {
+                    const progress = p.age / p.maxAge;
+                    const scale = 1 + progress * 18;
+                    p.mesh.scale.set(scale, scale, 1);
+                    p.mesh.material.opacity = (1 - progress) * 0.85;
                 }
+            }
+        }
 
-                const btns = activePad.buttons;
-                const isPressed = (idx) => btns[idx] && (btns[idx].pressed || btns[idx].value > 0.35);
-                const justPressed = (idx) => isPressed(idx) && !state.gamepad.prevButtons[idx];
+        function updateOnlinePlayersHUD() {
+            const totalOnline = 1 + remoteAvatars.size + ambientBotAvatars.size;
+            document.querySelectorAll('.hud-online-count').forEach(el => el.textContent = totalOnline);
 
-                // Cross (0) or R2 (7) -> Jump & Jetpack Fly
-                if (isPressed(0) || isPressed(7)) jumpOrFlyHeld = true;
-                if (justPressed(0) || justPressed(7)) jumpJustPressed = true;
+            const listEl = document.getElementById('hud-player-list');
+            if (!listEl) return;
 
-                // L1 (4) or L2 (6) -> Turbo Sprint
-                if (isPressed(4) || isPressed(6)) sprintHeld = true;
+            const entries = [];
+            for (const [id, av] of remoteAvatars.entries()) {
+                const dist = Math.round(state.player.pos.distanceTo(av.currentPos));
+                entries.push({ name: av.data.name || 'Traveler', color: av.data.color || '#38bdf8', dist, pos: av.currentPos });
+            }
+            for (const bot of ambientBotAvatars.values()) {
+                const dist = Math.round(state.player.pos.distanceTo(bot.pos));
+                entries.push({ name: bot.name, color: bot.color, dist, pos: bot.pos });
+            }
 
-                // Circle (1) -> Place Light Beacon
-                if (justPressed(1)) placeLightBeacon();
+            if (entries.length === 0) {
+                listEl.innerHTML = `<div class="text-slate-400 italic text-[11px]">You (${state.network.playerName}) • Share invite link for friends!</div>`;
+                return;
+            }
 
-                // Triangle (2) -> Cycle Atmosphere / Time of Day
-                if (justPressed(2)) {
-                    state.skyIndex = (state.skyIndex + 1) % ATMOSPHERES.length;
-                    applyAtmosphere(state.skyIndex);
-                    showToast(`Atmosphere: ${ATMOSPHERES[state.skyIndex].name}`);
-                }
-
+            listEl.innerHTML = entries.map((e, idx) => `
+                <div class="flex items-center justify-between gap-2 bg-slate-900/70 px-2.5 py-1 rounded-lg border border-white/5">
+                    <span class="flex items-center gap-1.5 truncate font-medium text-white">
+                        <span class="w-2 h-2 rounded-full shrink-0" style="background:${e.color}"></span>
+                        <span class="truncate">${e.name}</span>
+                    </span>
+                    <span class="text-[11px] text-sky-300 font-semibold shrink-0">${e.dist}m</span>
+                </div>
+            `).join('');
+        }
+// ... existing code ...
                 // Square (3) -> Toggle VR Box Split-Screen Mode
                 if (justPressed(3)) {
                     setVRMode(!state.vrMode);
                 }
 
+                // R1 (5) -> Send Wave / Pulse Emote to nearby players
+                if (justPressed(5)) {
+                    triggerLocalWaveEmote();
+                }
+
+                // L1 (4) -> Warp / Teleport near next online traveler (hold L2 to turbo sprint)
+                if (justPressed(4)) {
+                    teleportToNextPlayer();
+                }
+
+                // L2 (6) -> Turbo Sprint
+                if (isPressed(6)) sprintHeld = true;
+
                 // Options (9) or PS Button (16) -> Recenter View
                 if (justPressed(9) || justPressed(16)) {
                     recenterView();
                 }
-
-                // D-Pad Up (12) / Down (13) -> Adjust VR IPD Eye Separation
-                if (justPressed(12)) {
-                    state.ipdMm = Math.min(80, state.ipdMm + 2);
-                    updateEyeSeparation();
-                    showToast(`Eye Separation: ${state.ipdMm} mm`);
-                }
-                if (justPressed(13)) {
-                    state.ipdMm = Math.max(45, state.ipdMm - 2);
-                    updateEyeSeparation();
-                    showToast(`Eye Separation: ${state.ipdMm} mm`);
-                }
-
-                // Save button state for edge detection
-                for (let b = 0; b < btns.length; b++) {
-                    state.gamepad.prevButtons[b] = isPressed(b);
-                }
-            }
-
-            // Apply Camera Yaw & Pitch
-            state.player.yaw += turnYaw * dt * 1.65;
-            state.player.pitch = THREE.MathUtils.clamp(
-                state.player.pitch + turnPitch * dt * 1.35,
-                -Math.PI * 0.45,
-                Math.PI * 0.45
-            );
-
-            // Determine Horizontal Forward & Right Vectors based on player heading
-            const forward = new THREE.Vector3();
-            playerRig.getWorldDirection(forward);
-            forward.negate(); // Three.js cameras look down -Z
-            forward.y = 0;
-            if (forward.lengthSq() > 0.0001) forward.normalize();
-            else forward.set(-Math.sin(state.player.yaw), 0, -Math.cos(state.player.yaw));
-
-            const right = new THREE.Vector3().crossVectors(forward, upAxis).normalize();
-
-            // Clamp combined movement vector length to 1
-            const moveVec = new THREE.Vector2(moveX, moveZ);
-            if (moveVec.length() > 1) moveVec.normalize();
-
-            const speed = WORLD_CONFIG.WALK_SPEED * (sprintHeld ? WORLD_CONFIG.SPRINT_MULTIPLIER : 1.0);
-            const wishVelX = (forward.x * (-moveVec.y) + right.x * moveVec.x) * speed;
-            const wishVelZ = (forward.z * (-moveVec.y) + right.z * moveVec.x) * speed;
-
-            // Smooth horizontal acceleration
-            state.player.vel.x = THREE.MathUtils.lerp(state.player.vel.x, wishVelX, Math.min(1, dt * 10));
-            state.player.vel.z = THREE.MathUtils.lerp(state.player.vel.z, wishVelZ, Math.min(1, dt * 10));
-
-            // Jump & Jetpack Flight Physics
-            if (jumpOrFlyHeld) {
-                if (state.player.grounded || jumpJustPressed) {
-                    state.player.vel.y = Math.max(state.player.vel.y, WORLD_CONFIG.JUMP_VELOCITY);
-                    state.player.grounded = false;
-                } else {
-                    // Smooth upward jetpack lift
-                    state.player.vel.y = Math.min(
-                        WORLD_CONFIG.MAX_FLY_SPEED,
-                        state.player.vel.y + WORLD_CONFIG.JETPACK_ACCEL * dt
-                    );
-                }
-                state.player.flying = true;
-            } else {
-                state.player.flying = false;
-                state.player.vel.y -= WORLD_CONFIG.GRAVITY * dt;
-            }
-
-            // Integrate Player Position
-            state.player.pos.x += state.player.vel.x * dt;
-            state.player.pos.y += state.player.vel.y * dt;
-            state.player.pos.z += state.player.vel.z * dt;
-
-            // Terrain & Water Floor Collision
-            const terrainY = getTerrainHeight(state.player.pos.x, state.player.pos.z);
-            const floorY = Math.max(terrainY, WORLD_CONFIG.WATER_LEVEL - 0.35) + WORLD_CONFIG.PLAYER_EYE_HEIGHT;
-
-            if (state.player.pos.y <= floorY) {
-                state.player.pos.y = floorY;
-                if (state.player.vel.y < 0) state.player.vel.y = 0;
-                state.player.grounded = true;
-            } else {
-                state.player.grounded = false;
-            }
-        }
-
-        // ----------------------------------------------------------------------------
-        // 12. ORB COLLECTION & HUD UPDATES
-        // ----------------------------------------------------------------------------
-        const compassDirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-
-        function updateWorldEntitiesAndHUD(elapsed, dt) {
-            // Keep Sky, Stars & Infinite Water centered around player
-            skyDome.position.copy(state.player.pos);
-            starField.position.copy(state.player.pos);
-            sunOrb.position.copy(state.player.pos).add(new THREE.Vector3(160, 210, -180));
-            waterMesh.position.x = state.player.pos.x;
-            waterMesh.position.z = state.player.pos.z;
-
-            // Animate & check Orb Collection
-            for (let i = activeOrbs.length - 1; i >= 0; i--) {
-                const orb = activeOrbs[i];
-                orb.mesh.rotation.y = elapsed * 1.8;
-                orb.ring.rotation.x = elapsed * 1.4;
-                orb.ring.rotation.y = -elapsed * 1.1;
-                const bobY = orb.baseY + Math.sin(elapsed * 2.5 + i) * 0.45;
-                orb.mesh.position.y = bobY;
-                orb.ring.position.y = bobY;
-
-                const dist = state.player.pos.distanceTo(orb.mesh.position);
-                if (dist < 3.4) {
-                    state.collectedOrbIds.add(orb.id);
-                    state.orbsCollected += 1;
-                    orb.mesh.visible = false;
-                    orb.ring.visible = false;
-                    activeOrbs.splice(i, 1);
-
-                    sound.playChime(440 + (state.orbsCollected % 8) * 55);
-                    showToast(`✦ Exploration Orb Found! (${state.orbsCollected})`);
-                }
-            }
-
-            // Update Compass & Altitude across both 2D HUD and VR Left/Right Eye HUDs
-            const lookDir = new THREE.Vector3();
-            playerRig.getWorldDirection(lookDir);
-            lookDir.negate();
-            let deg = THREE.MathUtils.radToDeg(Math.atan2(lookDir.x, -lookDir.z));
-            if (deg < 0) deg += 360;
-            const dirText = compassDirs[Math.round(deg / 45) % 8];
-            const altText = `${Math.max(0, Math.round(state.player.pos.y - WORLD_CONFIG.WATER_LEVEL))}m`;
-
-            document.querySelectorAll('.hud-orbs').forEach(el => el.textContent = state.orbsCollected);
-            document.querySelectorAll('.hud-compass').forEach(el => el.textContent = dirText);
-            document.querySelectorAll('.hud-alt').forEach(el => el.textContent = altText);
-
-            const horizSpeed = Math.hypot(state.player.vel.x, state.player.vel.z);
-            sound.update(dt, horizSpeed, state.player.flying, state.player.pos.y);
-        }
-
-        // ----------------------------------------------------------------------------
-        // 13. STEREOSCOPIC VR RENDER LOOP & MODE SWITCHING
-        // ----------------------------------------------------------------------------
-        function setVRMode(enable) {
-            state.vrMode = enable;
-            const vrOverlay = document.getElementById('vr-overlay');
-            const hud2d = document.getElementById('hud-2d');
-            const exitPill = document.getElementById('btn-vr-exit-pill');
-
-            if (enable) {
-                vrOverlay.classList.add('active');
-                hud2d.classList.add('hidden');
-                hud2d.classList.remove('flex');
-                exitPill.classList.remove('hidden');
-                enableGyroscope();
-                requestFullscreenAndLandscape();
-                showToast('VR Box Stereoscopic Mode Active');
-            } else {
-                vrOverlay.classList.remove('active');
-                exitPill.classList.add('hidden');
-                if (state.started) {
-                    hud2d.classList.remove('hidden');
-                    hud2d.classList.add('flex');
-                }
-                renderer.setScissorTest(false);
-                renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-            }
-            handleResize();
-        }
-
-        async function requestFullscreenAndLandscape() {
-            try {
-                const docEl = document.documentElement;
-                if (!document.fullscreenElement && docEl.requestFullscreen) {
-                    await docEl.requestFullscreen();
-                } else if (!document.webkitFullscreenElement && docEl.webkitRequestFullscreen) {
-                    docEl.webkitRequestFullscreen();
-                }
-                if (screen.orientation && screen.orientation.lock) {
-                    await screen.orientation.lock('landscape').catch(() => {});
-                }
-            } catch (e) {
-                // Safe fallback if browser blocks fullscreen
-            }
-        }
-
-        function handleResize() {
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-            renderer.setSize(w, h);
-
-            mainCamera.aspect = w / h;
-            mainCamera.updateProjectionMatrix();
-
-            const halfAspect = (w * 0.5) / h;
-            leftEyeCamera.aspect = halfAspect;
-            leftEyeCamera.updateProjectionMatrix();
-            rightEyeCamera.aspect = halfAspect;
-            rightEyeCamera.updateProjectionMatrix();
-        }
-        window.addEventListener('resize', handleResize);
-
-        let lastTime = performance.now();
-        function animate(now) {
-            requestAnimationFrame(animate);
-            const dt = Math.min(0.05, (now - lastTime) / 1000);
-            lastTime = now;
-            const elapsed = now * 0.001;
-
+// ... existing code ...
             if (state.started) {
                 pollInputs(dt);
                 updateChunks();
                 updateWorldEntitiesAndHUD(elapsed, dt);
+                syncLocalPlayerToFirestore(false);
             } else {
                 // Gentle scenic orbit on start screen before entering game
                 state.player.yaw += dt * 0.12;
@@ -1568,89 +1039,76 @@
                 updateWorldEntitiesAndHUD(elapsed, dt);
             }
 
+            updateRemoteAvatarsAndEffects(elapsed, dt);
             updateCameraRig();
-
-            if (state.vrMode) {
-                const w = window.innerWidth;
-                const h = window.innerHeight;
-                const halfW = Math.floor(w / 2);
-
-                renderer.setScissorTest(true);
-
-                // Render Left Eye
-                renderer.setViewport(0, 0, halfW, h);
-                renderer.setScissor(0, 0, halfW, h);
-                renderer.render(scene, leftEyeCamera);
-
-                // Render Right Eye
-                renderer.setViewport(halfW, 0, w - halfW, h);
-                renderer.setScissor(halfW, 0, w - halfW, h);
-                renderer.render(scene, rightEyeCamera);
-
-                renderer.setScissorTest(false);
-            } else {
-                renderer.setScissorTest(false);
-                renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-                renderer.render(scene, mainCamera);
-            }
-        }
-
-        // ----------------------------------------------------------------------------
-        // 14. UI EVENT LISTENERS, KEYBOARD & TOUCH FALLBACKS
-        // ----------------------------------------------------------------------------
-        let toastTimeout = null;
-        function showToast(msg) {
-            const toast = document.getElementById('toast-banner');
-            toast.textContent = msg;
-            toast.classList.remove('opacity-0');
-            toast.classList.add('opacity-100');
-            clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.classList.remove('opacity-100');
-                toast.classList.add('opacity-0');
-            }, 2400);
-        }
-
-        const startModal = document.getElementById('start-modal');
-
-        document.getElementById('btn-start-vr').addEventListener('click', () => {
-            sound.init();
-            state.started = true;
-            startModal.classList.add('hidden');
-            setVRMode(true);
-        });
-
-        document.getElementById('btn-start-2d').addEventListener('click', () => {
-            sound.init();
-            state.started = true;
-            startModal.classList.add('hidden');
-            setVRMode(false);
-        });
-
-        document.getElementById('btn-hud-vr').addEventListener('click', () => {
-            sound.init();
-            setVRMode(true);
-        });
-
-        document.getElementById('btn-hud-menu').addEventListener('click', () => {
-            startModal.classList.remove('hidden');
-        });
-
-        document.getElementById('btn-vr-exit-pill').addEventListener('click', () => {
-            setVRMode(false);
-            startModal.classList.remove('hidden');
-        });
-
+// ... existing code ...
         document.getElementById('ipd-slider').addEventListener('input', (e) => {
             state.ipdMm = parseInt(e.target.value, 10);
             updateEyeSeparation();
         });
+
+        // Multiplayer Identity, Room Switching & Invite Link Handlers
+        document.getElementById('input-player-name').addEventListener('change', (e) => {
+            const clean = e.target.value.trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 18);
+            state.network.playerName = clean || defaultName;
+            e.target.value = state.network.playerName;
+            syncLocalPlayerToFirestore(true);
+            updateOnlinePlayersHUD();
+        });
+
+        document.getElementById('btn-join-room').addEventListener('click', () => {
+            const raw = document.getElementById('input-room-code').value.trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 16);
+            const nextRoom = raw || 'public';
+            document.getElementById('input-room-code').value = nextRoom;
+            if (nextRoom !== state.network.roomCode) {
+                cleanupLocalPlayerPresence();
+                state.network.roomCode = nextRoom;
+                subscribeToRoom(nextRoom);
+                syncLocalPlayerToFirestore(true);
+                showToast(`Joined Shard: ${nextRoom}`);
+            }
+        });
+
+        document.querySelectorAll('#color-swatch-row button').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#color-swatch-row button').forEach(b => {
+                    b.classList.remove('ring-2', 'ring-white', 'scale-110');
+                    b.classList.add('opacity-75');
+                });
+                btn.classList.add('ring-2', 'ring-white', 'scale-110');
+                btn.classList.remove('opacity-75');
+                state.network.avatarColor = btn.dataset.color;
+                syncLocalPlayerToFirestore(true);
+            });
+        });
+
+        document.getElementById('toggle-ambient-bots').addEventListener('change', (e) => {
+            setAmbientEchoBots(e.target.checked);
+        });
+
+        function copyMultiplayerInviteLink() {
+            const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(state.network.roomCode)}`;
+            const tempInput = document.createElement('input');
+            tempInput.value = shareUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast(`Invite link copied for room "${state.network.roomCode}"!`);
+        }
+
+        document.getElementById('btn-modal-copy-invite').addEventListener('click', copyMultiplayerInviteLink);
+        document.getElementById('btn-hud-copy-invite').addEventListener('click', copyMultiplayerInviteLink);
+        document.getElementById('btn-hud-wave').addEventListener('click', triggerLocalWaveEmote);
+        document.getElementById('btn-hud-warp').addEventListener('click', teleportToNextPlayer);
 
         // Keyboard Listeners
         window.addEventListener('keydown', (e) => {
             state.input.keys[e.code] = true;
             if (!state.started) return;
             if (e.code === 'KeyB') placeLightBeacon();
+            if (e.code === 'KeyE') triggerLocalWaveEmote();
+            if (e.code === 'KeyP') teleportToNextPlayer();
             if (e.code === 'KeyT') {
                 state.skyIndex = (state.skyIndex + 1) % ATMOSPHERES.length;
                 applyAtmosphere(state.skyIndex);
@@ -1659,95 +1117,17 @@
             if (e.code === 'KeyV') setVRMode(!state.vrMode);
             if (e.code === 'KeyR') recenterView();
         });
-
-        window.addEventListener('keyup', (e) => {
-            state.input.keys[e.code] = false;
-        });
-
-        // Desktop Mouse Drag Look
-        canvas.addEventListener('mousedown', (e) => {
-            if (!state.started || state.vrMode) return;
-            state.input.touchLookDragging = true;
-            state.input.lastTouchX = e.clientX;
-            state.input.lastTouchY = e.clientY;
-        });
-        window.addEventListener('mousemove', (e) => {
-            if (!state.input.touchLookDragging) return;
-            const dx = e.clientX - state.input.lastTouchX;
-            const dy = e.clientY - state.input.lastTouchY;
-            state.input.lastTouchX = e.clientX;
-            state.input.lastTouchY = e.clientY;
-            state.player.yaw -= dx * 0.0045;
-            state.player.pitch = THREE.MathUtils.clamp(state.player.pitch - dy * 0.0045, -1.4, 1.4);
-        });
-        window.addEventListener('mouseup', () => {
-            state.input.touchLookDragging = false;
-        });
-
-        // Mobile Touch Drag Look (on right half of screen in 2D mode)
-        canvas.addEventListener('touchstart', (e) => {
-            if (!state.started || state.vrMode) return;
-            const t = e.changedTouches[0];
-            state.input.touchLookDragging = true;
-            state.input.lastTouchX = t.clientX;
-            state.input.lastTouchY = t.clientY;
-        }, { passive: true });
-
-        canvas.addEventListener('touchmove', (e) => {
-            if (!state.input.touchLookDragging || state.vrMode) return;
-            const t = e.changedTouches[0];
-            const dx = t.clientX - state.input.lastTouchX;
-            const dy = t.clientY - state.input.lastTouchY;
-            state.input.lastTouchX = t.clientX;
-            state.input.lastTouchY = t.clientY;
-            state.player.yaw -= dx * 0.0055;
-            state.player.pitch = THREE.MathUtils.clamp(state.player.pitch - dy * 0.0055, -1.4, 1.4);
-        }, { passive: true });
-
-        canvas.addEventListener('touchend', () => {
-            state.input.touchLookDragging = false;
-        });
-
-        // Mobile Virtual Joystick (Left Thumb)
-        const moveZone = document.getElementById('touch-move-zone');
-        const moveKnob = document.getElementById('touch-move-knob');
-        moveZone.addEventListener('touchmove', (e) => {
-            const rect = moveZone.getBoundingClientRect();
-            const t = e.targetTouches[0];
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
-            const maxR = rect.width * 0.36;
-            let dx = t.clientX - cx;
-            let dy = t.clientY - cy;
-            const dist = Math.hypot(dx, dy);
-            if (dist > maxR) {
-                dx = (dx / dist) * maxR;
-                dy = (dy / dist) * maxR;
-            }
-            moveKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-            state.input.touchMove.x = dx / maxR;
-            state.input.touchMove.y = dy / maxR;
-        }, { passive: true });
-
-        moveZone.addEventListener('touchend', () => {
-            moveKnob.style.transform = 'translate(0px, 0px)';
-            state.input.touchMove.x = 0;
-            state.input.touchMove.y = 0;
-        });
-
-        // Mobile Touch Fly & Beacon Buttons
-        const btnTouchFly = document.getElementById('btn-touch-fly');
-        btnTouchFly.addEventListener('touchstart', (e) => { e.preventDefault(); state.input.touchFly = true; });
-        btnTouchFly.addEventListener('touchend', () => { state.input.touchFly = false; });
-
-        document.getElementById('btn-touch-beacon').addEventListener('click', () => {
-            placeLightBeacon();
-        });
-
-        // Start Initial World & Render Loop on Window Load
+// ... existing code ...
+        // Start Initial World, Multiplayer & Render Loop on Window Load
         window.onload = function () {
-            state.player.pos.set(0, getTerrainHeight(0, 0) + WORLD_CONFIG.PLAYER_EYE_HEIGHT + 1, 0);
+            state.player.pos.set(
+                (Math.random() - 0.5) * 14,
+                getTerrainHeight(0, 0) + WORLD_CONFIG.PLAYER_EYE_HEIGHT + 1,
+                (Math.random() - 0.5) * 14
+            );
             updateChunks();
+            initMultiplayer();
+            setInterval(updateOnlinePlayersHUD, 1000);
             animate(performance.now());
         };
     </script>
