@@ -1,622 +1,268 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebXR Infinite Voxel Land</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Inter', sans-serif;
-            background-color: #0b0f19;
-            user-select: none;
-        }
-        canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-        }
-        #vr-button-container {
-            position: absolute;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 50;
-        }
-        /* Custom styling to ensure default Three.js VRButton integrates cleanly */
-        #VRButton {
-            position: static !important;
-            font-family: inherit !important;
-            font-size: 14px !important;
-            font-weight: 600 !important;
-            padding: 12px 24px !important;
-            border-radius: 9999px !important;
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
-            color: white !important;
-            border: none !important;
-            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.5) !important;
-            cursor: pointer !important;
-            transition: transform 0.2s, box-shadow 0.2s !important;
-        }
-        #VRButton:hover {
-            transform: scale(1.05) !important;
-            box-shadow: 0 15px 30px -5px rgba(168, 85, 247, 0.6) !important;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0,
+      maximum-scale=1.0, user-scalable=no">
 
-    <!-- Import Three.js and addons using ES Modules -->
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
-        }
-    }
-    </script>
+<title>VR Camera Viewer</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+#screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    background: black;
+}
+
+.eye {
+    position: relative;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    border-right: 1px solid #222;
+}
+
+video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#controls {
+    position: fixed;
+    z-index: 10;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    width: 95%;
+}
+
+button {
+    border: 1px solid #444;
+    border-radius: 12px;
+    background: #171717;
+    color: white;
+    padding: 13px 16px;
+    font-size: 14px;
+}
+
+button:active {
+    background: #333;
+}
+
+#status {
+    position: fixed;
+    z-index: 10;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111c;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    text-align: center;
+}
+
+#settings {
+    position: fixed;
+    z-index: 10;
+    top: 65px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111c;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    width: 230px;
+}
+
+input[type=range] {
+    width: 100%;
+}
+</style>
 </head>
-<body class="text-white">
 
-    <!-- Desktop HUD & Controls Overlay -->
-    <div id="ui-overlay" class="absolute top-4 left-4 z-40 bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700/50 shadow-2xl max-w-sm pointer-events-auto">
-        <h1 class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-            Voxel World VR
-        </h1>
-        <p class="text-xs text-slate-400 mt-1">Infinite procedurally generated voxel terrain.</p>
-        
-        <div class="mt-3 text-xs space-y-1 text-slate-300 border-t border-slate-700/50 pt-2">
-            <div class="flex items-center justify-between">
-                <span class="font-semibold text-slate-400">Desktop:</span>
-                <span>Left Click Break / Right Click Place</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <span class="font-semibold text-slate-400">Camera:</span>
-                <span>Drag to Orbit, Scroll to Zoom</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <span class="font-semibold text-purple-400">VR Mode:</span>
-                <span>Right Trigger = Place, Left Trigger = Break</span>
-            </div>
-        </div>
+<body>
 
-        <!-- Block Selection Palette -->
-        <div class="mt-4">
-            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Active Material</label>
-            <div class="grid grid-cols-4 gap-2" id="palette">
-                <button data-type="1" class="block-btn ring-2 ring-indigo-500 bg-emerald-600 hover:bg-emerald-500 h-10 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold shadow-md transition">
-                    Grass
-                </button>
-                <button data-type="2" class="block-btn bg-amber-800 hover:bg-amber-700 h-10 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold shadow-md transition">
-                    Dirt
-                </button>
-                <button data-type="3" class="block-btn bg-slate-500 hover:bg-slate-400 h-10 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold shadow-md transition">
-                    Stone
-                </button>
-                <button data-type="4" class="block-btn bg-amber-950 hover:bg-amber-900 h-10 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold shadow-md transition">
-                    Wood
-                </button>
-            </div>
-        </div>
+<div id="status">
+    VR CAMERA VIEWER — CAMERA OFF
+</div>
+
+<div id="settings">
+    VR Zoom
+    <input type="range" id="zoom"
+           min="1" max="3" step="0.1" value="1">
+</div>
+
+<div id="screen">
+
+    <div class="eye">
+        <video id="leftEye"
+               autoplay playsinline muted></video>
     </div>
 
-    <!-- VR Button Container -->
-    <div id="vr-button-container"></div>
+    <div class="eye">
+        <video id="rightEye"
+               autoplay playsinline muted></video>
+    </div>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { VRButton } from 'three/addons/webxr/VRButton.js';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+</div>
 
-        // --- Fast 2D Simplex Noise Implementation for Smooth Infinite Terrain ---
-        const SimplexNoise = function() {
-            const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
-            const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
-            const p = new Uint8Array(256);
-            for (let i = 0; i < 256; i++) p[i] = Math.floor(Math.random() * 256);
-            const perm = new Uint8Array(512);
-            const permMod12 = new Uint8Array(512);
-            for (let i = 0; i < 512; i++) {
-                perm[i] = p[i & 255];
-                permMod12[i] = (perm[i] % 12);
-            }
-            const grad3 = new Float32Array([
-                1,1,0, -1,1,0, 1,-1,0, -1,-1,0,
-                1,0,1, -1,0,1, 1,0,-1, -1,0,-1,
-                0,1,1, 0,-1,1, 0,1,-1, 0,-1,-1
-            ]);
+<div id="controls">
+    <button onclick="startCamera()">📷 Start Camera</button>
+    <button onclick="switchCamera()">🔄 Switch Camera</button>
+    <button onclick="toggleVR()">🥽 VR Mode</button>
+    <button onclick="stopCamera()">⏹ Stop</button>
+</div>
 
-            return {
-                noise2D: function(xin, yin) {
-                    let n0, n1, n2;
-                    const s = (xin + yin) * F2;
-                    const i = Math.floor(xin + s);
-                    const j = Math.floor(yin + s);
-                    const t = (i + j) * G2;
-                    const X0 = i - t;
-                    const Y0 = j - t;
-                    const x0 = xin - X0;
-                    const y0 = yin - Y0;
+<script>
 
-                    let i1, j1;
-                    if (x0 > y0) { i1 = 1; j1 = 0; }
-                    else { i1 = 0; j1 = 1; }
+let stream = null;
+let facing = "environment";
+let vr = false;
 
-                    const x1 = x0 - i1 + G2;
-                    const y1 = y0 - j1 + G2;
-                    const x2 = x0 - 1.0 + 2.0 * G2;
-                    const y2 = y0 - 1.0 + 2.0 * G2;
+const leftEye = document.getElementById("leftEye");
+const rightEye = document.getElementById("rightEye");
+const status = document.getElementById("status");
+const zoom = document.getElementById("zoom");
 
-                    const ii = i & 255;
-                    const jj = j & 255;
+async function startCamera() {
 
-                    let t0 = 0.5 - x0*x0 - y0*y0;
-                    if (t0 < 0) n0 = 0.0;
-                    else {
-                        t0 *= t0;
-                        const gi0 = permMod12[ii + perm[jj]] * 3;
-                        n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0+1] * y0);
-                    }
+    try {
 
-                    let t1 = 0.5 - x1*x1 - y1*y1;
-                    if (t1 < 0) n1 = 0.0;
-                    else {
-                        t1 *= t1;
-                        const gi1 = permMod12[ii + i1 + perm[jj + j1]] * 3;
-                        n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1+1] * y1);
-                    }
-
-                    let t2 = 0.5 - x2*x2 - y2*y2;
-                    if (t2 < 0) n2 = 0.0;
-                    else {
-                        t2 *= t2;
-                        const gi2 = permMod12[ii + 1 + perm[jj + 1]] * 3;
-                        n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2+1] * y2);
-                    }
-
-                    return 70.0 * (n0 + n1 + n2);
-                }
-            };
-        };
-
-        const simplex = SimplexNoise();
-
-        // --- Game Constants & Materials ---
-        const CHUNK_SIZE = 8;
-        const RENDER_DISTANCE = 3; // Chunks around player
-        const BLOCK_SIZE = 1;
-
-        const BLOCK_TYPES = {
-            AIR: 0,
-            GRASS: 1,
-            DIRT: 2,
-            STONE: 3,
-            WOOD: 4,
-            LEAVES: 5
-        };
-
-        // Stylized voxel materials
-        const materials = {
-            [BLOCK_TYPES.GRASS]: new THREE.MeshStandardMaterial({ color: 0x2ecc71, roughness: 0.8 }),
-            [BLOCK_TYPES.DIRT]: new THREE.MeshStandardMaterial({ color: 0x8e5d38, roughness: 0.9 }),
-            [BLOCK_TYPES.STONE]: new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.6 }),
-            [BLOCK_TYPES.WOOD]: new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.7 }),
-            [BLOCK_TYPES.LEAVES]: new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.5, transparent: true, opacity: 0.9 })
-        };
-
-        const sharedGeometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-        let selectedBlockType = BLOCK_TYPES.GRASS;
-
-        // Global Scene & Engine Setup
-        let scene, camera, renderer, controls;
-        let userGroup; // VR Rig parent
-        const chunks = new Map(); // Dynamic chunk tracking: "x,z" -> Chunk
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        // Highlight box for block placement/destruction target
-        let targetBox;
-
-        // VR Controllers
-        let controller1, controller2;
-        let controllerGradients = [];
-
-        // Dynamic modifications store (blocks added or destroyed by user)
-        const blockModifications = new Map(); // "x,y,z" -> type (0 for destroyed)
-
-        // --- Core Application Initialization ---
-        function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87ceeb);
-            scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
-
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-
-            // User VR Rig Container
-            userGroup = new THREE.Group();
-            userGroup.position.set(0, 15, 0); // Position player above initial terrain height
-            scene.add(userGroup);
-            userGroup.add(camera);
-
-            // Renderer Setup
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.xr.enabled = true;
-            document.body.appendChild(renderer.domElement);
-
-            // VR Button Setup
-            const vrBtnContainer = document.getElementById('vr-button-container');
-            const vrButton = VRButton.createButton(renderer);
-            vrBtnContainer.appendChild(vrButton);
-
-            // Desktop Controls
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.target.set(0, 12, -5);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-
-            // Lighting Setup
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.75);
-            hemiLight.position.set(0, 50, 0);
-            scene.add(hemiLight);
-
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(30, 60, 30);
-            dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
-            dirLight.shadow.camera.near = 0.5;
-            dirLight.shadow.camera.far = 150;
-            const d = 40;
-            dirLight.shadow.camera.left = -d;
-            dirLight.shadow.camera.right = d;
-            dirLight.shadow.camera.top = d;
-            dirLight.shadow.camera.bottom = -d;
-            scene.add(dirLight);
-
-            // Target Highlight Outline Box
-            const wireframeGeo = new THREE.BoxGeometry(1.02, 1.02, 1.02);
-            const wireframeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-            targetBox = new THREE.Mesh(wireframeGeo, wireframeMat);
-            targetBox.visible = false;
-            scene.add(targetBox);
-
-            // Setup VR Controllers
-            setupVRControllers();
-
-            // Event Listeners
-            window.addEventListener('resize', onWindowResize);
-            window.addEventListener('pointerdown', onPointerDown);
-
-            // Setup Palette UI Click Listeners
-            document.querySelectorAll('.block-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('.block-btn').forEach(b => b.classList.remove('ring-2', 'ring-indigo-500'));
-                    const target = e.currentTarget;
-                    target.classList.add('ring-2', 'ring-indigo-500');
-                    selectedBlockType = parseInt(target.getAttribute('data-type'));
-                });
-            });
-
-            // Start Animation Loop (Compatible with WebXR)
-            renderer.setAnimationLoop(render);
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
         }
 
-        // --- VR Controller Setup & Visual Rays ---
-        function setupVRControllers() {
-            controller1 = renderer.xr.getController(0);
-            controller1.addEventListener('selectstart', () => onVRTrigger(controller1, false)); // Right trigger: Place
-            userGroup.add(controller1);
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                facingMode: facing,
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 }
+            }
+        });
 
-            controller2 = renderer.xr.getController(1);
-            controller2.addEventListener('selectstart', () => onVRTrigger(controller2, true)); // Left trigger: Break
-            userGroup.add(controller2);
+        leftEye.srcObject = stream;
+        rightEye.srcObject = stream;
 
-            // Laser Pointer Line Visuals
-            const laserGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -5)]);
-            const laserMat = new THREE.LineBasicMaterial({ color: 0x6366f1, opacity: 0.7, transparent: true });
+        await leftEye.play();
+        await rightEye.play();
 
-            const line1 = new THREE.Line(laserGeo, laserMat);
-            line1.name = 'line';
-            line1.scale.z = 10;
-            controller1.add(line1);
+        status.textContent = "VR CAMERA VIEWER — CAMERA ON";
 
-            const line2 = new THREE.Line(laserGeo, laserMat);
-            line2.name = 'line';
-            line2.scale.z = 10;
-            controller2.add(line2);
-        }
+    } catch (error) {
 
-        // Helper to evaluate terrain height at world (x, z)
-        function getTerrainHeight(x, z) {
-            const nx = x * 0.05;
-            const nz = z * 0.05;
-            let elevation = simplex.noise2D(nx, nz) * 6 + simplex.noise2D(nx * 2, nz * 2) * 2;
-            return Math.floor(elevation) + 8; // Base height of 8 blocks
-        }
+        status.textContent =
+            "Camera error: " + error.message;
 
-        // --- Procedural Instanced Chunk Generator ---
-        class Chunk {
-            constructor(cx, cz) {
-                this.cx = cx;
-                this.cz = cz;
-                this.meshGroup = new THREE.Group();
-                this.instancedMeshes = {};
-                this.generate();
+        alert(
+            "Camera access failed. Allow camera permission " +
+            "and open this app using HTTPS or localhost."
+        );
+    }
+}
+
+async function switchCamera() {
+
+    facing = facing === "environment"
+        ? "user"
+        : "environment";
+
+    await startCamera();
+}
+
+function stopCamera() {
+
+    if (stream) {
+
+        stream.getTracks().forEach(t => t.stop());
+
+        stream = null;
+
+        leftEye.srcObject = null;
+        rightEye.srcObject = null;
+
+        status.textContent =
+            "VR CAMERA VIEWER — CAMERA OFF";
+    }
+}
+
+async function toggleVR() {
+
+    vr = !vr;
+
+    if (vr) {
+
+        try {
+
+            if (document.documentElement.requestFullscreen) {
+                await document.documentElement.requestFullscreen();
             }
 
-            generate() {
-                const blockCounts = {};
-                const blockTransforms = {};
+        } catch (error) {
+            console.log("Fullscreen unavailable");
+        }
 
-                // Initial pass: Compute block types and count instances per material
-                for (let x = 0; x < CHUNK_SIZE; x++) {
-                    for (let z = 0; z < CHUNK_SIZE; z++) {
-                        const worldX = this.cx * CHUNK_SIZE + x;
-                        const worldZ = this.cz * CHUNK_SIZE + z;
-                        const height = getTerrainHeight(worldX, worldZ);
+        if (screen.orientation &&
+            screen.orientation.lock) {
 
-                        for (let y = 0; y <= height; y++) {
-                            const key = `${worldX},${y},${worldZ}`;
-                            let type = BLOCK_TYPES.AIR;
-
-                            // Check user override modifications
-                            if (blockModifications.has(key)) {
-                                type = blockModifications.get(key);
-                            } else {
-                                if (y === height) type = BLOCK_TYPES.GRASS;
-                                else if (y >= height - 2) type = BLOCK_TYPES.DIRT;
-                                else type = BLOCK_TYPES.STONE;
-                            }
-
-                            if (type !== BLOCK_TYPES.AIR) {
-                                if (!blockCounts[type]) {
-                                    blockCounts[type] = 0;
-                                    blockTransforms[type] = [];
-                                }
-                                blockCounts[type]++;
-                                blockTransforms[type].push({ x: worldX, y, z: worldZ });
-                            }
-                        }
-
-                        // Simple tree generation logic
-                        if (Math.random() < 0.015 && getTerrainHeight(worldX, worldZ) > 6) {
-                            const trunkHeight = 3 + Math.floor(Math.random() * 2);
-                            for (let ty = 1; ty <= trunkHeight; ty++) {
-                                const treeY = height + ty;
-                                const key = `${worldX},${treeY},${worldZ}`;
-                                if (!blockModifications.has(key)) {
-                                    const type = BLOCK_TYPES.WOOD;
-                                    if (!blockCounts[type]) { blockCounts[type] = 0; blockTransforms[type] = []; }
-                                    blockCounts[type]++;
-                                    blockTransforms[type].push({ x: worldX, y: treeY, z: worldZ });
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Check for user-added blocks outside terrain limits inside this chunk boundaries
-                blockModifications.forEach((type, key) => {
-                    if (type === BLOCK_TYPES.AIR) return;
-                    const [mx, my, mz] = key.split(',').map(Number);
-                    const mcx = Math.floor(mx / CHUNK_SIZE);
-                    const mcz = Math.floor(mz / CHUNK_SIZE);
-                    if (mcx === this.cx && mcz === this.cz) {
-                        // Avoid duplicates if already counted
-                        const h = getTerrainHeight(mx, mz);
-                        if (my > h || blockModifications.has(key)) {
-                            if (!blockCounts[type]) { blockCounts[type] = 0; blockTransforms[type] = []; }
-                            blockCounts[type]++;
-                            blockTransforms[type].push({ x: mx, y: my, z: mz });
-                        }
-                    }
-                });
-
-                // Second pass: Create instanced meshes for optimization
-                const dummy = new THREE.Object3D();
-                for (const type in blockCounts) {
-                    const count = blockCounts[type];
-                    const instancedMesh = new THREE.InstancedMesh(sharedGeometry, materials[type], count);
-                    instancedMesh.castShadow = true;
-                    instancedMesh.receiveShadow = true;
-
-                    const transforms = blockTransforms[type];
-                    for (let i = 0; i < transforms.length; i++) {
-                        const { x, y, z } = transforms[i];
-                        dummy.position.set(x, y, z);
-                        dummy.updateMatrix();
-                        instancedMesh.setMatrixAt(i, dummy.matrix);
-                    }
-
-                    instancedMesh.instanceMatrix.needsUpdate = true;
-                    instancedMesh.userData = { blockType: parseInt(type) };
-                    this.instancedMeshes[type] = instancedMesh;
-                    this.meshGroup.add(instancedMesh);
-                }
-
-                scene.add(this.meshGroup);
-            }
-
-            destroy() {
-                scene.remove(this.meshGroup);
-                for (const type in this.instancedMeshes) {
-                    this.instancedMeshes[type].geometry.dispose();
-                }
+            try {
+                await screen.orientation.lock("landscape");
+            } catch (error) {
+                console.log("Orientation lock unavailable");
             }
         }
 
-        // --- Terrain Dynamic Loading/Unloading ---
-        function updateChunks() {
-            // Find current chunk player is residing in
-            const playerPos = renderer.xr.isPresenting ? userGroup.position : camera.position;
-            const currentChunkX = Math.floor(playerPos.x / CHUNK_SIZE);
-            const currentChunkZ = Math.floor(playerPos.z / CHUNK_SIZE);
+        document.getElementById("controls").style.display = "none";
+        document.getElementById("settings").style.display = "none";
+        status.style.display = "none";
 
-            const activeChunkKeys = new Set();
+    } else {
 
-            for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
-                for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
-                    const cx = currentChunkX + x;
-                    const cz = currentChunkZ + z;
-                    const key = `${cx},${cz}`;
-                    activeChunkKeys.add(key);
+        document.getElementById("controls").style.display = "flex";
+        document.getElementById("settings").style.display = "block";
+        status.style.display = "block";
 
-                    if (!chunks.has(key)) {
-                        chunks.set(key, new Chunk(cx, cz));
-                    }
-                }
-            }
-
-            // Garbage collect distant chunks
-            for (const [key, chunk] of chunks.entries()) {
-                if (!activeChunkKeys.has(key)) {
-                    chunk.destroy();
-                    chunks.delete(key);
-                }
-            }
+        if (document.fullscreenElement) {
+            await document.exitFullscreen();
         }
+    }
+}
 
-        function rebuildAffectedChunk(worldX, worldZ) {
-            const cx = Math.floor(worldX / CHUNK_SIZE);
-            const cz = Math.floor(worldZ / CHUNK_SIZE);
-            const key = `${cx},${cz}`;
-            if (chunks.has(key)) {
-                chunks.get(key).destroy();
-                chunks.delete(key);
-                chunks.set(key, new Chunk(cx, cz));
-            }
-        }
+zoom.addEventListener("input", () => {
 
-        // --- Raycasting & Block Interaction Logic ---
-        function getIntersection(raycasterSource) {
-            const interactables = [];
-            chunks.forEach(chunk => {
-                chunk.meshGroup.children.forEach(mesh => interactables.push(mesh));
-            });
-            const intersects = raycasterSource.intersectObjects(interactables);
-            return intersects.length > 0 ? intersects[0] : null;
-        }
+    const value = zoom.value;
 
-        // Desktop mouse click handler
-        function onPointerDown(event) {
-            if (renderer.xr.isPresenting) return; // Ignore desktop mouse input in VR mode
-            if (event.target.tagName === 'BUTTON' || event.target.closest('#ui-overlay')) return;
+    leftEye.style.transform =
+        "scale(" + value + ")";
 
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    rightEye.style.transform =
+        "scale(" + value + ")";
+});
 
-            raycaster.setFromCamera(mouse, camera);
-            const hit = getIntersection(raycaster);
+</script>
 
-            if (hit) {
-                const matrix = new THREE.Matrix4();
-                hit.object.getMatrixAt(hit.instanceId, matrix);
-                const position = new THREE.Vector3().setFromMatrixPosition(matrix);
-
-                if (event.button === 0) {
-                    // Left Click: Break Block
-                    blockModifications.set(`${position.x},${position.y},${position.z}`, BLOCK_TYPES.AIR);
-                    rebuildAffectedChunk(position.x, position.z);
-                } else if (event.button === 2) {
-                    // Right Click: Place Block
-                    const normal = hit.face.normal;
-                    const placePos = position.clone().add(normal);
-                    blockModifications.set(`${placePos.x},${placePos.y},${placePos.z}`, selectedBlockType);
-                    rebuildAffectedChunk(placePos.x, placePos.z);
-                }
-            }
-        }
-
-        // Disable Context Menu for Smooth Right Clicking
-        window.addEventListener('contextmenu', e => e.preventDefault());
-
-        // VR Trigger Handler
-        function onVRTrigger(controller, isDestroy) {
-            const tempMatrix = new THREE.Matrix4();
-            tempMatrix.identity().extractRotation(controller.matrixWorld);
-
-            const ray = new THREE.Raycaster();
-            ray.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-            ray.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-
-            const hit = getIntersection(ray);
-            if (hit) {
-                const matrix = new THREE.Matrix4();
-                hit.object.getMatrixAt(hit.instanceId, matrix);
-                const position = new THREE.Vector3().setFromMatrixPosition(matrix);
-
-                if (isDestroy) {
-                    // Destroy block
-                    blockModifications.set(`${position.x},${position.y},${position.z}`, BLOCK_TYPES.AIR);
-                    rebuildAffectedChunk(position.x, position.z);
-                } else {
-                    // Place block
-                    const normal = hit.face.normal;
-                    const placePos = position.clone().add(normal);
-                    blockModifications.set(`${placePos.x},${placePos.y},${placePos.z}`, selectedBlockType);
-                    rebuildAffectedChunk(placePos.x, placePos.z);
-                }
-            }
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // --- Main Render & Animation Loop ---
-        function render() {
-            // Update OrbitControls when in desktop preview mode
-            if (!renderer.xr.isPresenting) {
-                controls.update();
-            }
-
-            // Handle dynamic landscape generation
-            updateChunks();
-
-            // Update Target Wireframe Box Highlight
-            if (!renderer.xr.isPresenting) {
-                raycaster.setFromCamera(mouse, camera);
-                const hit = getIntersection(raycaster);
-                if (hit) {
-                    const matrix = new THREE.Matrix4();
-                    hit.object.getMatrixAt(hit.instanceId, matrix);
-                    targetBox.position.setFromMatrixPosition(matrix);
-                    targetBox.visible = true;
-                } else {
-                    targetBox.visible = false;
-                }
-            } else {
-                // VR Controller Beam Raycasting Highlight
-                const tempMatrix = new THREE.Matrix4();
-                tempMatrix.identity().extractRotation(controller1.matrixWorld);
-                const ray = new THREE.Raycaster();
-                ray.ray.origin.setFromMatrixPosition(controller1.matrixWorld);
-                ray.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-
-                const hit = getIntersection(ray);
-                if (hit) {
-                    const matrix = new THREE.Matrix4();
-                    hit.object.getMatrixAt(hit.instanceId, matrix);
-                    targetBox.position.setFromMatrixPosition(matrix);
-                    targetBox.visible = true;
-                } else {
-                    targetBox.visible = false;
-                }
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        // Boot system once loaded
-        window.onload = init;
-    </script>
 </body>
 </html>
-```
