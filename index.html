@@ -2,2490 +2,1322 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AETHERIA VR — Multiplayer Infinite World Explorer</title>
-
-    <!-- Reliable Three.js r128 Loading with Secondary Fallback -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-        if (typeof window.THREE === 'undefined') {
-            document.write('<script src="https://unpkg.com/three@0.128.0/build/three.min.js"><\/script>');
-        }
-    </script>
-
-    <!-- 100% Self-Contained Inline Styles (No External CSS CDNs Required) -->
-    <style>
-        :root {
-            --bg-dark: #070b16;
-            --panel-bg: rgba(13, 20, 38, 0.94);
-            --card-bg: rgba(7, 12, 24, 0.78);
-            --border-subtle: rgba(255, 255, 255, 0.14);
-            --accent-sky: #38bdf8;
-            --accent-indigo: #6366f1;
-            --accent-emerald: #10b981;
-            --accent-amber: #f59e0b;
-            --accent-rose: #f43f5e;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-        }
-
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            touch-action: none;
-        }
-
-        #game-canvas {
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
-            display: block;
-            z-index: 1;
-        }
-
-        /* =========================================================
-           VR BOX STEREOSCOPIC SPLIT-SCREEN OVERLAY
-           ========================================================= */
-        #vr-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 15;
-            display: none;
-            pointer-events: none;
-            background: radial-gradient(circle at 25% 50%, transparent 36%, rgba(0, 0, 0, 0.92) 66%),
-                        radial-gradient(circle at 75% 50%, transparent 36%, rgba(0, 0, 0, 0.92) 66%);
-        }
-
-        #vr-overlay.active {
-            display: flex;
-        }
-
-        .vr-eye-viewport {
-            flex: 1;
-            height: 100%;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 12px;
-        }
-
-        .vr-center-divider {
-            width: 4px;
-            height: 100%;
-            background: #000;
-            box-shadow: 0 0 18px #000;
-        }
-
-        .vr-reticle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 8px;
-            height: 8px;
-            transform: translate(-50%, -50%);
-            border-radius: 50%;
-            border: 2px solid rgba(56, 189, 248, 0.85);
-            box-shadow: 0 0 10px rgba(56, 189, 248, 0.65);
-        }
-
-        .vr-mini-hud {
-            background: rgba(5, 10, 22, 0.72);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-radius: 999px;
-            padding: 4px 12px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.03em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #e2e8f0;
-        }
-
-        #btn-vr-exit {
-            position: fixed;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 30;
-            display: none;
-            background: rgba(7, 12, 24, 0.85);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 999px;
-            padding: 6px 14px;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        /* =========================================================
-           2D / DESKTOP HUD & TOP COMPASS BAR
-           ========================================================= */
-        #hud-2d {
-            position: fixed;
-            inset: 0;
-            z-index: 12;
-            pointer-events: none;
-            display: none;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 14px;
-        }
-
-        #hud-2d.active {
-            display: flex;
-        }
-
-        .hud-top-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .hud-pill-bar {
-            background: rgba(7, 12, 24, 0.78);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-subtle);
-            border-radius: 16px;
-            padding: 8px 14px;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-            font-size: 12px;
-            font-weight: 600;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-        }
-
-        .status-dot {
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            display: inline-block;
-            background: var(--accent-amber);
-        }
-
-        .status-dot.online {
-            background: var(--accent-emerald);
-            box-shadow: 0 0 10px var(--accent-emerald);
-        }
-
-        /* Compass Strip with Friend Pips */
-        .compass-wrap {
-            position: relative;
-            width: 220px;
-            height: 28px;
-            background: rgba(7, 12, 24, 0.8);
-            border: 1px solid var(--border-subtle);
-            border-radius: 999px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .compass-center-tick {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 50%;
-            width: 2px;
-            background: rgba(56, 189, 248, 0.75);
-            transform: translateX(-50%);
-        }
-
-        #compass-track {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            font-size: 11px;
-            font-weight: 800;
-            color: var(--text-muted);
-        }
-
-        .compass-mark {
-            position: absolute;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            white-space: nowrap;
-        }
-
-        .hud-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            pointer-events: auto;
-        }
-
-        .hud-btn {
-            background: rgba(15, 23, 42, 0.86);
-            color: #fff;
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 8px 12px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform 0.12s ease, background 0.15s ease;
-        }
-
-        .hud-btn:active {
-            transform: scale(0.95);
-        }
-
-        .hud-btn.primary {
-            background: linear-gradient(135deg, #38bdf8, #6366f1);
-            color: #040914;
-            border: none;
-        }
-
-        .hud-btn.wave {
-            background: rgba(79, 70, 229, 0.85);
-            border-color: rgba(129, 140, 248, 0.5);
-        }
-
-        /* Friends Radar List in HUD */
-        .friends-card {
-            margin-top: 8px;
-            background: rgba(7, 12, 24, 0.76);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-subtle);
-            border-radius: 14px;
-            padding: 8px 12px;
-            max-width: 260px;
-            pointer-events: auto;
-        }
-
-        .friends-card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-        }
-
-        .link-btn {
-            background: none;
-            border: none;
-            color: var(--accent-sky);
-            font-size: 11px;
-            font-weight: 700;
-            text-decoration: underline;
-            cursor: pointer;
-        }
-
-        #hud-friend-list {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            max-height: 110px;
-            overflow-y: auto;
-            font-size: 12px;
-        }
-
-        .friend-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 4px 8px;
-            border-radius: 8px;
-        }
-
-        /* Bottom HUD & Mobile Touch Controls */
-        .hud-bottom-row {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .touch-pad-zone {
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            position: relative;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            pointer-events: auto;
-        }
-
-        .touch-pad-knob {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(56, 189, 248, 0.78);
-            border: 2px solid #fff;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-        }
-
-        .touch-action-stack {
-            display: none;
-            flex-direction: column;
-            gap: 8px;
-            pointer-events: auto;
-        }
-
-        .touch-circle-btn {
-            width: 54px;
-            height: 54px;
-            border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            background: rgba(79, 70, 229, 0.85);
-            color: #fff;
-            font-size: 11px;
-            font-weight: 800;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
-        }
-
-        @media (max-width: 768px) {
-            .touch-pad-zone {
-                display: flex;
-            }
-            .touch-action-stack {
-                display: flex;
-            }
-        }
-
-        /* =========================================================
-           START / SETTINGS LOBBY MODAL
-           ========================================================= */
-        #start-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 40;
-            background: rgba(4, 8, 18, 0.78);
-            backdrop-filter: blur(12px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 14px;
-        }
-
-        #start-modal.hidden {
-            display: none;
-        }
-
-        .modal-card {
-            width: 100%;
-            max-width: 680px;
-            max-height: 94vh;
-            overflow-y: auto;
-            background: var(--panel-bg);
-            border: 1px solid var(--border-subtle);
-            border-radius: 24px;
-            padding: 20px;
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
-        }
-
-        .modal-header {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding-bottom: 14px;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .badge-tag {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 999px;
-            background: rgba(16, 185, 129, 0.16);
-            border: 1px solid rgba(16, 185, 129, 0.4);
-            color: #6ee7b7;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            margin-bottom: 6px;
-        }
-
-        .game-title {
-            font-size: 26px;
-            font-weight: 900;
-            letter-spacing: -0.02em;
-            background: linear-gradient(90deg, #7dd3fc, #a5b4fc, #f0abfc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .game-subtitle {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
-
-        .status-stack {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            min-width: 195px;
-        }
-
-        .status-box {
-            background: var(--card-bg);
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 7px 11px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-        }
-
-        .lobby-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
-            gap: 10px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-subtle);
-            border-radius: 16px;
-            padding: 14px;
-            margin-top: 14px;
-        }
-
-        .field-label {
-            display: block;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: var(--text-muted);
-            margin-bottom: 5px;
-        }
-
-        .text-input {
-            width: 100%;
-            background: #0f172a;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            border-radius: 10px;
-            padding: 8px 10px;
-            color: #fff;
-            font-size: 13px;
-            font-weight: 600;
-            outline: none;
-            user-select: text;
-        }
-
-        .text-input:focus {
-            border-color: var(--accent-sky);
-        }
-
-        .room-input-row {
-            display: flex;
-            gap: 6px;
-        }
-
-        .small-action-btn {
-            background: rgba(56, 189, 248, 0.18);
-            border: 1px solid rgba(56, 189, 248, 0.45);
-            color: #7dd3fc;
-            border-radius: 10px;
-            padding: 0 12px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .swatch-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            height: 36px;
-        }
-
-        .color-swatch {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            cursor: pointer;
-            transition: transform 0.15s ease;
-        }
-
-        .color-swatch.selected {
-            border-color: #fff;
-            transform: scale(1.18);
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
-        }
-
-        .lobby-footer-row {
-            grid-column: 1 / -1;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            padding-top: 8px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            font-size: 12px;
-        }
-
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            color: #cbd5e1;
-            cursor: pointer;
-        }
-
-        .launch-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin: 14px 0;
-        }
-
-        @media (max-width: 520px) {
-            .launch-buttons {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @keyframes vrPulse {
-            0%, 100% { box-shadow: 0 0 16px rgba(56, 189, 248, 0.45); }
-            50% { box-shadow: 0 0 28px rgba(99, 102, 241, 0.78); }
-        }
-
-        .btn-launch-vr {
-            background: linear-gradient(135deg, #0ea5e9, #4f46e5);
-            color: #fff;
-            border: none;
-            border-radius: 16px;
-            padding: 15px 16px;
-            font-size: 14px;
-            font-weight: 800;
-            letter-spacing: 0.02em;
-            cursor: pointer;
-            animation: vrPulse 2.8s infinite ease-in-out;
-        }
-
-        .btn-launch-2d {
-            background: #1e293b;
-            color: #f8fafc;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            border-radius: 16px;
-            padding: 15px 16px;
-            font-size: 14px;
-            font-weight: 800;
-            cursor: pointer;
-        }
-
-        .controls-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 7px;
-            margin-top: 8px;
-        }
-
-        @media (max-width: 540px) {
-            .controls-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        .ctrl-item {
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.09);
-            border-radius: 11px;
-            padding: 8px 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11px;
-        }
-
-        .ctrl-badge {
-            min-width: 28px;
-            height: 28px;
-            border-radius: 8px;
-            background: rgba(56, 189, 248, 0.16);
-            border: 1px solid rgba(56, 189, 248, 0.35);
-            color: #7dd3fc;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .ipd-bar {
-            margin-top: 12px;
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.09);
-            border-radius: 14px;
-            padding: 10px 14px;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            font-size: 12px;
-        }
-
-        #toast-banner {
-            position: fixed;
-            top: 56px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 50;
-            background: rgba(7, 12, 24, 0.92);
-            border: 1px solid rgba(56, 189, 248, 0.55);
-            color: #e0f2fe;
-            padding: 8px 18px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 700;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.25s ease;
-            white-space: nowrap;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Infinite VR Land — Multiplayer & PS4 Explorer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PeerJS for serverless WebRTC P2P multiplayer (works directly on GitHub Pages) -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0b1120;
+      font-family: 'Inter', sans-serif;
+      touch-action: none;
+    }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    /* Custom scrollbar for HUD panel */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 4px; }
+
+    /* VR Box Split Divider & Exit Button */
+    #vr-box-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      pointer-events: none;
+      display: none;
+    }
+    #vr-box-overlay.active {
+      display: block;
+    }
+    .vr-center-line {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateX(-50%);
+    }
+    #exit-vr-box-btn {
+      pointer-events: auto;
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #f8fafc;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      cursor: pointer;
+    }
+    /* Style Three.js default VRButton to fit cleanly */
+    #VRButton {
+      position: fixed !important;
+      bottom: 16px !important;
+      right: 16px !important;
+      left: auto !important;
+      width: auto !important;
+      padding: 10px 18px !important;
+      border-radius: 12px !important;
+      background: rgba(15, 23, 42, 0.85) !important;
+      border: 1px solid rgba(56, 189, 248, 0.4) !important;
+      color: #e0f2fe !important;
+      font-family: 'Inter', sans-serif !important;
+      font-weight: 600 !important;
+      font-size: 13px !important;
+      backdrop-filter: blur(10px) !important;
+      z-index: 30 !important;
+      opacity: 1 !important;
+      transition: all 0.2s ease !important;
+    }
+    #VRButton:hover {
+      background: rgba(2, 132, 199, 0.9) !important;
+      transform: translateY(-1px);
+    }
+  </style>
+  <!-- Import Map for Three.js r160 and Addons -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
-<body>
+<body class="text-slate-100">
 
-    <!-- Main 3D WebGL Canvas -->
-    <canvas id="game-canvas"></canvas>
+  <!-- 3D WebGL Canvas Container -->
+  <div id="canvas-container"></div>
 
-    <!-- VR Box Stereoscopic Side-by-Side Overlay -->
-    <div id="vr-overlay">
-        <div class="vr-eye-viewport">
-            <div class="vr-mini-hud">
-                <span style="color:#34d399;">● <span class="hud-online-count">1</span></span>
-                <span>•</span>
-                <span style="color:#38bdf8;">✦ <span class="hud-orbs">0</span></span>
-                <span>•</span>
-                <span class="hud-compass">N</span>
-                <span>•</span>
-                <span class="hud-alt" style="color:#fbbf24;">0m</span>
-                <span>•</span>
-                <span class="hud-ipd" style="color:#c084fc;">IPD 64mm</span>
-            </div>
-            <div class="vr-reticle"></div>
-            <div class="vr-mini-hud" style="font-size:10px; opacity:0.85;">
-                <span>L1: Warp to Friend</span>
-                <span>•</span>
-                <span>R1: Wave</span>
-            </div>
+  <!-- VR Box Stereoscopic Overlay (Minimalist center line + Exit button) -->
+  <div id="vr-box-overlay">
+    <div class="vr-center-line"></div>
+    <button id="exit-vr-box-btn" title="Exit VR Box Mode">✕ Exit VR Box</button>
+  </div>
+
+  <!-- Toast Notification Banner (Replaces alert()) -->
+  <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+
+  <!-- Main HUD Overlay -->
+  <div id="main-hud" class="fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-3 sm:p-5">
+
+    <!-- Top Row: Status Pills & Collapsible Control Drawer -->
+    <div class="flex items-start justify-between gap-2">
+
+      <!-- Left: Status Badges & Coordinates -->
+      <div class="flex flex-col gap-2 pointer-events-auto">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- PS4 Controller Badge -->
+          <div id="gamepad-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/70 backdrop-blur-md text-xs font-medium shadow-lg">
+            <span id="gamepad-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <span id="gamepad-text">PS4 Controller: Press any button</span>
+          </div>
+
+          <!-- Multiplayer Online Count -->
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/70 backdrop-blur-md text-xs font-medium shadow-lg">
+            <span id="net-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <span id="player-count-text">Explorers: 1</span>
+          </div>
         </div>
-        <div class="vr-center-divider"></div>
-        <div class="vr-eye-viewport">
-            <div class="vr-mini-hud">
-                <span style="color:#34d399;">● <span class="hud-online-count">1</span></span>
-                <span>•</span>
-                <span style="color:#38bdf8;">✦ <span class="hud-orbs">0</span></span>
-                <span>•</span>
-                <span class="hud-compass">N</span>
-                <span>•</span>
-                <span class="hud-alt" style="color:#fbbf24;">0m</span>
-                <span>•</span>
-                <span class="hud-ipd" style="color:#c084fc;">IPD 64mm</span>
-            </div>
-            <div class="vr-reticle"></div>
-            <div class="vr-mini-hud" style="font-size:10px; opacity:0.85;">
-                <span>✕/R2: Fly</span>
-                <span>•</span>
-                <span>□: Exit VR</span>
-            </div>
+
+        <!-- Coordinates & Mode Indicator -->
+        <div class="inline-flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md text-[11px] text-slate-300 w-fit">
+          <span id="coords-text">X: 0 | Y: 12 | Z: 0</span>
+          <span class="text-slate-600">•</span>
+          <span id="move-mode-text" class="text-sky-400 font-semibold">WALK</span>
         </div>
+      </div>
+
+      <!-- Right: Collapsible Multiplayer & VR Settings Panel -->
+      <div class="pointer-events-auto flex flex-col items-end">
+        <button id="toggle-hud-btn" class="px-3.5 py-2 rounded-xl bg-slate-900/85 hover:bg-slate-800 border border-slate-700/80 backdrop-blur-md text-xs font-semibold text-slate-100 shadow-lg flex items-center gap-2 transition">
+          <span>⚙️ Menu & Multiplayer</span>
+          <span id="hud-chevron">▼</span>
+        </button>
+
+        <div id="hud-panel" class="mt-2 w-72 sm:w-80 max-h-[78vh] overflow-y-auto rounded-2xl bg-slate-900/90 border border-slate-700/80 backdrop-blur-xl p-4 shadow-2xl flex flex-col gap-4 text-xs">
+
+          <!-- VR Box Launcher Section -->
+          <div class="p-3 rounded-xl bg-gradient-to-br from-sky-950/90 to-indigo-950/90 border border-sky-500/30 flex flex-col gap-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sky-300 text-sm">🥽 VR Box / Cardboard</span>
+              <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300">Stereo 3D</span>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+              Splits screen side-by-side with gyro head-tracking + PS4 controller movement.
+            </p>
+            <button id="enter-vr-box-btn" class="w-full py-2.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 active:scale-[0.98] text-slate-950 font-bold text-xs shadow-lg shadow-sky-500/25 transition cursor-pointer">
+              Enter VR Box Mode
+            </button>
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <label for="ipd-slider" class="text-[11px] text-slate-300">Eye Separation (IPD):</label>
+              <span id="ipd-value" class="text-[11px] font-mono text-sky-300">0.064m</span>
+            </div>
+            <input id="ipd-slider" type="range" min="0.03" max="0.10" step="0.002" value="0.064" class="w-full accent-sky-400 cursor-pointer" />
+          </div>
+
+          <!-- Multiplayer P2P Section -->
+          <div class="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70 flex flex-col gap-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-emerald-300 text-sm">🌐 P2P Multiplayer</span>
+              <span id="peer-role-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold">HOST</span>
+            </div>
+
+            <!-- Player Name & Color -->
+            <div class="flex items-center gap-2">
+              <input id="player-name-input" type="text" maxlength="16" placeholder="Your Name" class="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950/80 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-sky-400" />
+              <input id="player-color-input" type="color" value="#38bdf8" title="Avatar Color" class="w-8 h-8 rounded-lg bg-transparent border border-slate-700 cursor-pointer" />
+            </div>
+
+            <!-- Room ID & Invite Link -->
+            <div class="flex flex-col gap-1">
+              <span class="text-[10px] text-slate-400 uppercase tracking-wider">Your Room ID</span>
+              <div class="flex items-center gap-1.5">
+                <input id="my-peer-id" type="text" readonly value="Connecting..." class="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950/90 border border-slate-700/80 font-mono text-[11px] text-amber-300 focus:outline-none" />
+                <button id="copy-invite-btn" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] transition cursor-pointer whitespace-nowrap">
+                  Copy Link
+                </button>
+              </div>
+            </div>
+
+            <!-- Join Another Room -->
+            <div class="flex flex-col gap-1 pt-1 border-t border-slate-700/60">
+              <span class="text-[10px] text-slate-400 uppercase tracking-wider">Join Friend's Room ID</span>
+              <div class="flex items-center gap-1.5">
+                <input id="join-peer-input" type="text" placeholder="Paste Room ID..." class="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950/90 border border-slate-700 font-mono text-[11px] text-slate-100 focus:outline-none focus:border-sky-400" />
+                <button id="join-peer-btn" class="px-3 py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-[11px] transition cursor-pointer">
+                  Join
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PS4 Controller & Controls Guide -->
+          <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700/60 flex flex-col gap-1.5 text-[11px] text-slate-300">
+            <div class="font-bold text-slate-200 mb-0.5">🎮 Controls (PS4 DualShock 4)</div>
+            <div class="flex justify-between"><span class="text-slate-400">Left Stick</span><span>Move / Strafe</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Right Stick</span><span>Look Around</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Cross (✕)</span><span>Jump / Fly Up</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Circle (○)</span><span>Fly Down (in Fly Mode)</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">L1 / R1</span><span>Sprint Boost</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Triangle (△)</span><span>Toggle Walk / Fly Mode</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Square (□)</span><span>Reset to Surface</span></div>
+            <div class="pt-1 mt-1 border-t border-slate-700/60 text-[10px] text-slate-400">
+              Desktop: Click canvas to look, WASD move, Space jump, Shift sprint, F fly.
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
 
-    <button id="btn-vr-exit">Exit VR / Menu (or press PS4 □)</button>
+    <!-- Bottom Row: Mobile Touch Dual-Virtual-Joysticks (Auto-shown on touch devices if no gamepad) -->
+    <div id="mobile-controls" class="flex items-end justify-between w-full sm:hidden pointer-events-none pb-12">
+      <!-- Left Touch Pad: Move -->
+      <div id="touch-move-zone" class="pointer-events-auto w-28 h-28 rounded-full bg-slate-900/50 border border-slate-600/50 backdrop-blur-sm relative flex items-center justify-center">
+        <div id="touch-move-knob" class="w-11 h-11 rounded-full bg-sky-400/70 border border-white/60 shadow-md"></div>
+      </div>
 
-    <!-- 2D / Desktop HUD -->
-    <div id="hud-2d">
-        <div class="hud-top-row">
-            <div>
-                <div class="hud-pill-bar">
-                    <span><span id="hud-net-dot" class="status-dot"></span> ONLINE: <strong class="hud-online-count">1</strong></span>
-                    <span style="opacity:0.35;">|</span>
-                    <span style="color:#7dd3fc;">ORBS: <strong class="hud-orbs">0</strong></span>
-                    <span style="opacity:0.35;">|</span>
-                    <span>ALT: <strong class="hud-alt" style="color:#fbbf24;">0m</strong></span>
-                    <span style="opacity:0.35;">|</span>
-                    <span style="color:#c084fc;">ROOM: <strong class="hud-room-name">public</strong></span>
-                </div>
+      <!-- Center Action Buttons -->
+      <div class="pointer-events-auto flex flex-col gap-2 items-center">
+        <button id="mobile-fly-btn" class="px-3 py-1.5 rounded-full bg-slate-900/75 border border-slate-600 text-[11px] font-bold text-amber-300">FLY</button>
+        <button id="mobile-jump-btn" class="w-14 h-14 rounded-full bg-emerald-500/80 border-2 border-white/50 text-xs font-extrabold text-slate-950 shadow-lg active:scale-95">JUMP</button>
+      </div>
 
-                <!-- Live Friend Radar List -->
-                <div class="friends-card">
-                    <div class="friends-card-header">
-                        <span>TRAVELERS IN ROOM</span>
-                        <button id="btn-hud-warp" class="link-btn">Warp Next (L1)</button>
-                    </div>
-                    <div id="hud-friend-list">
-                        <div style="color:#94a3b8; font-size:11px;">Waiting for friends to join room...</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Compass Strip Showing Friend Directions -->
-            <div class="compass-wrap">
-                <div class="compass-center-tick"></div>
-                <div id="compass-track"></div>
-            </div>
-
-            <!-- Quick HUD Actions -->
-            <div class="hud-actions">
-                <button id="btn-hud-wave" class="hud-btn wave">👋 Wave (R1)</button>
-                <button id="btn-hud-invite" class="hud-btn">📋 Invite</button>
-                <button id="btn-hud-vr" class="hud-btn primary">🥽 VR Box</button>
-                <button id="btn-hud-menu" class="hud-btn">Menu</button>
-            </div>
-        </div>
-
-        <div class="hud-bottom-row">
-            <!-- Mobile Touch Joystick (2D mode) -->
-            <div id="touch-move-zone" class="touch-pad-zone">
-                <div id="touch-move-knob" class="touch-pad-knob"></div>
-            </div>
-
-            <!-- Controller Live Status -->
-            <div class="hud-pill-bar" style="margin: 0 auto; font-size: 11px;">
-                <span id="hud-pad-dot" class="status-dot"></span>
-                <span id="hud-pad-text">PS4 Controller: Press any button to connect</span>
-            </div>
-
-            <!-- Mobile Touch Action Buttons -->
-            <div class="touch-action-stack">
-                <button id="btn-touch-fly" class="touch-circle-btn">FLY</button>
-                <button id="btn-touch-beacon" class="touch-circle-btn" style="background:#0284c7;">MARK</button>
-            </div>
-        </div>
+      <!-- Right Touch Pad: Look -->
+      <div id="touch-look-zone" class="pointer-events-auto w-28 h-28 rounded-full bg-slate-900/50 border border-slate-600/50 backdrop-blur-sm relative flex items-center justify-center">
+        <div id="touch-look-knob" class="w-11 h-11 rounded-full bg-indigo-400/70 border border-white/60 shadow-md"></div>
+      </div>
     </div>
 
-    <!-- Notification Toast -->
-    <div id="toast-banner">Welcome to Aetheria VR</div>
+  </div>
 
-    <!-- Start / Lobby Overlay -->
-    <div id="start-modal">
-        <div class="modal-card">
-            <div class="modal-header">
-                <div>
-                    <span class="badge-tag">Multiplayer Live • VR Box • PS4 DualShock 4</span>
-                    <h1 class="game-title">AETHERIA VR</h1>
-                    <p class="game-subtitle">Explore an endless procedural 3D world together with friends.</p>
-                </div>
+  <!-- Main Application Module -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { VRButton } from 'three/addons/webxr/VRButton.js';
+    import { StereoEffect } from 'three/addons/effects/StereoEffect.js';
 
-                <div class="status-stack">
-                    <div class="status-box">
-                        <span id="modal-pad-dot" class="status-dot"></span>
-                        <div>
-                            <div id="modal-pad-title" style="font-weight:700;">PS4 Pad: Searching...</div>
-                            <div id="modal-pad-sub" style="font-size:11px; color:#94a3b8;">Pair Bluetooth &amp; press X</div>
-                        </div>
-                    </div>
-                    <div class="status-box">
-                        <span id="modal-net-dot" class="status-dot"></span>
-                        <div>
-                            <div id="modal-net-status" style="font-weight:700;">Connecting Multiplayer...</div>
-                            <div style="font-size:11px; color:#94a3b8;"><strong class="hud-online-count" style="color:#fff;">1</strong> Traveler(s) in Room</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    // =========================================================================
+    // 1. DETERMINISTIC SEEDED 2D SIMPLEX NOISE & INFINITE TERRAIN GENERATOR
+    // =========================================================================
+    class SeededSimplexNoise {
+      constructor(seed = 1337) {
+        this.p = new Uint8Array(256);
+        for (let i = 0; i < 256; i++) this.p[i] = i;
+        let s = seed >>> 0;
+        for (let i = 255; i > 0; i--) {
+          s = (s * 1664525 + 1013904223) >>> 0;
+          const j = s % (i + 1);
+          const tmp = this.p[i];
+          this.p[i] = this.p[j];
+          this.p[j] = tmp;
+        }
+        this.perm = new Uint8Array(512);
+        this.permMod12 = new Uint8Array(512);
+        for (let i = 0; i < 512; i++) {
+          this.perm[i] = this.p[i & 255];
+          this.permMod12[i] = this.perm[i] % 12;
+        }
+      }
 
-            <!-- Player Identity & Shared Room Setup -->
-            <div class="lobby-grid">
-                <div>
-                    <label class="field-label" for="input-player-name">Your Traveler Name</label>
-                    <input id="input-player-name" class="text-input" type="text" maxlength="16" placeholder="SkyWalker_01">
-                </div>
+      noise2D(xin, yin) {
+        const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
+        const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
+        const grad3 = [
+          [1, 1], [-1, 1], [1, -1], [-1, -1],
+          [1, 0], [-1, 0], [0, 1], [0, -1],
+          [1, 1], [-1, 1], [1, -1], [-1, -1]
+        ];
 
-                <div>
-                    <label class="field-label" for="input-room-code">Shared Room Name</label>
-                    <div class="room-input-row">
-                        <input id="input-room-code" class="text-input" type="text" maxlength="16" value="public">
-                        <button id="btn-join-room" class="small-action-btn">Join</button>
-                    </div>
-                </div>
+        let n0 = 0, n1 = 0, n2 = 0;
+        const s = (xin + yin) * F2;
+        const i = Math.floor(xin + s);
+        const j = Math.floor(yin + s);
+        const t = (i + j) * G2;
+        const X0 = i - t;
+        const Y0 = j - t;
+        const x0 = xin - X0;
+        const y0 = yin - Y0;
 
-                <div>
-                    <label class="field-label">Avatar Aura Color</label>
-                    <div id="color-swatch-row" class="swatch-row">
-                        <button type="button" class="color-swatch selected" data-color="#38bdf8" style="background:#38bdf8;"></button>
-                        <button type="button" class="color-swatch" data-color="#a855f7" style="background:#a855f7;"></button>
-                        <button type="button" class="color-swatch" data-color="#10b981" style="background:#10b981;"></button>
-                        <button type="button" class="color-swatch" data-color="#f43f5e" style="background:#f43f5e;"></button>
-                        <button type="button" class="color-swatch" data-color="#f59e0b" style="background:#f59e0b;"></button>
-                    </div>
-                </div>
+        let i1, j1;
+        if (x0 > y0) { i1 = 1; j1 = 0; }
+        else { i1 = 0; j1 = 1; }
 
-                <div class="lobby-footer-row">
-                    <label class="checkbox-label">
-                        <input id="toggle-ai-bots" type="checkbox">
-                        <span>Spawn AI Explorer Companions (for solo testing)</span>
-                    </label>
-                    <button id="btn-modal-invite" class="link-btn">📋 Copy Friend Invite Link</button>
-                </div>
-            </div>
+        const x1 = x0 - i1 + G2;
+        const y1 = y0 - j1 + G2;
+        const x2 = x0 - 1.0 + 2.0 * G2;
+        const y2 = y0 - 1.0 + 2.0 * G2;
 
-            <!-- Primary Launch Actions -->
-            <div class="launch-buttons">
-                <button id="btn-start-vr" class="btn-launch-vr">🥽 ENTER VR BOX (STEREO)</button>
-                <button id="btn-start-2d" class="btn-launch-2d">🖥️ PLAY 2D / FULLSCREEN</button>
-            </div>
+        const ii = i & 255;
+        const jj = j & 255;
+        const gi0 = this.permMod12[ii + this.perm[jj]];
+        const gi1 = this.permMod12[ii + i1 + this.perm[jj + j1]];
+        const gi2 = this.permMod12[ii + 1 + this.perm[jj + 1]];
 
-            <!-- PS4 Controller & Keyboard Mapping -->
-            <div>
-                <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:700; color:#94a3b8;">
-                    <span>PS4 DUALSHOCK 4 CONTROLS (OR PRESS ✕ TO LAUNCH VR)</span>
-                    <span>PC: WASD + Space + E + P</span>
-                </div>
-                <div class="controls-grid">
-                    <div class="ctrl-item"><span class="ctrl-badge">L3</span><div><strong>Left Stick</strong><br><span style="color:#94a3b8;">Walk &amp; Strafe</span></div></div>
-                    <div class="ctrl-item"><span class="ctrl-badge">R3</span><div><strong>Right Stick</strong><br><span style="color:#94a3b8;">Turn Camera</span></div></div>
-                    <div class="ctrl-item"><span class="ctrl-badge">✕</span><div><strong>Cross / R2</strong><br><span style="color:#94a3b8;">Jump &amp; Jetpack Fly</span></div></div>
-                    <div class="ctrl-item"><span class="ctrl-badge">R1</span><div><strong>R1 Bumper</strong><br><span style="color:#94a3b8;">Wave Pulse Emote</span></div></div>
-                    <div class="ctrl-item"><span class="ctrl-badge">L1</span><div><strong>L1 Bumper</strong><br><span style="color:#94a3b8;">Warp Next to Friend</span></div></div>
-                    <div class="ctrl-item"><span class="ctrl-badge">○</span><div><strong>Circle</strong><br><span style="color:#94a3b8;">Drop Shared Beacon</span></div></div>
-                    <div class="ctrl-item"><span class="ctrl-badge">△</span><div><strong>Triangle</strong><br><span style="color:#94a3b8;">Cycle Sky / Time</span></div></div>
-                    <div class="ctrl-item"><span class="ctrl-badge">□</span><div><strong>Square</strong><br><span style="color:#94a3b8;">Toggle VR / 2D</span></div></div>
-                    <div class="ctrl-item"><span class="ctrl-badge">OPT</span><div><strong>Options</strong><br><span style="color:#94a3b8;">Recenter VR Head</span></div></div>
-                </div>
-            </div>
+        let t0 = 0.5 - x0 * x0 - y0 * y0;
+        if (t0 >= 0) {
+          t0 *= t0;
+          n0 = t0 * t0 * (grad3[gi0][0] * x0 + grad3[gi0][1] * y0);
+        }
 
-            <!-- VR Eye Separation Calibration -->
-            <div class="ipd-bar">
-                <div>
-                    <strong>VR Lens Eye Separation (IPD): <span id="modal-ipd-val" style="color:#38bdf8;">64 mm</span></strong>
-                    <div style="font-size:11px; color:#94a3b8;">Adjust anytime inside your VR Box using PS4 D-Pad Up/Down.</div>
-                </div>
-                <input id="ipd-slider" type="range" min="45" max="80" value="64" style="width:160px; accent-color:#38bdf8;">
-            </div>
-        </div>
-    </div>
+        let t1 = 0.5 - x1 * x1 - y1 * y1;
+        if (t1 >= 0) {
+          t1 *= t1;
+          n1 = t1 * t1 * (grad3[gi1][0] * x1 + grad3[gi1][1] * y1);
+        }
 
-    <script>
-        /**
-         * ============================================================================
-         * AETHERIA VR — ZERO-CONFIG MULTIPLAYER INFINITE PROCEDURAL WORLD
-         * Built-in Pure JS MQTT-over-WSS Client + BroadcastChannel + Three.js WebVR
-         * ============================================================================
-         */
-        (function () {
-            if (typeof window.THREE === 'undefined') {
-                document.getElementById('modal-net-status').textContent = '3D Engine Offline (Check Internet)';
-                return;
+        let t2 = 0.5 - x2 * x2 - y2 * y2;
+        if (t2 >= 0) {
+          t2 *= t2;
+          n2 = t2 * t2 * (grad3[gi2][0] * x2 + grad3[gi2][1] * y2);
+        }
+
+        return 70.0 * (n0 + n1 + n2);
+      }
+    }
+
+    // Shared World Seed (Everyone in multiplayer gets the exact same terrain!)
+    const WORLD_SEED = 42026;
+    const simplex = new SeededSimplexNoise(WORLD_SEED);
+
+    // Terrain Configuration
+    const CHUNK_SIZE = 48;         // World units per chunk
+    const CHUNK_SEGMENTS = 24;     // Grid resolution per chunk (low-poly crispness)
+    const RENDER_DISTANCE = 4;     // Chunks radius around player
+    const WATER_LEVEL = -1.5;
+
+    /**
+     * Deterministic height sampler for any world (x, z) coordinate.
+     * Used by terrain mesh generation, trees/rocks, player physics, and remote avatars.
+     */
+    function getTerrainHeight(x, z) {
+      // Multi-octave fractal Brownian motion (fBm)
+      const scale1 = 0.008;
+      const scale2 = 0.025;
+      const scale3 = 0.075;
+
+      const n1 = simplex.noise2D(x * scale1, z * scale1);
+      const n2 = simplex.noise2D(x * scale2 + 100, z * scale2 + 100) * 0.4;
+      const n3 = simplex.noise2D(x * scale3 - 200, z * scale3 - 200) * 0.12;
+
+      // Ridge noise for dramatic mountain peaks
+      const ridge = 1.0 - Math.abs(simplex.noise2D(x * 0.005 + 500, z * 0.005 + 500));
+      const mountainFactor = Math.pow(Math.max(0, ridge), 2.4) * 26.0;
+
+      let h = (n1 + n2 + n3) * 10.5 + mountainFactor - 2.0;
+
+      // Flatten slightly near origin (0, 0) for a welcoming spawn valley
+      const distFromOrigin = Math.hypot(x, z);
+      if (distFromOrigin < 24) {
+        const blend = distFromOrigin / 24;
+        h = h * blend + 2.5 * (1 - blend);
+      }
+
+      return h;
+    }
+
+    /**
+     * Vertex color palette based on elevation and slope
+     */
+    function getTerrainColor(height) {
+      const color = new THREE.Color();
+      if (height < WATER_LEVEL - 0.5) {
+        color.setHex(0x1d4ed8); // Deep riverbed blue
+      } else if (height < WATER_LEVEL + 0.8) {
+        color.setHex(0xfde047).lerp(new THREE.Color(0xd97706), 0.35); // Warm beach sand
+      } else if (height < 9.5) {
+        // Lush emerald & meadow green variation
+        const t = (height - (WATER_LEVEL + 0.8)) / 10.3;
+        color.setHex(0x22c55e).lerp(new THREE.Color(0x15803d), t);
+      } else if (height < 18.5) {
+        // Alpine rock / slate
+        const t = (height - 9.5) / 9.0;
+        color.setHex(0x64748b).lerp(new THREE.Color(0x475569), t);
+      } else {
+        // Snow-capped peaks
+        color.setHex(0xf8fafc);
+      }
+      return color;
+    }
+
+    // =========================================================================
+    // 2. THREE.JS SCENE, RENDERER, WEBXR & STEREO VR BOX SETUP
+    // =========================================================================
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x7dd3fc);
+    scene.fog = new THREE.FogExp2(0x93c5fd, 0.0068);
+
+    // Camera Rig: playerRig holds world position & yaw; camera holds pitch & WebXR/Gyro pose
+    const playerRig = new THREE.Group();
+    scene.add(playerRig);
+
+    const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 450);
+    camera.position.set(0, 1.7, 0); // Eye height 1.7m
+    playerRig.add(camera);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.xr.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    // Standard WebXR VRButton (for Oculus/Quest/PCVR)
+    const vrButton = VRButton.createButton(renderer);
+    document.body.appendChild(vrButton);
+
+    // Stereoscopic Side-by-Side Effect for Phone VR Box (Cardboard)
+    const stereoEffect = new StereoEffect(renderer);
+    stereoEffect.setEyeSeparation(0.064);
+    stereoEffect.setSize(window.innerWidth, window.innerHeight);
+
+    // Atmospheric Lighting
+    const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x365314, 0.85);
+    hemiLight.position.set(0, 100, 0);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfffbeb, 1.35);
+    sunLight.position.set(60, 110, 40);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 1024;
+    sunLight.shadow.mapSize.height = 1024;
+    sunLight.shadow.camera.near = 10;
+    sunLight.shadow.camera.far = 250;
+    const d = 85;
+    sunLight.shadow.camera.left = -d;
+    sunLight.shadow.camera.right = d;
+    sunLight.shadow.camera.top = d;
+    sunLight.shadow.camera.bottom = -d;
+    scene.add(sunLight);
+    scene.add(sunLight.target);
+
+    // Decorative Sun Disc & Low-Poly Clouds
+    const sunDisc = new THREE.Mesh(
+      new THREE.SphereGeometry(8, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0xfef08a, fog: false })
+    );
+    scene.add(sunDisc);
+
+    // Infinite Water Plane that follows player XZ
+    const waterGeo = new THREE.PlaneGeometry(600, 600, 1, 1);
+    waterGeo.rotateX(-Math.PI / 2);
+    const waterMat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      roughness: 0.15,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.82
+    });
+    const waterMesh = new THREE.Mesh(waterGeo, waterMat);
+    waterMesh.position.y = WATER_LEVEL;
+    scene.add(waterMesh);
+
+    // =========================================================================
+    // 3. CHUNK MANAGER (INFINITE TERRAIN + PROCEDURAL TREES & ROCKS)
+    // =========================================================================
+    const activeChunks = new Map();
+
+    // Shared Low-Poly Geometries & Materials for Props
+    const trunkGeo = new THREE.CylinderGeometry(0.22, 0.35, 1.6, 5);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x78350f, flatShading: true });
+    const leavesGeo = new THREE.ConeGeometry(1.4, 3.4, 6);
+    const leavesMat = new THREE.MeshStandardMaterial({ color: 0x166534, flatShading: true });
+    const rockGeo = new THREE.DodecahedronGeometry(0.85, 0);
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x64748b, flatShading: true });
+
+    // Deterministic pseudo-random helper per chunk cell
+    function hash2D(ix, iz) {
+      let n = Math.sin(ix * 127.1 + iz * 311.7 + WORLD_SEED) * 43758.5453123;
+      return n - Math.floor(n);
+    }
+
+    function createChunk(cx, cz) {
+      const chunkGroup = new THREE.Group();
+      const startX = cx * CHUNK_SIZE;
+      const startZ = cz * CHUNK_SIZE;
+
+      const geo = new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SEGMENTS, CHUNK_SEGMENTS);
+      geo.rotateX(-Math.PI / 2);
+
+      const posAttr = geo.attributes.position;
+      const colors = new Float32Array(posAttr.count * 3);
+
+      for (let i = 0; i < posAttr.count; i++) {
+        const lx = posAttr.getX(i);
+        const lz = posAttr.getZ(i);
+        const wx = startX + lx + CHUNK_SIZE / 2;
+        const wz = startZ + lz + CHUNK_SIZE / 2;
+
+        const wy = getTerrainHeight(wx, wz);
+        posAttr.setY(i, wy);
+
+        const c = getTerrainColor(wy);
+        colors[i * 3] = c.r;
+        colors[i * 3 + 1] = c.g;
+        colors[i * 3 + 2] = c.b;
+      }
+
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geo.computeVertexNormals();
+
+      const mat = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        flatShading: true,
+        roughness: 0.85,
+        metalness: 0.05
+      });
+
+      const terrainMesh = new THREE.Mesh(geo, mat);
+      terrainMesh.position.set(startX + CHUNK_SIZE / 2, 0, startZ + CHUNK_SIZE / 2);
+      terrainMesh.receiveShadow = true;
+      chunkGroup.add(terrainMesh);
+
+      // Scatter procedural low-poly trees & rocks deterministically
+      const step = 8;
+      for (let ox = 4; ox < CHUNK_SIZE; ox += step) {
+        for (let oz = 4; oz < CHUNK_SIZE; oz += step) {
+          const wx = startX + ox;
+          const wz = startZ + oz;
+          const r = hash2D(Math.floor(wx), Math.floor(wz));
+
+          const wy = getTerrainHeight(wx, wz);
+
+          // Trees grow on grassy elevations
+          if (wy > WATER_LEVEL + 1.2 && wy < 11.0 && r > 0.72) {
+            const scale = 0.8 + (r - 0.72) * 3.2;
+            const tree = new THREE.Group();
+
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 0.8 * scale;
+            trunk.scale.setScalar(scale);
+            trunk.castShadow = true;
+
+            const crown = new THREE.Mesh(leavesGeo, leavesMat);
+            crown.position.y = 2.8 * scale;
+            crown.scale.setScalar(scale);
+            crown.castShadow = true;
+
+            tree.add(trunk, crown);
+            tree.position.set(wx, wy - 0.15, wz);
+            chunkGroup.add(tree);
+          } else if (wy > WATER_LEVEL + 0.5 && wy < 19.0 && r < 0.08) {
+            // Boulders
+            const rock = new THREE.Mesh(rockGeo, rockMat);
+            const s = 0.6 + r * 14;
+            rock.scale.set(s, s * 0.7, s);
+            rock.rotation.set(r * 3, r * 5, r * 2);
+            rock.position.set(wx, wy + 0.2, wz);
+            rock.castShadow = true;
+            rock.receiveShadow = true;
+            chunkGroup.add(rock);
+          }
+        }
+      }
+
+      scene.add(chunkGroup);
+      return { group: chunkGroup, geo, mat };
+    }
+
+    function updateChunks(playerX, playerZ) {
+      const currentCX = Math.floor(playerX / CHUNK_SIZE);
+      const currentCZ = Math.floor(playerZ / CHUNK_SIZE);
+      const neededKeys = new Set();
+
+      for (let dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; dx++) {
+        for (let dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; dz++) {
+          if (dx * dx + dz * dz > RENDER_DISTANCE * RENDER_DISTANCE + 2) continue;
+          const cx = currentCX + dx;
+          const cz = currentCZ + dz;
+          const key = `${cx},${cz}`;
+          neededKeys.add(key);
+
+          if (!activeChunks.has(key)) {
+            activeChunks.set(key, createChunk(cx, cz));
+          }
+        }
+      }
+
+      // Unload far chunks to keep memory & FPS fast
+      for (const [key, chunk] of activeChunks.entries()) {
+        if (!neededKeys.has(key)) {
+          scene.remove(chunk.group);
+          chunk.geo.dispose();
+          chunk.mat.dispose();
+          activeChunks.delete(key);
+        }
+      }
+    }
+
+    // =========================================================================
+    // 4. PLAYER PHYSICS, PS4 DUALSHOCK 4 CONTROLLER, KEYBOARD, TOUCH & VR GYRO
+    // =========================================================================
+    const playerState = {
+      pos: new THREE.Vector3(0, getTerrainHeight(0, 0) + 1.0, 0),
+      velY: 0,
+      yaw: 0,
+      pitch: 0,
+      onGround: false,
+      flyMode: false,
+      name: `Explorer_${Math.floor(100 + Math.random() * 900)}`,
+      color: '#38bdf8'
+    };
+
+    document.getElementById('player-name-input').value = playerState.name;
+    playerRig.position.copy(playerState.pos);
+
+    // Input States
+    const keys = {};
+    const touchInput = { moveX: 0, moveY: 0, lookX: 0, lookY: 0, jump: false };
+    let activeGamepadIndex = null;
+    let prevTrianglePressed = false;
+    let prevSquarePressed = false;
+
+    // VR Box Mode & DeviceOrientation Gyro Tracking
+    let isVrBoxMode = false;
+    let gyroEnabled = false;
+    const deviceEuler = new THREE.Euler();
+    const deviceQuat = new THREE.Quaternion();
+    const screenTransform = new THREE.Quaternion();
+    const worldTransform = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -PI/2 around X
+
+    window.addEventListener('deviceorientation', (event) => {
+      if (!isVrBoxMode || event.alpha === null) return;
+      gyroEnabled = true;
+
+      const alpha = THREE.MathUtils.degToRad(event.alpha || 0); // Z
+      const beta = THREE.MathUtils.degToRad(event.beta || 0);   // X'
+      const gamma = THREE.MathUtils.degToRad(event.gamma || 0); // Y''
+      const orient = THREE.MathUtils.degToRad(window.screen?.orientation?.angle || window.orientation || 0);
+
+      deviceEuler.set(beta, alpha, -gamma, 'YXZ');
+      deviceQuat.setFromEuler(deviceEuler);
+      deviceQuat.multiply(worldTransform);
+      screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -orient);
+      deviceQuat.multiply(screenTransform);
+    });
+
+    // Toast Helper (Never uses alert())
+    function showToast(msg, colorClass = 'border-sky-400/50 text-sky-100') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `px-4 py-2 rounded-full bg-slate-900/90 border ${colorClass} backdrop-blur-md text-xs font-semibold shadow-xl transition-all duration-300`;
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(-8px)';
+        setTimeout(() => el.remove(), 300);
+      }, 2800);
+    }
+
+    // PS4 DualShock 4 Gamepad Connection Listeners
+    window.addEventListener('gamepadconnected', (e) => {
+      activeGamepadIndex = e.gamepad.index;
+      const dot = document.getElementById('gamepad-dot');
+      const text = document.getElementById('gamepad-text');
+      dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+      const shortName = e.gamepad.id.includes('054c') || e.gamepad.id.toLowerCase().includes('dualshock') || e.gamepad.id.toLowerCase().includes('wireless controller')
+        ? 'PS4 DualShock 4 Connected'
+        : `Gamepad: ${e.gamepad.id.slice(0, 22)}`;
+      text.textContent = shortName;
+      showToast(`🎮 ${shortName}`, 'border-emerald-400/60 text-emerald-200');
+    });
+
+    window.addEventListener('gamepaddisconnected', (e) => {
+      if (activeGamepadIndex === e.gamepad.index) {
+        activeGamepadIndex = null;
+        document.getElementById('gamepad-dot').className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
+        document.getElementById('gamepad-text').textContent = 'PS4 Controller: Disconnected';
+        showToast('🎮 Controller disconnected', 'border-amber-400/60 text-amber-200');
+      }
+    });
+
+    function applyDeadzone(val, deadzone = 0.12) {
+      if (Math.abs(val) < deadzone) return 0;
+      return (val - Math.sign(val) * deadzone) / (1 - deadzone);
+    }
+
+    function pollGamepad() {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      let gp = activeGamepadIndex !== null ? gamepads[activeGamepadIndex] : null;
+      if (!gp) {
+        for (let i = 0; i < gamepads.length; i++) {
+          if (gamepads[i]) {
+            gp = gamepads[i];
+            activeGamepadIndex = i;
+            break;
+          }
+        }
+      }
+      if (!gp) return null;
+
+      // Standard DualShock 4 Mapping:
+      // Axes: [0]=LeftX, [1]=LeftY, [2]=RightX, [3]=RightY
+      // Buttons: [0]=Cross(X), [1]=Circle(O), [2]=Square, [3]=Triangle, [4]=L1, [5]=R1, [6]=L2, [7]=R2
+      const lx = applyDeadzone(gp.axes[0] || 0);
+      const ly = applyDeadzone(gp.axes[1] || 0);
+      const rx = applyDeadzone(gp.axes[2] || 0);
+      const ry = applyDeadzone(gp.axes[3] || 0);
+
+      const crossPressed = gp.buttons[0]?.pressed || false;
+      const circlePressed = gp.buttons[1]?.pressed || false;
+      const squarePressed = gp.buttons[2]?.pressed || false;
+      const trianglePressed = gp.buttons[3]?.pressed || false;
+      const sprintPressed = (gp.buttons[4]?.pressed || gp.buttons[5]?.pressed || gp.buttons[6]?.value > 0.3 || gp.buttons[7]?.value > 0.3) || false;
+
+      // Edge-triggered Triangle -> Toggle Fly Mode
+      if (trianglePressed && !prevTrianglePressed) {
+        toggleFlyMode();
+      }
+      prevTrianglePressed = trianglePressed;
+
+      // Edge-triggered Square -> Reset cleanly onto terrain surface
+      if (squarePressed && !prevSquarePressed) {
+        const groundY = getTerrainHeight(playerState.pos.x, playerState.pos.z);
+        playerState.pos.y = groundY + 1.5;
+        playerState.velY = 0;
+        showToast('🔄 Reset to terrain surface');
+      }
+      prevSquarePressed = squarePressed;
+
+      return { lx, ly, rx, ry, crossPressed, circlePressed, sprintPressed };
+    }
+
+    function toggleFlyMode() {
+      playerState.flyMode = !playerState.flyMode;
+      playerState.velY = 0;
+      const modeLabel = document.getElementById('move-mode-text');
+      modeLabel.textContent = playerState.flyMode ? 'FLY MODE' : 'WALK';
+      modeLabel.className = playerState.flyMode ? 'text-amber-400 font-semibold' : 'text-sky-400 font-semibold';
+      showToast(playerState.flyMode ? '🕊️ Fly Mode Enabled (✕ Up / ○ Down)' : '🥾 Walk Mode Enabled');
+    }
+
+    // Keyboard & Desktop PointerLock Controls
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      if (e.code === 'KeyF') toggleFlyMode();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    renderer.domElement.addEventListener('click', () => {
+      if (!isVrBoxMode && document.pointerLockElement !== renderer.domElement && window.innerWidth > 768) {
+        renderer.domElement.requestPointerLock?.();
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (document.pointerLockElement === renderer.domElement) {
+        playerState.yaw -= e.movementX * 0.0022;
+        playerState.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, playerState.pitch - e.movementY * 0.0022));
+      }
+    });
+
+    // Mobile Touch Virtual Joysticks
+    function setupTouchJoystick(zoneId, knobId, onUpdate) {
+      const zone = document.getElementById(zoneId);
+      const knob = document.getElementById(knobId);
+      let touchId = null;
+
+      zone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+        touchId = t.identifier;
+        updateKnob(t);
+      }, { passive: false });
+
+      zone.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        for (const t of e.changedTouches) {
+          if (t.identifier === touchId) updateKnob(t);
+        }
+      }, { passive: false });
+
+      const endTouch = (e) => {
+        for (const t of e.changedTouches) {
+          if (t.identifier === touchId) {
+            touchId = null;
+            knob.style.transform = 'translate(0px, 0px)';
+            onUpdate(0, 0);
+          }
+        }
+      };
+      zone.addEventListener('touchend', endTouch);
+      zone.addEventListener('touchcancel', endTouch);
+
+      function updateKnob(touch) {
+        const rect = zone.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const maxR = rect.width * 0.35;
+        let dx = touch.clientX - cx;
+        let dy = touch.clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        if (dist > maxR) {
+          dx = (dx / dist) * maxR;
+          dy = (dy / dist) * maxR;
+        }
+        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+        onUpdate(dx / maxR, dy / maxR);
+      }
+    }
+
+    setupTouchJoystick('touch-move-zone', 'touch-move-knob', (nx, ny) => {
+      touchInput.moveX = nx;
+      touchInput.moveY = ny;
+    });
+    setupTouchJoystick('touch-look-zone', 'touch-look-knob', (nx, ny) => {
+      touchInput.lookX = nx;
+      touchInput.lookY = ny;
+    });
+
+    document.getElementById('mobile-jump-btn').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      touchInput.jump = true;
+    });
+    document.getElementById('mobile-jump-btn').addEventListener('touchend', () => {
+      touchInput.jump = false;
+    });
+    document.getElementById('mobile-fly-btn').addEventListener('click', toggleFlyMode);
+
+    // =========================================================================
+    // 5. VR BOX (STEREOSCOPIC CARDBOARD) MODE CONTROLS
+    // =========================================================================
+    const vrBoxOverlay = document.getElementById('vr-box-overlay');
+    const mainHud = document.getElementById('main-hud');
+
+    async function enterVrBoxMode() {
+      // Request iOS 13+ DeviceOrientation permission if needed
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          const res = await DeviceOrientationEvent.requestPermission();
+          if (res !== 'granted') {
+            showToast('Gyroscope permission denied; use PS4 Right Stick to look', 'border-amber-400/60 text-amber-200');
+          }
+        } catch (err) {
+          console.warn('Gyro permission error:', err);
+        }
+      }
+
+      // Request Fullscreen & Landscape Lock for VR Box headset
+      try {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+        if (screen.orientation && screen.orientation.lock) {
+          await screen.orientation.lock('landscape').catch(() => {});
+        }
+      } catch (e) {
+        // Fallback smoothly if browser blocks fullscreen/lock
+      }
+
+      isVrBoxMode = true;
+      mainHud.style.display = 'none';
+      vrButton.style.display = 'none';
+      vrBoxOverlay.classList.add('active');
+      stereoEffect.setSize(window.innerWidth, window.innerHeight);
+      showToast('🥽 VR Box Mode Active — Insert phone into VR headset!');
+    }
+
+    function exitVrBoxMode() {
+      isVrBoxMode = false;
+      gyroEnabled = false;
+      mainHud.style.display = 'flex';
+      vrButton.style.display = 'block';
+      vrBoxOverlay.classList.remove('active');
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    document.getElementById('enter-vr-box-btn').addEventListener('click', enterVrBoxMode);
+    document.getElementById('exit-vr-box-btn').addEventListener('click', exitVrBoxMode);
+
+    document.getElementById('ipd-slider').addEventListener('input', (e) => {
+      const ipd = parseFloat(e.target.value);
+      document.getElementById('ipd-value').textContent = `${ipd.toFixed(3)}m`;
+      stereoEffect.setEyeSeparation(ipd);
+    });
+
+    // =========================================================================
+    // 6. SERVERLESS P2P MULTIPLAYER VIA PEERJS (GITHUB PAGES READY)
+    // =========================================================================
+    const remotePlayers = new Map(); // peerId -> { mesh, headMesh, targetPos, targetYaw, targetPitch, name, color }
+    let peer = null;
+    let myPeerId = '';
+    let isHost = true;
+    const hostConnections = new Map(); // Used when we are Host: peerId -> DataConnection
+    let clientToHostConn = null;       // Used when we are Client: DataConnection to Host
+
+    // Create Stylized Low-Poly Explorer Avatar for Remote Players
+    function createAvatarMesh(name, hexColor) {
+      const group = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: hexColor, flatShading: true });
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xfde68a, flatShading: true });
+      const visorMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.8 });
+
+      // Torso
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.9, 0.38), bodyMat);
+      torso.position.y = 0.95;
+      torso.castShadow = true;
+      group.add(torso);
+
+      // Head + VR Visor
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 1.65, 0);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.46, 0.46), skinMat);
+      head.castShadow = true;
+      headGroup.add(head);
+
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.18, 0.14), visorMat);
+      visor.position.set(0, 0.02, -0.22);
+      headGroup.add(visor);
+
+      group.add(headGroup);
+
+      // Floating Name Sprite
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+      ctx.roundRect(16, 10, 224, 44, 16);
+      ctx.fill();
+      ctx.font = 'bold 24px Inter, sans-serif';
+      ctx.fillStyle = '#f8fafc';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(name || 'Explorer', 128, 33);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.position.set(0, 2.25, 0);
+      sprite.scale.set(2.2, 0.55, 1);
+      group.add(sprite);
+
+      scene.add(group);
+      return { group, headGroup, sprite, name, color: hexColor };
+    }
+
+    function upsertRemotePlayer(id, data) {
+      if (!id || id === myPeerId) return;
+      let rp = remotePlayers.get(id);
+      if (!rp) {
+        const avatar = createAvatarMesh(data.name, data.color || '#38bdf8');
+        rp = {
+          ...avatar,
+          targetPos: new THREE.Vector3(data.x, data.y, data.z),
+          targetYaw: data.yaw || 0,
+          targetPitch: data.pitch || 0
+        };
+        rp.group.position.copy(rp.targetPos);
+        remotePlayers.set(id, rp);
+        updatePlayerCountUI();
+        showToast(`👋 ${data.name || 'An explorer'} joined the world!`);
+      } else {
+        rp.targetPos.set(data.x, data.y, data.z);
+        rp.targetYaw = data.yaw || 0;
+        rp.targetPitch = data.pitch || 0;
+      }
+    }
+
+    function removeRemotePlayer(id) {
+      const rp = remotePlayers.get(id);
+      if (rp) {
+        scene.remove(rp.group);
+        remotePlayers.delete(id);
+        updatePlayerCountUI();
+      }
+    }
+
+    function updatePlayerCountUI() {
+      const total = 1 + remotePlayers.size;
+      document.getElementById('player-count-text').textContent = `Explorers: ${total}`;
+    }
+
+    function initMultiplayer() {
+      if (typeof Peer === 'undefined') {
+        document.getElementById('my-peer-id').value = 'Offline Mode';
+        return;
+      }
+
+      // Generate concise 6-char room ID for easy sharing
+      const shortId = 'vr-' + Math.random().toString(36).substring(2, 8);
+      peer = new Peer(shortId, { debug: 1 });
+
+      peer.on('open', (id) => {
+        myPeerId = id;
+        document.getElementById('my-peer-id').value = id;
+
+        // Check URL parameter ?join=<roomId> for instant invite link joining
+        const params = new URLSearchParams(window.location.search);
+        const joinId = params.get('join');
+        if (joinId && joinId !== id) {
+          connectToHost(joinId);
+        }
+      });
+
+      // Incoming P2P connection (when acting as Host)
+      peer.on('connection', (conn) => {
+        hostConnections.set(conn.peer, conn);
+
+        conn.on('data', (msg) => {
+          if (msg.type === 'state') {
+            upsertRemotePlayer(conn.peer, msg.payload);
+            // Relay this peer's state to all other connected peers
+            for (const [otherId, otherConn] of hostConnections.entries()) {
+              if (otherId !== conn.peer && otherConn.open) {
+                otherConn.send({ type: 'peer_state', id: conn.peer, payload: msg.payload });
+              }
             }
-
-            // ------------------------------------------------------------------------
-            // 1. DETERMINISTIC 2D SIMPLEX NOISE FOR INFINITE SHARED TERRAIN
-            // ------------------------------------------------------------------------
-            class SimplexNoise2D {
-                constructor(seed = 1337) {
-                    this.grad3 = [
-                        [1, 1], [-1, 1], [1, -1], [-1, -1],
-                        [1, 0], [-1, 0], [0, 1], [0, -1]
-                    ];
-                    this.p = new Uint8Array(256);
-                    for (let i = 0; i < 256; i++) this.p[i] = i;
-                    let s = seed >>> 0;
-                    for (let i = 255; i > 0; i--) {
-                        s = (s * 1664525 + 1013904223) >>> 0;
-                        const j = s % (i + 1);
-                        const tmp = this.p[i];
-                        this.p[i] = this.p[j];
-                        this.p[j] = tmp;
-                    }
-                    this.perm = new Uint8Array(512);
-                    for (let i = 0; i < 512; i++) this.perm[i] = this.p[i & 255];
-                }
-
-                noise(xin, yin) {
-                    const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
-                    const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
-                    let n0 = 0, n1 = 0, n2 = 0;
-                    const s = (xin + yin) * F2;
-                    const i = Math.floor(xin + s);
-                    const j = Math.floor(yin + s);
-                    const t = (i + j) * G2;
-                    const x0 = xin - (i - t);
-                    const y0 = yin - (j - t);
-                    const i1 = x0 > y0 ? 1 : 0;
-                    const j1 = x0 > y0 ? 0 : 1;
-                    const x1 = x0 - i1 + G2;
-                    const y1 = y0 - j1 + G2;
-                    const x2 = x0 - 1.0 + 2.0 * G2;
-                    const y2 = y0 - 1.0 + 2.0 * G2;
-                    const ii = i & 255;
-                    const jj = j & 255;
-                    const gi0 = this.perm[ii + this.perm[jj]] & 7;
-                    const gi1 = this.perm[ii + i1 + this.perm[jj + j1]] & 7;
-                    const gi2 = this.perm[ii + 1 + this.perm[jj + 1]] & 7;
-
-                    let t0 = 0.5 - x0 * x0 - y0 * y0;
-                    if (t0 >= 0) {
-                        t0 *= t0;
-                        n0 = t0 * t0 * (this.grad3[gi0][0] * x0 + this.grad3[gi0][1] * y0);
-                    }
-                    let t1 = 0.5 - x1 * x1 - y1 * y1;
-                    if (t1 >= 0) {
-                        t1 *= t1;
-                        n1 = t1 * t1 * (this.grad3[gi1][0] * x1 + this.grad3[gi1][1] * y1);
-                    }
-                    let t2 = 0.5 - x2 * x2 - y2 * y2;
-                    if (t2 >= 0) {
-                        t2 *= t2;
-                        n2 = t2 * t2 * (this.grad3[gi2][0] * x2 + this.grad3[gi2][1] * y2);
-                    }
-                    return 70.0 * (n0 + n1 + n2);
-                }
-
-                fbm(x, z, octaves = 4) {
-                    let val = 0, amp = 0.5, freq = 1.0, norm = 0;
-                    for (let o = 0; o < octaves; o++) {
-                        val += amp * this.noise(x * freq, z * freq);
-                        norm += amp;
-                        amp *= 0.5;
-                        freq *= 2.05;
-                    }
-                    return val / norm;
-                }
-            }
-
-            // ------------------------------------------------------------------------
-            // 2. WEB AUDIO PROCEDURAL SOUND ENGINE
-            // ------------------------------------------------------------------------
-            class SoundEngine {
-                constructor() {
-                    this.ctx = null;
-                    this.initialized = false;
-                }
-
-                init() {
-                    if (this.initialized) return;
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    if (!AudioCtx) return;
-                    this.ctx = new AudioCtx();
-                    this.initialized = true;
-                }
-
-                playChime(baseFreq = 523.25) {
-                    if (!this.initialized || !this.ctx) return;
-                    const now = this.ctx.currentTime;
-                    [baseFreq, baseFreq * 1.25, baseFreq * 1.5].forEach((freq, i) => {
-                        const osc = this.ctx.createOscillator();
-                        const gain = this.ctx.createGain();
-                        osc.type = 'sine';
-                        osc.frequency.setValueAtTime(freq, now + i * 0.05);
-                        gain.gain.setValueAtTime(0.001, now + i * 0.05);
-                        gain.gain.exponentialRampToValueAtTime(0.07, now + i * 0.05 + 0.02);
-                        gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.05 + 0.45);
-                        osc.connect(gain);
-                        gain.connect(this.ctx.destination);
-                        osc.start(now + i * 0.05);
-                        osc.stop(now + i * 0.05 + 0.5);
-                    });
-                }
-
-                playWavePulse(offset = 0) {
-                    if (!this.initialized || !this.ctx) return;
-                    const now = this.ctx.currentTime;
-                    [392 + offset, 493.88 + offset, 587.33 + offset, 783.99 + offset].forEach((freq, idx) => {
-                        const osc = this.ctx.createOscillator();
-                        const gain = this.ctx.createGain();
-                        osc.type = 'triangle';
-                        osc.frequency.setValueAtTime(freq, now + idx * 0.04);
-                        gain.gain.setValueAtTime(0.001, now + idx * 0.04);
-                        gain.gain.exponentialRampToValueAtTime(0.075, now + idx * 0.04 + 0.03);
-                        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.04 + 0.6);
-                        osc.connect(gain);
-                        gain.connect(this.ctx.destination);
-                        osc.start(now + idx * 0.04);
-                        osc.stop(now + idx * 0.04 + 0.65);
-                    });
-                }
-
-                playBeacon() {
-                    if (!this.initialized || !this.ctx) return;
-                    const now = this.ctx.currentTime;
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(220, now);
-                    osc.frequency.exponentialRampToValueAtTime(660, now + 0.35);
-                    gain.gain.setValueAtTime(0.11, now);
-                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    osc.start(now);
-                    osc.stop(now + 0.48);
-                }
-            }
-
-            // ------------------------------------------------------------------------
-            // 3. ZERO-CONFIG REAL-TIME MULTIPLAYER RELAY (MQTT OVER WSS + LOCAL TAB SYNC)
-            //    Connects players across different phones/PCs with zero server setup!
-            // ------------------------------------------------------------------------
-            class ZeroConfigMultiplayer {
-                constructor(onMessage, onStatusChange) {
-                    this.onMessage = onMessage;
-                    this.onStatusChange = onStatusChange;
-                    this.ws = null;
-                    this.bc = null;
-                    this.room = 'public';
-                    this.clientId = 'vr_' + Math.random().toString(36).slice(2, 10);
-                    this.connected = false;
-                    this.pingTimer = null;
-                    this.brokers = [
-                        'wss://broker.emqx.io:8084/mqtt',
-                        'wss://broker.hivemq.com:8884/mqtt'
-                    ];
-                    this.brokerIndex = 0;
-                }
-
-                encodeStr(str) {
-                    const bytes = new TextEncoder().encode(str);
-                    const out = new Uint8Array(2 + bytes.length);
-                    out[0] = (bytes.length >> 8) & 0xff;
-                    out[1] = bytes.length & 0xff;
-                    out.set(bytes, 2);
-                    return out;
-                }
-
-                encodeLength(len) {
-                    const out = [];
-                    do {
-                        let digit = len % 128;
-                        len = Math.floor(len / 128);
-                        if (len > 0) digit |= 0x80;
-                        out.push(digit);
-                    } while (len > 0);
-                    return new Uint8Array(out);
-                }
-
-                concatBytes(arrays) {
-                    const total = arrays.reduce((sum, a) => sum + a.length, 0);
-                    const res = new Uint8Array(total);
-                    let offset = 0;
-                    for (const a of arrays) {
-                        res.set(a, offset);
-                        offset += a.length;
-                    }
-                    return res;
-                }
-
-                buildConnectPacket(clientId) {
-                    const proto = this.encodeStr('MQTT');
-                    const level = new Uint8Array([0x04]);
-                    const flags = new Uint8Array([0x02]); // Clean session
-                    const keepAlive = new Uint8Array([0x00, 0x1e]); // 30s
-                    const cid = this.encodeStr(clientId);
-                    const body = this.concatBytes([proto, level, flags, keepAlive, cid]);
-                    return this.concatBytes([new Uint8Array([0x10]), this.encodeLength(body.length), body]);
-                }
-
-                buildSubscribePacket(topic) {
-                    const packetId = new Uint8Array([0x00, 0x01]);
-                    const tBytes = this.encodeStr(topic);
-                    const qos = new Uint8Array([0x00]);
-                    const body = this.concatBytes([packetId, tBytes, qos]);
-                    return this.concatBytes([new Uint8Array([0x82]), this.encodeLength(body.length), body]);
-                }
-
-                buildPublishPacket(topic, jsonStr) {
-                    const tBytes = this.encodeStr(topic);
-                    const payload = new TextEncoder().encode(jsonStr);
-                    const body = this.concatBytes([tBytes, payload]);
-                    return this.concatBytes([new Uint8Array([0x30]), this.encodeLength(body.length), body]);
-                }
-
-                connect(room) {
-                    this.room = room || 'public';
-                    this.disconnect();
-
-                    // Same-device multi-tab instant channel
-                    if (typeof BroadcastChannel !== 'undefined') {
-                        this.bc = new BroadcastChannel('aetheria_vr_' + this.room);
-                        this.bc.onmessage = (ev) => {
-                            if (ev.data && ev.data.senderId !== this.clientId) {
-                                this.onMessage(ev.data);
-                            }
-                        };
-                    }
-
-                    const url = this.brokers[this.brokerIndex % this.brokers.length];
-                    try {
-                        this.ws = new WebSocket(url, ['mqtt']);
-                        this.ws.binaryType = 'arraybuffer';
-
-                        this.ws.onopen = () => {
-                            this.ws.send(this.buildConnectPacket(this.clientId));
-                        };
-
-                        this.ws.onmessage = (event) => {
-                            const buf = new Uint8Array(event.data);
-                            if (buf.length < 2) return;
-                            const packetType = buf[0] & 0xf0;
-
-                            // CONNACK (0x20)
-                            if (packetType === 0x20) {
-                                this.connected = true;
-                                this.onStatusChange(true, this.room);
-                                const topic = `aetheria-vr-v2/rooms/${this.room}`;
-                                this.ws.send(this.buildSubscribePacket(topic));
-                                this.pingTimer = setInterval(() => {
-                                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                                        this.ws.send(new Uint8Array([0xc0, 0x00])); // PINGREQ
-                                    }
-                                }, 15000);
-                            }
-
-                            // PUBLISH (0x30)
-                            if (packetType === 0x30) {
-                                let idx = 1;
-                                let mult = 1;
-                                let remLen = 0;
-                                let byte = 0;
-                                do {
-                                    byte = buf[idx++];
-                                    remLen += (byte & 127) * mult;
-                                    mult *= 128;
-                                } while ((byte & 128) !== 0 && idx < buf.length);
-
-                                if (idx + 2 <= buf.length) {
-                                    const topicLen = (buf[idx] << 8) | buf[idx + 1];
-                                    const payloadStart = idx + 2 + topicLen;
-                                    if (payloadStart < buf.length) {
-                                        const text = new TextDecoder().decode(buf.subarray(payloadStart));
-                                        try {
-                                            const parsed = JSON.parse(text);
-                                            if (parsed && parsed.senderId !== this.clientId) {
-                                                this.onMessage(parsed);
-                                            }
-                                        } catch (e) {}
-                                    }
-                                }
-                            }
-                        };
-
-                        this.ws.onerror = () => {
-                            this.connected = false;
-                            this.onStatusChange(false, this.room);
-                        };
-
-                        this.ws.onclose = () => {
-                            this.connected = false;
-                            if (this.pingTimer) clearInterval(this.pingTimer);
-                            this.onStatusChange(false, this.room);
-                            // Auto-reconnect with fallback broker
-                            setTimeout(() => {
-                                this.brokerIndex++;
-                                this.connect(this.room);
-                            }, 3500);
-                        };
-                    } catch (err) {
-                        this.onStatusChange(false, this.room);
-                    }
-                }
-
-                publish(dataObj) {
-                    dataObj.senderId = this.clientId;
-                    if (this.bc) {
-                        try { this.bc.postMessage(dataObj); } catch (e) {}
-                    }
-                    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.connected) {
-                        const topic = `aetheria-vr-v2/rooms/${this.room}`;
-                        this.ws.send(this.buildPublishPacket(topic, JSON.stringify(dataObj)));
-                    }
-                }
-
-                disconnect() {
-                    if (this.pingTimer) clearInterval(this.pingTimer);
-                    if (this.bc) {
-                        this.bc.close();
-                        this.bc = null;
-                    }
-                    if (this.ws) {
-                        this.ws.onclose = null;
-                        this.ws.close();
-                        this.ws = null;
-                    }
-                    this.connected = false;
-                }
-            }
-
-            // ------------------------------------------------------------------------
-            // 4. GAME CONFIGURATION & GLOBAL STATE
-            // ------------------------------------------------------------------------
-            const WORLD = {
-                CHUNK_SIZE: 64,
-                CHUNK_SEGMENTS: 24,
-                RENDER_DIST: 2,
-                WATER_LEVEL: 0.0,
-                PLAYER_EYE_HEIGHT: 1.75,
-                WALK_SPEED: 13.5,
-                FLY_SPEED: 26.0,
-                GRAVITY: 24.0,
-                JUMP_FORCE: 10.5
-            };
-
-            const ATMOSPHERES = [
-                { name: 'Crystal Dawn', sky: 0x162447, fog: 0x1f3668, sun: 0xffd194, sunInt: 1.25, amb: 0x4b6cb7 },
-                { name: 'Aether Noon', sky: 0x38bdf8, fog: 0x7dd3fc, sun: 0xffffff, sunInt: 1.45, amb: 0x93c5fd },
-                { name: 'Amber Sunset', sky: 0x3b185f, fog: 0x7a2869, sun: 0xfb923c, sunInt: 1.35, amb: 0x86198f },
-                { name: 'Bioluminescent Night', sky: 0x050814, fog: 0x0b132b, sun: 0x60a5fa, sunInt: 0.75, amb: 0x1e293b }
-            ];
-
-            const ADJ = ['Aero', 'Solar', 'Nebula', 'Crystal', 'Echo', 'Nova', 'Drift', 'Star', 'Zenith', 'Azure'];
-            const NOUN = ['Walker', 'Nomad', 'Drifter', 'Pilot', 'Seeker', 'Voyager', 'Ranger', 'Strider'];
-            const randomName = `${ADJ[Math.floor(Math.random() * ADJ.length)]}${NOUN[Math.floor(Math.random() * NOUN.length)]}_${Math.floor(10 + Math.random() * 89)}`;
-            const urlParams = new URLSearchParams(window.location.search);
-            const initialRoom = (urlParams.get('room') || 'public').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 16) || 'public';
-
-            const state = {
-                started: false,
-                vrMode: false,
-                ipdMm: 64,
-                skyIndex: 0,
-                orbs: 0,
-                collectedOrbs: new Set(),
-                beacons: [],
-                net: {
-                    name: randomName,
-                    color: '#38bdf8',
-                    room: initialRoom,
-                    lastBroadcast: 0,
-                    waveTime: 0,
-                    warpIndex: 0
-                },
-                player: {
-                    pos: new THREE.Vector3((Math.random() - 0.5) * 14, 15, (Math.random() - 0.5) * 14),
-                    vel: new THREE.Vector3(0, 0, 0),
-                    yaw: 0,
-                    pitch: 0,
-                    grounded: false,
-                    flying: false
-                },
-                gyro: {
-                    enabled: false,
-                    alpha: 0,
-                    beta: 0,
-                    gamma: 0,
-                    yawOffset: 0,
-                    initialized: false
-                },
-                gamepad: {
-                    connected: false,
-                    prevButtons: []
-                },
-                input: {
-                    keys: {},
-                    touchMove: { x: 0, y: 0 },
-                    touchFly: false,
-                    dragging: false,
-                    lastX: 0,
-                    lastY: 0
-                }
-            };
-
-            document.getElementById('input-player-name').value = state.net.name;
-            document.getElementById('input-room-code').value = state.net.room;
-            document.querySelectorAll('.hud-room-name').forEach(el => el.textContent = state.net.room);
-
-            const noise = new SimplexNoise2D(77421);
-            const sound = new SoundEngine();
-
-            // ------------------------------------------------------------------------
-            // 5. THREE.JS SCENE, RENDERER & STEREOSCOPIC CAMERA RIG
-            // ------------------------------------------------------------------------
-            const canvas = document.getElementById('game-canvas');
-            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-            renderer.setSize(window.innerWidth, window.innerHeight);
-
-            const scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(ATMOSPHERES[0].fog, 0.0075);
-
-            const mainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 420);
-            const leftEyeCam = new THREE.PerspectiveCamera(82, (window.innerWidth * 0.5) / window.innerHeight, 0.1, 420);
-            const rightEyeCam = new THREE.PerspectiveCamera(82, (window.innerWidth * 0.5) / window.innerHeight, 0.1, 420);
-
-            const playerRig = new THREE.Group();
-            playerRig.add(mainCamera, leftEyeCam, rightEyeCam);
-            scene.add(playerRig);
-
-            function updateEyeSeparation() {
-                const halfIpdMeters = (state.ipdMm / 1000) * 0.5;
-                leftEyeCam.position.set(-halfIpdMeters, 0, 0);
-                rightEyeCam.position.set(halfIpdMeters, 0, 0);
-                document.querySelectorAll('.hud-ipd').forEach(el => el.textContent = `IPD ${state.ipdMm}mm`);
-                document.getElementById('modal-ipd-val').textContent = `${state.ipdMm} mm`;
-            }
-            updateEyeSeparation();
-
-            // Lighting & Sky
-            const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x1e293b, 0.85);
-            scene.add(hemiLight);
-
-            const sunLight = new THREE.DirectionalLight(0xffd194, 1.25);
-            sunLight.position.set(60, 110, 40);
-            scene.add(sunLight);
-
-            // Starfield dome
-            const starGeo = new THREE.BufferGeometry();
-            const starVerts = new Float32Array(900 * 3);
-            for (let i = 0; i < 900; i++) {
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(Math.random());
-                const r = 280;
-                starVerts[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-                starVerts[i * 3 + 1] = r * Math.cos(phi) + 20;
-                starVerts[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
-            }
-            starGeo.setAttribute('position', new THREE.BufferAttribute(starVerts, 3));
-            const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.1 }));
-            scene.add(starField);
-
-            // Infinite Water Plane following player
-            const waterPlane = new THREE.Mesh(
-                new THREE.PlaneGeometry(900, 900),
-                new THREE.MeshStandardMaterial({
-                    color: 0x0ea5e9,
-                    roughness: 0.2,
-                    metalness: 0.65,
-                    transparent: true,
-                    opacity: 0.78
-                })
-            );
-            waterPlane.rotation.x = -Math.PI / 2;
-            waterPlane.position.y = WORLD.WATER_LEVEL;
-            scene.add(waterPlane);
-
-            function applyAtmosphere(index) {
-                const atm = ATMOSPHERES[index % ATMOSPHERES.length];
-                renderer.setClearColor(atm.sky);
-                scene.fog.color.setHex(atm.fog);
-                sunLight.color.setHex(atm.sun);
-                sunLight.intensity = atm.sunInt;
-                hemiLight.color.setHex(atm.amb);
-                starField.visible = index === 3 || index === 0;
-            }
-            applyAtmosphere(0);
-
-            // ------------------------------------------------------------------------
-            // 6. INFINITE PROCEDURAL CHUNK TERRAIN, TREES, CRYSTALS & ORBS
-            // ------------------------------------------------------------------------
-            function getTerrainHeight(x, z) {
-                const base = noise.fbm(x * 0.009, z * 0.009, 4);
-                const ridge = Math.abs(noise.noise(x * 0.0045 + 11.3, z * 0.0045 - 7.1));
-                let h = base * 16.0 + Math.pow(ridge, 1.8) * 24.0 - 2.5;
-                // Flatten spawn clearing slightly so players meet comfortably
-                const distFromOrigin = Math.hypot(x, z);
-                if (distFromOrigin < 28) {
-                    const blend = distFromOrigin / 28;
-                    h = h * blend + 2.5 * (1 - blend);
-                }
-                return h;
-            }
-
-            const loadedChunks = new Map();
-            const activeOrbs = [];
-
-            const treeTrunkGeo = new THREE.CylinderGeometry(0.22, 0.35, 1.8, 5);
-            const treeCrownGeo = new THREE.ConeGeometry(1.45, 3.8, 6);
-            const crystalGeo = new THREE.OctahedronGeometry(0.75, 0);
-            const orbGeo = new THREE.IcosahedronGeometry(0.6, 1);
-
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
-            const crownMat = new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.75, flatShading: true });
-            const crystalMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-            const orbMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
-
-            function createChunk(cx, cz) {
-                const key = `${cx},${cz}`;
-                if (loadedChunks.has(key)) return;
-
-                const group = new THREE.Group();
-                const size = WORLD.CHUNK_SIZE;
-                const segs = WORLD.CHUNK_SEGMENTS;
-                const worldX0 = cx * size;
-                const worldZ0 = cz * size;
-
-                const geo = new THREE.PlaneGeometry(size, size, segs, segs);
-                geo.rotateX(-Math.PI / 2);
-
-                const posAttr = geo.attributes.position;
-                const colors = new Float32Array(posAttr.count * 3);
-                const cSand = new THREE.Color(0xd97706);
-                const cGrass = new THREE.Color(0x10b981);
-                const cRock = new THREE.Color(0x475569);
-                const cSnow = new THREE.Color(0xf8fafc);
-
-                for (let i = 0; i < posAttr.count; i++) {
-                    const lx = posAttr.getX(i);
-                    const lz = posAttr.getZ(i);
-                    const wx = worldX0 + lx + size * 0.5;
-                    const wz = worldZ0 + lz + size * 0.5;
-                    const y = getTerrainHeight(wx, wz);
-                    posAttr.setY(i, y);
-
-                    let c = cGrass;
-                    if (y < 1.2) c = cSand;
-                    else if (y > 22) c = cSnow;
-                    else if (y > 13) c = cRock;
-
-                    colors[i * 3] = c.r;
-                    colors[i * 3 + 1] = c.g;
-                    colors[i * 3 + 2] = c.b;
-                }
-
-                geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-                geo.computeVertexNormals();
-
-                const terrainMesh = new THREE.Mesh(
-                    geo,
-                    new THREE.MeshStandardMaterial({
-                        vertexColors: true,
-                        roughness: 0.85,
-                        metalness: 0.05,
-                        flatShading: true
-                    })
-                );
-                terrainMesh.position.set(worldX0 + size * 0.5, 0, worldZ0 + size * 0.5);
-                group.add(terrainMesh);
-
-                // Deterministic props per chunk (trees, glowing crystals, floating islands & orbs)
-                let seed = Math.abs((cx * 73856093) ^ (cz * 19349663)) >>> 0;
-                const rand = () => {
-                    seed = (seed * 1664525 + 1013904223) >>> 0;
-                    return seed / 4294967296;
-                };
-
-                for (let t = 0; t < 7; t++) {
-                    const px = worldX0 + rand() * size;
-                    const pz = worldZ0 + rand() * size;
-                    const py = getTerrainHeight(px, pz);
-                    if (py > 1.5 && py < 14.5) {
-                        const scale = 0.85 + rand() * 0.8;
-                        const trunk = new THREE.Mesh(treeTrunkGeo, trunkMat);
-                        trunk.position.set(px, py + 0.8 * scale, pz);
-                        trunk.scale.setScalar(scale);
-                        const crown = new THREE.Mesh(treeCrownGeo, crownMat);
-                        crown.position.set(px, py + 3.1 * scale, pz);
-                        crown.scale.setScalar(scale);
-                        group.add(trunk, crown);
-                    } else if (py >= 14.5 && rand() > 0.45) {
-                        const crys = new THREE.Mesh(crystalGeo, crystalMat);
-                        crys.position.set(px, py + 0.6, pz);
-                        crys.scale.set(0.7, 1.6, 0.7);
-                        group.add(crys);
-                    }
-                }
-
-                // Floating Sky Island in occasional chunks
-                if (rand() > 0.68) {
-                    const ix = worldX0 + size * 0.5;
-                    const iz = worldZ0 + size * 0.5;
-                    const iy = 28 + rand() * 16;
-                    const island = new THREE.Mesh(
-                        new THREE.ConeGeometry(6.5, 8.5, 6),
-                        new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true })
-                    );
-                    island.rotation.x = Math.PI;
-                    island.position.set(ix, iy, iz);
-                    group.add(island);
-                }
-
-                // Collectible Exploration Orb
-                const orbId = `${cx}_${cz}`;
-                if (!state.collectedOrbs.has(orbId)) {
-                    const ox = worldX0 + (0.25 + rand() * 0.5) * size;
-                    const oz = worldZ0 + (0.25 + rand() * 0.5) * size;
-                    const oy = Math.max(WORLD.WATER_LEVEL, getTerrainHeight(ox, oz)) + 2.1;
-                    const orbMesh = new THREE.Mesh(orbGeo, orbMat);
-                    orbMesh.position.set(ox, oy, oz);
-                    group.add(orbMesh);
-                    activeOrbs.push({ id: orbId, mesh: orbMesh, baseY: oy, chunkKey: key });
-                }
-
-                scene.add(group);
-                loadedChunks.set(key, { group, geo });
-            }
-
-            function updateChunks() {
-                const pcx = Math.floor(state.player.pos.x / WORLD.CHUNK_SIZE);
-                const pcz = Math.floor(state.player.pos.z / WORLD.CHUNK_SIZE);
-                const r = WORLD.RENDER_DIST;
-
-                for (let dx = -r; dx <= r; dx++) {
-                    for (let dz = -r; dz <= r; dz++) {
-                        createChunk(pcx + dx, pcz + dz);
-                    }
-                }
-
-                for (const [key, chunk] of loadedChunks.entries()) {
-                    const [cx, cz] = key.split(',').map(Number);
-                    if (Math.abs(cx - pcx) > r + 1 || Math.abs(cz - pcz) > r + 1) {
-                        scene.remove(chunk.group);
-                        chunk.geo.dispose();
-                        loadedChunks.delete(key);
-                        for (let i = activeOrbs.length - 1; i >= 0; i--) {
-                            if (activeOrbs[i].chunkKey === key) activeOrbs.splice(i, 1);
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------------
-            // 7. ANIMATED 3D CYBER-TRAVELER AVATARS & MULTIPLAYER SYNC
-            // ------------------------------------------------------------------------
-            const remotePlayers = new Map();
-            const aiBots = new Map();
-            const pulseRings = [];
-
-            function createNametagSprite(name, colorHex, distMeters = 0) {
-                const c = document.createElement('canvas');
-                c.width = 512;
-                c.height = 128;
-                const ctx = c.getContext('2d');
-                const tex = new THREE.CanvasTexture(c);
-                const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
-                const sprite = new THREE.Sprite(mat);
-                sprite.scale.set(3.4, 0.85, 1);
-                const tagObj = { sprite, c, ctx, tex };
-                updateNametagSprite(tagObj, name, colorHex, distMeters);
-                return tagObj;
-            }
-
-            function updateNametagSprite(tagObj, name, colorHex, distMeters) {
-                const { ctx, c, tex } = tagObj;
-                ctx.clearRect(0, 0, c.width, c.height);
-                ctx.fillStyle = 'rgba(7, 12, 24, 0.82)';
-                ctx.beginPath();
-                if (ctx.roundRect) ctx.roundRect(30, 22, 452, 84, 42);
-                else ctx.rect(30, 22, 452, 84);
-                ctx.fill();
-                ctx.lineWidth = 5;
-                ctx.strokeStyle = colorHex;
-                ctx.stroke();
-
-                ctx.font = 'bold 32px sans-serif';
-                ctx.fillStyle = '#ffffff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(`${name} • ${Math.round(distMeters)}m`, 256, 65);
-                tex.needsUpdate = true;
-            }
-
-            function buildTravelerAvatar(name, colorHex) {
-                const accent = new THREE.Color(colorHex);
-                const root = new THREE.Group();
-                const armorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.35, metalness: 0.65, flatShading: true });
-                const glowMat = new THREE.MeshBasicMaterial({ color: accent });
-
-                const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.22, 1.05, 8), armorMat);
-                torso.position.y = -0.85;
-                root.add(torso);
-
-                const chestDiamond = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), glowMat);
-                chestDiamond.position.set(0, -0.72, -0.34);
-                root.add(chestDiamond);
-
-                // Articulated Head + VR Visor
-                const headGroup = new THREE.Group();
-                headGroup.position.set(0, -0.05, 0);
-                const helmet = new THREE.Mesh(new THREE.DodecahedronGeometry(0.34, 1), armorMat);
-                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.16, 0.24), glowMat);
-                visor.position.set(0, 0.02, -0.24);
-                headGroup.add(helmet, visor);
-                root.add(headGroup);
-
-                // Floating Shoulder Fins
-                const leftWing = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), armorMat);
-                leftWing.scale.set(0.7, 1.6, 0.7);
-                leftWing.position.set(-0.56, -0.68, 0);
-
-                const rightWing = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), armorMat);
-                rightWing.scale.set(0.7, 1.6, 0.7);
-                rightWing.position.set(0.56, -0.68, 0);
-                root.add(leftWing, rightWing);
-
-                // Jetpack Flames
-                const flameGeo = new THREE.ConeGeometry(0.14, 0.75, 6);
-                flameGeo.rotateX(Math.PI);
-                const flameMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.88 });
-                const flameL = new THREE.Mesh(flameGeo, flameMat);
-                flameL.position.set(-0.22, -1.55, 0.18);
-                const flameR = new THREE.Mesh(flameGeo, flameMat);
-                flameR.position.set(0.22, -1.55, 0.18);
-                flameL.visible = false;
-                flameR.visible = false;
-                root.add(flameL, flameR);
-
-                // Ground Proximity Ring
-                const ring = new THREE.Mesh(
-                    new THREE.RingGeometry(0.56, 0.7, 24),
-                    new THREE.MeshBasicMaterial({ color: accent, side: THREE.DoubleSide, transparent: true, opacity: 0.65 })
-                );
-                ring.rotation.x = -Math.PI / 2;
-                ring.position.y = -1.65;
-                root.add(ring);
-
-                const tagObj = createNametagSprite(name, colorHex, 0);
-                tagObj.sprite.position.set(0, 0.75, 0);
-                root.add(tagObj.sprite);
-
-                scene.add(root);
-                return { root, headGroup, leftWing, rightWing, flameL, flameR, ring, tagObj, glowMat };
-            }
-
-            function spawnPulseEffect(pos, colorHex) {
-                const geo = new THREE.RingGeometry(0.6, 1.15, 32);
-                geo.rotateX(-Math.PI / 2);
-                const mat = new THREE.MeshBasicMaterial({
-                    color: new THREE.Color(colorHex),
-                    transparent: true,
-                    opacity: 0.9,
-                    side: THREE.DoubleSide
-                });
-                const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.copy(pos);
-                mesh.position.y -= 0.8;
-                scene.add(mesh);
-                pulseRings.push({ mesh, age: 0, maxAge: 1.5 });
-            }
-
-            function spawnBeaconMesh(x, y, z, colorHex) {
-                const g = new THREE.Group();
-                const col = new THREE.Color(colorHex);
-                const beam = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.18, 0.5, 110, 8, 1, true),
-                    new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.42, side: THREE.DoubleSide })
-                );
-                beam.position.y = 55;
-                const crystal = new THREE.Mesh(
-                    new THREE.OctahedronGeometry(0.95, 0),
-                    new THREE.MeshBasicMaterial({ color: col })
-                );
-                crystal.position.y = 1.1;
-                g.add(beam, crystal);
-                g.position.set(x, y, z);
-                scene.add(g);
-                return g;
-            }
-
-            // Initialize Zero-Config Multiplayer Relay
-            const mp = new ZeroConfigMultiplayer(
-                (msg) => {
-                    if (msg.type === 'state') {
-                        let p = remotePlayers.get(msg.senderId);
-                        if (!p) {
-                            const rig = buildTravelerAvatar(msg.name || 'Traveler', msg.color || '#38bdf8');
-                            p = {
-                                ...rig,
-                                name: msg.name || 'Traveler',
-                                color: msg.color || '#38bdf8',
-                                curPos: new THREE.Vector3(msg.x, msg.y, msg.z),
-                                tarPos: new THREE.Vector3(msg.x, msg.y, msg.z),
-                                curYaw: msg.yaw || 0,
-                                tarYaw: msg.yaw || 0,
-                                curPitch: msg.pitch || 0,
-                                tarPitch: msg.pitch || 0,
-                                flying: Boolean(msg.flying),
-                                lastSeen: Date.now(),
-                                lastDist: -1
-                            };
-                            rig.root.position.copy(p.curPos);
-                            remotePlayers.set(msg.senderId, p);
-                            showToast(`✦ ${p.name} joined your world!`);
-                            sound.playChime(587.33);
-                            broadcastLocalState(true);
-                        } else {
-                            p.tarPos.set(msg.x, msg.y, msg.z);
-                            p.tarYaw = msg.yaw || 0;
-                            p.tarPitch = msg.pitch || 0;
-                            p.flying = Boolean(msg.flying);
-                            p.lastSeen = Date.now();
-                            if (msg.name) p.name = msg.name;
-                            if (msg.color && p.color !== msg.color) {
-                                p.color = msg.color;
-                                p.glowMat.color.set(msg.color);
-                            }
-                        }
-                    } else if (msg.type === 'wave') {
-                        const p = remotePlayers.get(msg.senderId);
-                        const pos = p ? p.curPos : new THREE.Vector3(msg.x, msg.y, msg.z);
-                        spawnPulseEffect(pos, msg.color || '#38bdf8');
-                        sound.playWavePulse(80);
-                        showToast(`👋 ${msg.name || 'A friend'} sent a wave!`);
-                    } else if (msg.type === 'beacon') {
-                        spawnBeaconMesh(msg.x, msg.y, msg.z, msg.color || '#38bdf8');
-                        showToast(`📍 ${msg.name || 'A friend'} placed a beacon`);
-                    }
-                },
-                (isOnline, roomName) => {
-                    const modalDot = document.getElementById('modal-net-dot');
-                    const modalStatus = document.getElementById('modal-net-status');
-                    const hudDot = document.getElementById('hud-net-dot');
-                    if (isOnline) {
-                        modalDot.classList.add('online');
-                        hudDot.classList.add('online');
-                        modalStatus.textContent = `Multiplayer Ready (${roomName})`;
-                    } else {
-                        modalDot.classList.remove('online');
-                        hudDot.classList.remove('online');
-                        modalStatus.textContent = 'Connecting Relay...';
-                    }
-                }
-            );
-
-            function broadcastLocalState(force = false) {
-                const now = performance.now();
-                if (!force && now - state.net.lastBroadcast < 75) return; // ~13 Hz smooth updates
-                state.net.lastBroadcast = now;
-
-                const euler = new THREE.Euler().setFromQuaternion(playerRig.quaternion, 'YXZ');
-                mp.publish({
-                    type: 'state',
-                    name: state.net.name,
-                    color: state.net.color,
-                    x: Number(state.player.pos.x.toFixed(2)),
-                    y: Number(state.player.pos.y.toFixed(2)),
-                    z: Number(state.player.pos.z.toFixed(2)),
-                    yaw: Number(euler.y.toFixed(3)),
-                    pitch: Number(euler.x.toFixed(3)),
-                    flying: state.player.flying
-                });
-            }
-
-            function triggerWave() {
-                spawnPulseEffect(state.player.pos, state.net.color);
-                sound.playWavePulse(0);
-                showToast('👋 Harmonic Wave Sent!');
-                mp.publish({
-                    type: 'wave',
-                    name: state.net.name,
-                    color: state.net.color,
-                    x: state.player.pos.x,
-                    y: state.player.pos.y,
-                    z: state.player.pos.z
-                });
-            }
-
-            function dropBeacon() {
-                const bx = state.player.pos.x;
-                const bz = state.player.pos.z;
-                const by = Math.max(WORLD.WATER_LEVEL, getTerrainHeight(bx, bz));
-                const b = spawnBeaconMesh(bx, by, bz, state.net.color);
-                state.beacons.push(b);
-                if (state.beacons.length > 8) scene.remove(state.beacons.shift());
-                sound.playBeacon();
-                showToast('📍 Light Beacon Placed');
-                mp.publish({
-                    type: 'beacon',
-                    name: state.net.name,
-                    color: state.net.color,
-                    x: bx,
-                    y: by,
-                    z: bz
-                });
-            }
-
-            function warpToNextFriend() {
-                const list = [];
-                for (const p of remotePlayers.values()) list.push({ name: p.name, pos: p.curPos });
-                for (const b of aiBots.values()) list.push({ name: b.name, pos: b.pos });
-
-                if (list.length === 0) {
-                    showToast('No friends in room yet — tap Invite to share link!');
-                    return;
-                }
-                state.net.warpIndex = (state.net.warpIndex + 1) % list.length;
-                const target = list[state.net.warpIndex];
-                const ang = Math.random() * Math.PI * 2;
-                state.player.pos.set(
-                    target.pos.x + Math.cos(ang) * 4.5,
-                    target.pos.y + 1.0,
-                    target.pos.z + Math.sin(ang) * 4.5
-                );
-                state.player.vel.set(0, 0, 0);
-                spawnPulseEffect(state.player.pos, state.net.color);
-                sound.playWavePulse(110);
-                showToast(`⚡ Warped next to ${target.name}`);
-                broadcastLocalState(true);
-            }
-
-            function toggleAiBots(enabled) {
-                if (!enabled) {
-                    for (const b of aiBots.values()) scene.remove(b.rig.root);
-                    aiBots.clear();
-                    return;
-                }
-                [
-                    { id: 'bot1', name: 'Echo_Lyra', color: '#a855f7', angle: 0.4, radius: 18 },
-                    { id: 'bot2', name: 'Echo_Orion', color: '#10b981', angle: 2.5, radius: 28 }
-                ].forEach((cfg) => {
-                    const rig = buildTravelerAvatar(cfg.name, cfg.color);
-                    const bx = state.player.pos.x + Math.cos(cfg.angle) * cfg.radius;
-                    const bz = state.player.pos.z + Math.sin(cfg.angle) * cfg.radius;
-                    const by = getTerrainHeight(bx, bz) + 2.2;
-                    aiBots.set(cfg.id, { ...cfg, rig, pos: new THREE.Vector3(bx, by, bz), lastDist: -1 });
-                });
-            }
-
-            // ------------------------------------------------------------------------
-            // 8. VR BOX GYROSCOPE & FULLSCREEN CONTROLS
-            // ------------------------------------------------------------------------
-            window.addEventListener('deviceorientation', (e) => {
-                if (e.alpha === null) return;
-                state.gyro.alpha = e.alpha;
-                state.gyro.beta = e.beta || 0;
-                state.gyro.gamma = e.gamma || 0;
-                if (!state.gyro.initialized) {
-                    state.gyro.yawOffset = e.alpha;
-                    state.gyro.initialized = true;
-                }
-            });
-
-            function recenterView() {
-                state.gyro.yawOffset = state.gyro.alpha;
-                state.player.pitch = 0;
-                showToast('VR Head Orientation Recentered');
-            }
-
-            async function enterExperience(useVR) {
-                sound.init();
-                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    try { await DeviceOrientationEvent.requestPermission(); } catch (e) {}
-                }
-                state.gyro.enabled = true;
-                state.started = true;
-                document.getElementById('start-modal').classList.add('hidden');
-                setVRMode(useVR);
-
-                if (useVR) {
-                    try {
-                        if (document.documentElement.requestFullscreen) {
-                            await document.documentElement.requestFullscreen();
-                        }
-                        if (screen.orientation && screen.orientation.lock) {
-                            await screen.orientation.lock('landscape');
-                        }
-                    } catch (e) {}
-                }
-                broadcastLocalState(true);
-            }
-
-            function setVRMode(enabled) {
-                state.vrMode = enabled;
-                const vrOverlay = document.getElementById('vr-overlay');
-                const hud2d = document.getElementById('hud-2d');
-                const exitPill = document.getElementById('btn-vr-exit');
-
-                if (enabled) {
-                    vrOverlay.classList.add('active');
-                    hud2d.classList.remove('active');
-                    exitPill.style.display = 'block';
-                } else {
-                    vrOverlay.classList.remove('active');
-                    hud2d.classList.add('active');
-                    exitPill.style.display = 'none';
-                    renderer.setScissorTest(false);
-                    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-                }
-            }
-
-            // ------------------------------------------------------------------------
-            // 9. PS4 DUALSHOCK 4 GAMEPAD API + KEYBOARD + TOUCH INPUTS
-            // ------------------------------------------------------------------------
-            window.addEventListener('gamepadconnected', (e) => {
-                state.gamepad.connected = true;
-                document.getElementById('modal-pad-dot').classList.add('online');
-                document.getElementById('hud-pad-dot').classList.add('online');
-                document.getElementById('modal-pad-title').textContent = 'PS4 Controller Ready';
-                document.getElementById('modal-pad-sub').textContent = e.gamepad.id.slice(0, 26);
-                document.getElementById('hud-pad-text').textContent = 'PS4 Controller Active';
-                showToast('🎮 PS4 DualShock 4 Connected!');
-            });
-
-            window.addEventListener('gamepaddisconnected', () => {
-                state.gamepad.connected = false;
-                document.getElementById('modal-pad-dot').classList.remove('online');
-                document.getElementById('hud-pad-dot').classList.remove('online');
-                document.getElementById('modal-pad-title').textContent = 'PS4 Pad: Searching...';
-                document.getElementById('hud-pad-text').textContent = 'PS4 Controller Disconnected';
-            });
-
-            function pollGamepadLobby() {
-                if (!navigator.getGamepads) return;
-                const pads = navigator.getGamepads();
-                const pad = pads[0] || pads[1] || pads[2] || pads[3];
-                if (!pad) return;
-
-                if (!state.gamepad.connected) {
-                    state.gamepad.connected = true;
-                    document.getElementById('modal-pad-dot').classList.add('online');
-                    document.getElementById('hud-pad-dot').classList.add('online');
-                    document.getElementById('modal-pad-title').textContent = 'PS4 Controller Ready';
-                    document.getElementById('hud-pad-text').textContent = 'PS4 Controller Active';
-                }
-
-                // Allow launching directly with PS4 X (0) or Square (2) from lobby
-                if (!state.started) {
-                    if (pad.buttons[0] && pad.buttons[0].pressed) enterExperience(true);
-                    else if (pad.buttons[2] && pad.buttons[2].pressed) enterExperience(false);
-                }
-            }
-
-            function pollInputs(dt) {
-                let moveForward = 0;
-                let moveRight = 0;
-                let turnYaw = 0;
-                let turnPitch = 0;
-                let flyHeld = state.input.touchFly;
-                let jumpPressed = false;
-                let sprint = false;
-
-                // Keyboard
-                if (state.input.keys['KeyW'] || state.input.keys['ArrowUp']) moveForward += 1;
-                if (state.input.keys['KeyS'] || state.input.keys['ArrowDown']) moveForward -= 1;
-                if (state.input.keys['KeyA']) moveRight -= 1;
-                if (state.input.keys['KeyD']) moveRight += 1;
-                if (state.input.keys['ArrowLeft']) turnYaw += 1.8;
-                if (state.input.keys['ArrowRight']) turnYaw -= 1.8;
-                if (state.input.keys['Space']) { flyHeld = true; jumpPressed = true; }
-                if (state.input.keys['ShiftLeft']) sprint = true;
-
-                // Mobile Touch Joystick
-                moveForward -= state.input.touchMove.y;
-                moveRight += state.input.touchMove.x;
-
-                // PS4 DualShock 4 Gamepad
-                if (navigator.getGamepads) {
-                    const pads = navigator.getGamepads();
-                    const pad = pads[0] || pads[1] || pads[2] || pads[3];
-                    if (pad) {
-                        const dz = 0.14;
-                        const lx = Math.abs(pad.axes[0]) > dz ? pad.axes[0] : 0;
-                        const ly = Math.abs(pad.axes[1]) > dz ? pad.axes[1] : 0;
-                        const rx = Math.abs(pad.axes[2]) > dz ? pad.axes[2] : 0;
-                        const ry = Math.abs(pad.axes[3]) > dz ? pad.axes[3] : 0;
-
-                        moveRight += lx;
-                        moveForward -= ly;
-                        turnYaw -= rx * 2.3;
-                        turnPitch -= ry * 1.6;
-
-                        const isBtn = (i) => pad.buttons[i] && pad.buttons[i].pressed;
-                        const justBtn = (i) => isBtn(i) && !state.gamepad.prevButtons[i];
-
-                        // Cross (0) or R2 (7) -> Jump & Jetpack Fly
-                        if (isBtn(0) || isBtn(7)) flyHeld = true;
-                        if (justBtn(0)) jumpPressed = true;
-                        if (isBtn(6)) sprint = true; // L2 Sprint
-
-                        // Circle (1) -> Place Light Beacon
-                        if (justBtn(1)) dropBeacon();
-
-                        // Square (2) -> Toggle VR Box Stereo Mode
-                        if (justBtn(2)) setVRMode(!state.vrMode);
-
-                        // Triangle (3) -> Cycle Sky Mood
-                        if (justBtn(3)) {
-                            state.skyIndex = (state.skyIndex + 1) % ATMOSPHERES.length;
-                            applyAtmosphere(state.skyIndex);
-                            showToast(`Sky: ${ATMOSPHERES[state.skyIndex].name}`);
-                        }
-
-                        // L1 (4) -> Warp to Friend
-                        if (justBtn(4)) warpToNextFriend();
-
-                        // R1 (5) -> Wave Emote
-                        if (justBtn(5)) triggerWave();
-
-                        // Options (9) -> Recenter View
-                        if (justBtn(9)) recenterView();
-
-                        // D-Pad Up (12) / Down (13) -> Adjust VR IPD
-                        if (justBtn(12)) {
-                            state.ipdMm = Math.min(80, state.ipdMm + 1);
-                            document.getElementById('ipd-slider').value = state.ipdMm;
-                            updateEyeSeparation();
-                        }
-                        if (justBtn(13)) {
-                            state.ipdMm = Math.max(45, state.ipdMm - 1);
-                            document.getElementById('ipd-slider').value = state.ipdMm;
-                            updateEyeSeparation();
-                        }
-
-                        state.gamepad.prevButtons = pad.buttons.map(b => Boolean(b && b.pressed));
-                    }
-                }
-
-                state.player.yaw += turnYaw * dt;
-                state.player.pitch = THREE.MathUtils.clamp(state.player.pitch + turnPitch * dt, -1.35, 1.35);
-
-                // Forward direction along look yaw
-                const headEuler = new THREE.Euler().setFromQuaternion(playerRig.quaternion, 'YXZ');
-                const moveYaw = state.vrMode ? headEuler.y : state.player.yaw;
-                const forwardVec = new THREE.Vector3(-Math.sin(moveYaw), 0, -Math.cos(moveYaw));
-                const rightVec = new THREE.Vector3(Math.cos(moveYaw), 0, -Math.sin(moveYaw));
-
-                const speed = (flyHeld ? WORLD.FLY_SPEED : WORLD.WALK_SPEED) * (sprint ? 1.65 : 1.0);
-                const wishVel = new THREE.Vector3()
-                    .addScaledVector(forwardVec, moveForward)
-                    .addScaledVector(rightVec, moveRight);
-                if (wishVel.lengthSq() > 1) wishVel.normalize();
-                wishVel.multiplyScalar(speed);
-
-                state.player.vel.x = THREE.MathUtils.lerp(state.player.vel.x, wishVel.x, Math.min(1, dt * 10));
-                state.player.vel.z = THREE.MathUtils.lerp(state.player.vel.z, wishVel.z, Math.min(1, dt * 10));
-
-                // Vertical Physics (Jump + Jetpack Flight)
-                const groundY = Math.max(WORLD.WATER_LEVEL, getTerrainHeight(state.player.pos.x, state.player.pos.z)) + WORLD.PLAYER_EYE_HEIGHT;
-
-                if (jumpPressed && state.player.grounded) {
-                    state.player.vel.y = WORLD.JUMP_FORCE;
-                    state.player.grounded = false;
-                } else if (flyHeld) {
-                    state.player.vel.y = THREE.MathUtils.lerp(state.player.vel.y, 12.0, Math.min(1, dt * 6));
-                    state.player.grounded = false;
-                } else {
-                    state.player.vel.y -= WORLD.GRAVITY * dt;
-                }
-
-                state.player.pos.addScaledVector(state.player.vel, dt);
-
-                if (state.player.pos.y <= groundY) {
-                    state.player.pos.y = groundY;
-                    state.player.vel.y = 0;
-                    state.player.grounded = true;
-                }
-                state.player.flying = !state.player.grounded && state.player.pos.y > groundY + 0.8;
-            }
-
-            function updateCameraRig() {
-                playerRig.position.copy(state.player.pos);
-                waterPlane.position.x = state.player.pos.x;
-                waterPlane.position.z = state.player.pos.z;
-
-                if (state.vrMode && state.gyro.initialized) {
-                    const degToRad = Math.PI / 180;
-                    const alpha = (state.gyro.alpha - state.gyro.yawOffset) * degToRad;
-                    const beta = state.gyro.beta * degToRad;
-                    const gamma = state.gyro.gamma * degToRad;
-
-                    const orient = (window.screen && window.screen.orientation ? window.screen.orientation.angle : (window.orientation || 0)) * degToRad;
-                    const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-                    const q = new THREE.Quaternion().setFromEuler(euler);
-                    const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
-                    q.multiply(q1);
-                    const q0 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -orient);
-                    q.multiply(q0);
-
-                    const yawOffsetQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), state.player.yaw);
-                    playerRig.quaternion.copy(yawOffsetQ).multiply(q);
-                } else {
-                    const euler = new THREE.Euler(state.player.pitch, state.player.yaw, 0, 'YXZ');
-                    playerRig.quaternion.setFromEuler(euler);
-                }
-            }
-
-            // ------------------------------------------------------------------------
-            // 10. WORLD ENTITIES, COMPASS PIPS & REMOTE AVATAR UPDATES
-            // ------------------------------------------------------------------------
-            function updateWorldAndAvatars(elapsed, dt) {
-                // Spin Orbs & Check Pickup
-                for (let i = activeOrbs.length - 1; i >= 0; i--) {
-                    const o = activeOrbs[i];
-                    o.mesh.rotation.y = elapsed * 2.2;
-                    o.mesh.position.y = o.baseY + Math.sin(elapsed * 3.0 + i) * 0.25;
-                    if (state.player.pos.distanceTo(o.mesh.position) < 2.6) {
-                        state.collectedOrbs.add(o.id);
-                        state.orbs++;
-                        o.mesh.visible = false;
-                        activeOrbs.splice(i, 1);
-                        sound.playChime(659.25);
-                        document.querySelectorAll('.hud-orbs').forEach(el => el.textContent = state.orbs);
-                    }
-                }
-
-                // Interpolate Remote Friends
-                const now = Date.now();
-                const lerp = Math.min(1, dt * 11);
-                for (const [id, p] of remotePlayers.entries()) {
-                    if (now - p.lastSeen > 15000) {
-                        scene.remove(p.root);
-                        remotePlayers.delete(id);
-                        continue;
-                    }
-                    p.curPos.lerp(p.tarPos, lerp);
-                    let dYaw = p.tarYaw - p.curYaw;
-                    while (dYaw > Math.PI) dYaw -= Math.PI * 2;
-                    while (dYaw < -Math.PI) dYaw += Math.PI * 2;
-                    p.curYaw += dYaw * lerp;
-                    p.curPitch = THREE.MathUtils.lerp(p.curPitch, p.tarPitch, lerp);
-
-                    const bob = Math.sin(elapsed * 3.2) * 0.1;
-                    p.root.position.set(p.curPos.x, p.curPos.y + bob, p.curPos.z);
-                    p.root.rotation.y = p.curYaw;
-                    p.headGroup.rotation.x = THREE.MathUtils.clamp(p.curPitch, -1.1, 1.1);
-                    p.ring.rotation.z = elapsed * 1.4;
-                    p.flameL.visible = p.flying;
-                    p.flameR.visible = p.flying;
-
-                    const dist = Math.round(state.player.pos.distanceTo(p.curPos));
-                    if (Math.abs(dist - p.lastDist) >= 2) {
-                        p.lastDist = dist;
-                        updateNametagSprite(p.tagObj, p.name, p.color, dist);
-                    }
-                }
-
-                // Update AI Companion Bots (if enabled)
-                for (const b of aiBots.values()) {
-                    b.angle += dt * 0.25;
-                    const tx = state.player.pos.x + Math.cos(b.angle) * b.radius;
-                    const tz = state.player.pos.z + Math.sin(b.angle) * b.radius;
-                    const ty = Math.max(WORLD.WATER_LEVEL, getTerrainHeight(tx, tz)) + 2.4 + Math.sin(elapsed * 2 + b.angle) * 1.2;
-                    const dx = tx - b.pos.x;
-                    const dz = tz - b.pos.z;
-                    b.pos.set(tx, ty, tz);
-                    b.rig.root.position.copy(b.pos);
-                    b.rig.root.rotation.y = Math.atan2(-dx, -dz);
-                    b.rig.flameL.visible = true;
-                    b.rig.flameR.visible = true;
-                    const dist = Math.round(state.player.pos.distanceTo(b.pos));
-                    if (Math.abs(dist - b.lastDist) >= 2) {
-                        b.lastDist = dist;
-                        updateNametagSprite(b.rig.tagObj, b.name, b.color, dist);
-                    }
-                }
-
-                // Pulse Wave Rings
-                for (let i = pulseRings.length - 1; i >= 0; i--) {
-                    const pr = pulseRings[i];
-                    pr.age += dt;
-                    if (pr.age >= pr.maxAge) {
-                        scene.remove(pr.mesh);
-                        pr.mesh.geometry.dispose();
-                        pr.mesh.material.dispose();
-                        pulseRings.splice(i, 1);
-                    } else {
-                        const t = pr.age / pr.maxAge;
-                        pr.mesh.scale.set(1 + t * 18, 1 + t * 18, 1);
-                        pr.mesh.material.opacity = (1 - t) * 0.85;
-                    }
-                }
-
-                // Update HUD Readouts & Compass Pips
-                const alt = Math.max(0, Math.round(state.player.pos.y - WORLD.WATER_LEVEL));
-                document.querySelectorAll('.hud-alt').forEach(el => el.textContent = `${alt}m`);
-
-                const euler = new THREE.Euler().setFromQuaternion(playerRig.quaternion, 'YXZ');
-                const headingDeg = ((-euler.y * 180 / Math.PI) % 360 + 360) % 360;
-                const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-                const dirStr = dirs[Math.round(headingDeg / 45) % 8];
-                document.querySelectorAll('.hud-compass').forEach(el => el.textContent = dirStr);
-
-                updateCompassAndFriendList(euler.y);
-            }
-
-            function updateCompassAndFriendList(playerYaw) {
-                const track = document.getElementById('compass-track');
-                if (!track) return;
-
-                const cardinals = [
-                    { label: 'N', angle: 0 },
-                    { label: 'E', angle: -Math.PI * 0.5 },
-                    { label: 'S', angle: Math.PI },
-                    { label: 'W', angle: Math.PI * 0.5 }
-                ];
-
-                let html = '';
-                for (const c of cardinals) {
-                    let diff = c.angle - playerYaw;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    if (Math.abs(diff) < 1.3) {
-                        const pct = 50 - (diff / 1.3) * 48;
-                        html += `<span class="compass-mark" style="left:${pct}%;">${c.label}</span>`;
-                    }
-                }
-
-                // Friend Pips on Compass
-                const allFriends = [];
-                for (const p of remotePlayers.values()) allFriends.push({ name: p.name, color: p.color, pos: p.curPos });
-                for (const b of aiBots.values()) allFriends.push({ name: b.name, color: b.color, pos: b.pos });
-
-                for (const f of allFriends) {
-                    const dx = f.pos.x - state.player.pos.x;
-                    const dz = f.pos.z - state.player.pos.z;
-                    const targetYaw = Math.atan2(-dx, -dz);
-                    let diff = targetYaw - playerYaw;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    const clamped = THREE.MathUtils.clamp(diff, -1.25, 1.25);
-                    const pct = 50 - (clamped / 1.3) * 48;
-                    html += `<span class="compass-mark" style="left:${pct}%; color:${f.color}; font-size:13px;">▼</span>`;
-                }
-                track.innerHTML = html;
-
-                const total = 1 + allFriends.length;
-                document.querySelectorAll('.hud-online-count').forEach(el => el.textContent = total);
-
-                const listEl = document.getElementById('hud-friend-list');
-                if (allFriends.length === 0) {
-                    listEl.innerHTML = `<div style="color:#94a3b8; font-size:11px;">You (${state.net.name}) • Share invite link!</div>`;
-                } else {
-                    listEl.innerHTML = allFriends.map(f => {
-                        const d = Math.round(state.player.pos.distanceTo(f.pos));
-                        return `<div class="friend-row">
-                            <span style="display:flex; align-items:center; gap:6px; font-weight:700;">
-                                <span style="width:8px; height:8px; border-radius:50%; background:${f.color};"></span>${f.name}
-                            </span>
-                            <span style="color:#7dd3fc; font-weight:700;">${d}m</span>
-                        </div>`;
-                    }).join('');
-                }
-            }
-
-            // ------------------------------------------------------------------------
-            // 11. UI EVENT LISTENERS & RENDER LOOP
-            // ------------------------------------------------------------------------
-            let toastTimeout = null;
-            function showToast(msg) {
-                const el = document.getElementById('toast-banner');
-                el.textContent = msg;
-                el.style.opacity = '1';
-                clearTimeout(toastTimeout);
-                toastTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2600);
-            }
-
-            document.getElementById('btn-start-vr').addEventListener('click', () => enterExperience(true));
-            document.getElementById('btn-start-2d').addEventListener('click', () => enterExperience(false));
-            document.getElementById('btn-hud-vr').addEventListener('click', () => setVRMode(true));
-            document.getElementById('btn-vr-exit').addEventListener('click', () => setVRMode(false));
-            document.getElementById('btn-hud-menu').addEventListener('click', () => {
-                setVRMode(false);
-                document.getElementById('start-modal').classList.remove('hidden');
-            });
-
-            document.getElementById('btn-hud-wave').addEventListener('click', triggerWave);
-            document.getElementById('btn-hud-warp').addEventListener('click', warpToNextFriend);
-
-            function copyInviteUrl() {
-                const url = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(state.net.room)}`;
-                const inp = document.createElement('input');
-                inp.value = url;
-                document.body.appendChild(inp);
-                inp.select();
-                document.execCommand('copy');
-                document.body.removeChild(inp);
-                showToast(`📋 Invite link copied for room "${state.net.room}"!`);
-            }
-            document.getElementById('btn-modal-invite').addEventListener('click', copyInviteUrl);
-            document.getElementById('btn-hud-invite').addEventListener('click', copyInviteUrl);
-
-            document.getElementById('input-player-name').addEventListener('change', (e) => {
-                const clean = e.target.value.trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 16);
-                state.net.name = clean || randomName;
-                e.target.value = state.net.name;
-                broadcastLocalState(true);
-            });
-
-            document.getElementById('btn-join-room').addEventListener('click', () => {
-                const raw = document.getElementById('input-room-code').value.trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 16);
-                const nextRoom = raw || 'public';
-                document.getElementById('input-room-code').value = nextRoom;
-                if (nextRoom !== state.net.room) {
-                    state.net.room = nextRoom;
-                    for (const p of remotePlayers.values()) scene.remove(p.root);
-                    remotePlayers.clear();
-                    document.querySelectorAll('.hud-room-name').forEach(el => el.textContent = nextRoom);
-                    mp.connect(nextRoom);
-                    showToast(`Joined Room: ${nextRoom}`);
-                }
-            });
-
-            document.querySelectorAll('.color-swatch').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                    state.net.color = btn.dataset.color;
-                    broadcastLocalState(true);
-                });
-            });
-
-            document.getElementById('toggle-ai-bots').addEventListener('change', (e) => toggleAiBots(e.target.checked));
-
-            document.getElementById('ipd-slider').addEventListener('input', (e) => {
-                state.ipdMm = parseInt(e.target.value, 10);
-                updateEyeSeparation();
-            });
-
-            // Keyboard Shortcuts
-            window.addEventListener('keydown', (e) => {
-                state.input.keys[e.code] = true;
-                if (!state.started) return;
-                if (e.code === 'KeyE') triggerWave();
-                if (e.code === 'KeyP') warpToNextFriend();
-                if (e.code === 'KeyB') dropBeacon();
-                if (e.code === 'KeyV') setVRMode(!state.vrMode);
-                if (e.code === 'KeyR') recenterView();
-                if (e.code === 'KeyT') {
-                    state.skyIndex = (state.skyIndex + 1) % ATMOSPHERES.length;
-                    applyAtmosphere(state.skyIndex);
-                }
-            });
-            window.addEventListener('keyup', (e) => { state.input.keys[e.code] = false; });
-
-            // Mouse & Touch Drag Look
-            canvas.addEventListener('mousedown', (e) => {
-                state.input.dragging = true;
-                state.input.lastX = e.clientX;
-                state.input.lastY = e.clientY;
-            });
-            window.addEventListener('mouseup', () => { state.input.dragging = false; });
-            window.addEventListener('mousemove', (e) => {
-                if (!state.input.dragging || !state.started) return;
-                state.player.yaw -= (e.clientX - state.input.lastX) * 0.0045;
-                state.player.pitch = THREE.MathUtils.clamp(state.player.pitch - (e.clientY - state.input.lastY) * 0.0045, -1.35, 1.35);
-                state.input.lastX = e.clientX;
-                state.input.lastY = e.clientY;
-            });
-
-            canvas.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 1) {
-                    state.input.dragging = true;
-                    state.input.lastX = e.touches[0].clientX;
-                    state.input.lastY = e.touches[0].clientY;
-                }
-            }, { passive: true });
-            canvas.addEventListener('touchmove', (e) => {
-                if (!state.input.dragging || !state.started || e.touches.length !== 1) return;
-                state.player.yaw -= (e.touches[0].clientX - state.input.lastX) * 0.0055;
-                state.player.pitch = THREE.MathUtils.clamp(state.player.pitch - (e.touches[0].clientY - state.input.lastY) * 0.0055, -1.35, 1.35);
-                state.input.lastX = e.touches[0].clientX;
-                state.input.lastY = e.touches[0].clientY;
-            }, { passive: true });
-            canvas.addEventListener('touchend', () => { state.input.dragging = false; });
-
-            // Touch Joystick & Mobile Action Buttons
-            const joyZone = document.getElementById('touch-move-zone');
-            const joyKnob = document.getElementById('touch-move-knob');
-            joyZone.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                const rect = joyZone.getBoundingClientRect();
-                const cx = rect.left + rect.width * 0.5;
-                const cy = rect.top + rect.height * 0.5;
-                const maxR = rect.width * 0.35;
-                const dx = THREE.MathUtils.clamp(e.touches[0].clientX - cx, -maxR, maxR);
-                const dy = THREE.MathUtils.clamp(e.touches[0].clientY - cy, -maxR, maxR);
-                joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-                state.input.touchMove.x = dx / maxR;
-                state.input.touchMove.y = dy / maxR;
-            }, { passive: false });
-            joyZone.addEventListener('touchend', () => {
-                joyKnob.style.transform = 'translate(0px, 0px)';
-                state.input.touchMove.x = 0;
-                state.input.touchMove.y = 0;
-            });
-
-            const flyBtn = document.getElementById('btn-touch-fly');
-            flyBtn.addEventListener('touchstart', (e) => { e.preventDefault(); state.input.touchFly = true; });
-            flyBtn.addEventListener('touchend', () => { state.input.touchFly = false; });
-            document.getElementById('btn-touch-beacon').addEventListener('click', dropBeacon);
-
-            // Resize Handler
-            window.addEventListener('resize', () => {
-                const w = window.innerWidth;
-                const h = window.innerHeight;
-                renderer.setSize(w, h);
-                mainCamera.aspect = w / h;
-                mainCamera.updateProjectionMatrix();
-                leftEyeCam.aspect = (w * 0.5) / h;
-                leftEyeCam.updateProjectionMatrix();
-                rightEyeCam.aspect = (w * 0.5) / h;
-                rightEyeCam.updateProjectionMatrix();
-            });
-
-            // Main Render Loop
-            let lastTime = performance.now();
-            function animate(now) {
-                requestAnimationFrame(animate);
-                const dt = Math.min(0.05, (now - lastTime) / 1000);
-                lastTime = now;
-                const elapsed = now * 0.001;
-
-                if (state.started) {
-                    pollInputs(dt);
-                    updateChunks();
-                    updateWorldAndAvatars(elapsed, dt);
-                    broadcastLocalState(false);
-                } else {
-                    pollGamepadLobby();
-                    state.player.yaw += dt * 0.14;
-                    state.player.pos.y = getTerrainHeight(0, 0) + 12;
-                    updateChunks();
-                    updateWorldAndAvatars(elapsed, dt);
-                }
-
-                updateCameraRig();
-
-                if (state.vrMode) {
-                    const w = window.innerWidth;
-                    const h = window.innerHeight;
-                    const halfW = Math.floor(w * 0.5);
-                    renderer.setScissorTest(true);
-
-                    // Left Eye
-                    renderer.setViewport(0, 0, halfW, h);
-                    renderer.setScissor(0, 0, halfW, h);
-                    renderer.render(scene, leftEyeCam);
-
-                    // Right Eye
-                    renderer.setViewport(halfW, 0, w - halfW, h);
-                    renderer.setScissor(halfW, 0, w - halfW, h);
-                    renderer.render(scene, rightEyeCam);
-                } else {
-                    renderer.setScissorTest(false);
-                    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-                    renderer.render(scene, mainCamera);
-                }
-            }
-
-            // Boot World & Multiplayer Immediately on Load
-            window.onload = function () {
-                state.player.pos.set(
-                    (Math.random() - 0.5) * 14,
-                    getTerrainHeight(0, 0) + WORLD.PLAYER_EYE_HEIGHT + 1,
-                    (Math.random() - 0.5) * 14
-                );
-                updateChunks();
-                mp.connect(state.net.room);
-                animate(performance.now());
-            };
-        })();
-    </script>
+          }
+        });
+
+        conn.on('close', () => {
+          hostConnections.delete(conn.peer);
+          removeRemotePlayer(conn.peer);
+          for (const [, otherConn] of hostConnections.entries()) {
+            if (otherConn.open) otherConn.send({ type: 'peer_leave', id: conn.peer });
+          }
+        });
+      });
+
+      peer.on('error', (err) => {
+        console.warn('PeerJS notice:', err.type);
+        if (err.type === 'peer-unavailable') {
+          showToast('❌ Room ID not found or offline', 'border-rose-400/60 text-rose-200');
+        }
+      });
+    }
+
+    function connectToHost(hostId) {
+      if (!peer || !hostId || hostId === myPeerId) return;
+      if (clientToHostConn) clientToHostConn.close();
+
+      isHost = false;
+      document.getElementById('peer-role-badge').textContent = 'JOINED';
+      document.getElementById('peer-role-badge').className = 'text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold';
+
+      const conn = peer.connect(hostId, { reliable: false });
+      clientToHostConn = conn;
+
+      conn.on('open', () => {
+        showToast(`🌐 Connected to room ${hostId}!`, 'border-emerald-400/60 text-emerald-200');
+      });
+
+      conn.on('data', (msg) => {
+        if (msg.type === 'state') {
+          // Direct state from Host
+          upsertRemotePlayer(conn.peer, msg.payload);
+        } else if (msg.type === 'peer_state') {
+          // Relayed state from another peer in the room
+          upsertRemotePlayer(msg.id, msg.payload);
+        } else if (msg.type === 'peer_leave') {
+          removeRemotePlayer(msg.id);
+        }
+      });
+
+      conn.on('close', () => {
+        showToast('Disconnected from host room', 'border-amber-400/60 text-amber-200');
+        isHost = true;
+        document.getElementById('peer-role-badge').textContent = 'HOST';
+      });
+    }
+
+    // Broadcast local player state at 20Hz
+    setInterval(() => {
+      if (!myPeerId) return;
+      const payload = {
+        name: playerState.name,
+        color: playerState.color,
+        x: Number(playerState.pos.x.toFixed(2)),
+        y: Number(playerState.pos.y.toFixed(2)),
+        z: Number(playerState.pos.z.toFixed(2)),
+        yaw: Number(playerState.yaw.toFixed(3)),
+        pitch: Number(playerState.pitch.toFixed(3))
+      };
+
+      if (clientToHostConn && clientToHostConn.open) {
+        clientToHostConn.send({ type: 'state', payload });
+      }
+      for (const [, conn] of hostConnections.entries()) {
+        if (conn.open) {
+          conn.send({ type: 'state', payload });
+        }
+      }
+    }, 50);
+
+    // UI Event Listeners for Multiplayer & HUD
+    document.getElementById('copy-invite-btn').addEventListener('click', () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('join', myPeerId);
+      const tempInput = document.createElement('input');
+      tempInput.value = url.toString();
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      tempInput.remove();
+      showToast('📋 Invite link copied! Share with friends.', 'border-emerald-400/60 text-emerald-200');
+    });
+
+    document.getElementById('join-peer-btn').addEventListener('click', () => {
+      const targetId = document.getElementById('join-peer-input').value.trim();
+      if (targetId) connectToHost(targetId);
+    });
+
+    document.getElementById('player-name-input').addEventListener('input', (e) => {
+      playerState.name = e.target.value.trim() || 'Explorer';
+    });
+
+    document.getElementById('player-color-input').addEventListener('input', (e) => {
+      playerState.color = e.target.value;
+    });
+
+    let hudOpen = true;
+    document.getElementById('toggle-hud-btn').addEventListener('click', () => {
+      hudOpen = !hudOpen;
+      document.getElementById('hud-panel').style.display = hudOpen ? 'flex' : 'none';
+      document.getElementById('hud-chevron').textContent = hudOpen ? '▼' : '▲';
+    });
+
+    // =========================================================================
+    // 7. MAIN SIMULATION & RENDER LOOP (SUPPORTS STANDARD, VR BOX, AND WEBXR)
+    // =========================================================================
+    const clock = new THREE.Clock();
+    const forwardVec = new THREE.Vector3();
+    const rightVec = new THREE.Vector3();
+    const eulerHelper = new THREE.Euler(0, 0, 0, 'YXZ');
+
+    // Initialize initial terrain chunks & P2P networking
+    updateChunks(0, 0);
+    initMultiplayer();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      stereoEffect.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    let lastCoordUpdate = 0;
+
+    function animate() {
+      const dt = Math.min(clock.getDelta(), 0.05);
+
+      // 1. Poll PS4 DualShock 4 Controller
+      const gp = pollGamepad();
+
+      // 2. Gather Movement & Look Inputs (PS4 Controller + Keyboard + Mobile Touch)
+      let moveForward = 0;
+      let moveRight = 0;
+      let lookYaw = 0;
+      let lookPitch = 0;
+      let jumpAction = false;
+      let descendAction = false;
+      let isSprinting = false;
+
+      if (gp) {
+        moveForward -= gp.ly;
+        moveRight += gp.lx;
+        lookYaw -= gp.rx * 2.2 * dt;
+        lookPitch -= gp.ry * 1.8 * dt;
+        if (gp.crossPressed) jumpAction = true;
+        if (gp.circlePressed) descendAction = true;
+        if (gp.sprintPressed) isSprinting = true;
+      }
+
+      // Keyboard fallback
+      if (keys['KeyW'] || keys['ArrowUp']) moveForward += 1;
+      if (keys['KeyS'] || keys['ArrowDown']) moveForward -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) moveRight += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) moveRight -= 1;
+      if (keys['Space']) jumpAction = true;
+      if (keys['ShiftLeft'] || keys['ShiftRight']) isSprinting = true;
+      if (keys['KeyC']) descendAction = true;
+
+      // Mobile touch fallback
+      if (Math.abs(touchInput.moveY) > 0.05) moveForward -= touchInput.moveY;
+      if (Math.abs(touchInput.moveX) > 0.05) moveRight += touchInput.moveX;
+      if (Math.abs(touchInput.lookX) > 0.05) lookYaw -= touchInput.lookX * 2.0 * dt;
+      if (Math.abs(touchInput.lookY) > 0.05) lookPitch -= touchInput.lookY * 1.6 * dt;
+      if (touchInput.jump) jumpAction = true;
+
+      // Update Yaw & Pitch
+      playerState.yaw += lookYaw;
+      playerState.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, playerState.pitch + lookPitch));
+
+      // Apply Rotation to Rig & Camera
+      playerRig.rotation.y = playerState.yaw;
+
+      if (renderer.xr.isPresenting) {
+        // WebXR handles headset orientation automatically on camera
+      } else if (isVrBoxMode && gyroEnabled) {
+        // Combine phone gyroscope head-tracking with PS4 right-stick yaw
+        camera.quaternion.copy(deviceQuat);
+      } else {
+        eulerHelper.set(playerState.pitch, 0, 0, 'YXZ');
+        camera.quaternion.setFromEuler(eulerHelper);
+      }
+
+      // Calculate Forward & Right vectors in XZ plane
+      // If in WebXR, orient movement relative to where the VR headset is looking
+      let moveHeading = playerState.yaw;
+      if (renderer.xr.isPresenting) {
+        const xrCam = renderer.xr.getCamera();
+        const dir = new THREE.Vector3();
+        xrCam.getWorldDirection(dir);
+        moveHeading = Math.atan2(-dir.x, -dir.z);
+      }
+
+      forwardVec.set(-Math.sin(moveHeading), 0, -Math.cos(moveHeading));
+      rightVec.set(Math.cos(moveHeading), 0, -Math.sin(moveHeading));
+
+      const speed = (isSprinting ? 22.0 : 10.5) * (playerState.flyMode ? 1.6 : 1.0);
+      const inputLen = Math.hypot(moveForward, moveRight);
+      if (inputLen > 1) {
+        moveForward /= inputLen;
+        moveRight /= inputLen;
+      }
+
+      playerState.pos.addScaledVector(forwardVec, moveForward * speed * dt);
+      playerState.pos.addScaledVector(rightVec, moveRight * speed * dt);
+
+      // Vertical Physics (Walk vs Fly)
+      const groundY = getTerrainHeight(playerState.pos.x, playerState.pos.z);
+
+      if (playerState.flyMode) {
+        if (jumpAction) playerState.pos.y += speed * 0.85 * dt;
+        if (descendAction) playerState.pos.y -= speed * 0.85 * dt;
+        if (playerState.pos.y < groundY + 0.5) playerState.pos.y = groundY + 0.5;
+      } else {
+        if (jumpAction && playerState.onGround) {
+          playerState.velY = 10.5;
+          playerState.onGround = false;
+        }
+        playerState.velY -= 26.0 * dt; // Gravity
+        playerState.pos.y += playerState.velY * dt;
+
+        if (playerState.pos.y <= groundY) {
+          playerState.pos.y = groundY;
+          playerState.velY = 0;
+          playerState.onGround = true;
+        }
+      }
+
+      playerRig.position.copy(playerState.pos);
+
+      // 3. Keep Water, Sun & Infinite Chunks Centered Around Player
+      waterMesh.position.x = playerState.pos.x;
+      waterMesh.position.z = playerState.pos.z;
+      sunLight.position.set(playerState.pos.x + 60, 110, playerState.pos.z + 40);
+      sunLight.target.position.copy(playerState.pos);
+      sunDisc.position.set(playerState.pos.x + 150, 220, playerState.pos.z + 100);
+
+      updateChunks(playerState.pos.x, playerState.pos.z);
+
+      // 4. Smoothly Interpolate Remote Multiplayer Avatars
+      for (const [, rp] of remotePlayers.entries()) {
+        rp.group.position.lerp(rp.targetPos, Math.min(1, dt * 12));
+        // Smooth yaw interpolation
+        let diff = rp.targetYaw - rp.group.rotation.y;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        rp.group.rotation.y += diff * Math.min(1, dt * 12);
+        rp.headGroup.rotation.x = THREE.MathUtils.lerp(rp.headGroup.rotation.x, rp.targetPitch, Math.min(1, dt * 12));
+      }
+
+      // 5. Update HUD Coordinates periodically
+      const now = performance.now();
+      if (now - lastCoordUpdate > 200) {
+        lastCoordUpdate = now;
+        document.getElementById('coords-text').textContent =
+          `X: ${Math.round(playerState.pos.x)} | Y: ${Math.round(playerState.pos.y)} | Z: ${Math.round(playerState.pos.z)}`;
+      }
+
+      // 6. Render (Stereoscopic VR Box vs Standard / WebXR)
+      if (isVrBoxMode && !renderer.xr.isPresenting) {
+        stereoEffect.render(scene, camera);
+      } else {
+        renderer.render(scene, camera);
+      }
+    }
+
+    // Start WebXR-compatible animation loop on window load
+    window.addEventListener('load', () => {
+      renderer.setAnimationLoop(animate);
+    });
+  </script>
 </body>
 </html>
 ```
