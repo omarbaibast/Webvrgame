@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -361,10 +360,8 @@
 
     /**
      * Deterministic height sampler for any world (x, z) coordinate.
-     * Used by terrain mesh generation, trees/rocks, player physics, and remote avatars.
      */
     function getTerrainHeight(x, z) {
-      // Multi-octave fractal Brownian motion (fBm)
       const scale1 = 0.008;
       const scale2 = 0.025;
       const scale3 = 0.075;
@@ -373,13 +370,11 @@
       const n2 = simplex.noise2D(x * scale2 + 100, z * scale2 + 100) * 0.4;
       const n3 = simplex.noise2D(x * scale3 - 200, z * scale3 - 200) * 0.12;
 
-      // Ridge noise for dramatic mountain peaks
       const ridge = 1.0 - Math.abs(simplex.noise2D(x * 0.005 + 500, z * 0.005 + 500));
       const mountainFactor = Math.pow(Math.max(0, ridge), 2.4) * 26.0;
 
       let h = (n1 + n2 + n3) * 10.5 + mountainFactor - 2.0;
 
-      // Flatten slightly near origin (0, 0) for a welcoming spawn valley
       const distFromOrigin = Math.hypot(x, z);
       if (distFromOrigin < 24) {
         const blend = distFromOrigin / 24;
@@ -390,7 +385,7 @@
     }
 
     /**
-     * Vertex color palette based on elevation and slope
+     * Vertex color palette based on elevation
      */
     function getTerrainColor(height) {
       const color = new THREE.Color();
@@ -399,15 +394,12 @@
       } else if (height < WATER_LEVEL + 0.8) {
         color.setHex(0xfde047).lerp(new THREE.Color(0xd97706), 0.35); // Warm beach sand
       } else if (height < 9.5) {
-        // Lush emerald & meadow green variation
         const t = (height - (WATER_LEVEL + 0.8)) / 10.3;
         color.setHex(0x22c55e).lerp(new THREE.Color(0x15803d), t);
       } else if (height < 18.5) {
-        // Alpine rock / slate
         const t = (height - 9.5) / 9.0;
         color.setHex(0x64748b).lerp(new THREE.Color(0x475569), t);
       } else {
-        // Snow-capped peaks
         color.setHex(0xf8fafc);
       }
       return color;
@@ -421,12 +413,11 @@
     scene.background = new THREE.Color(0x7dd3fc);
     scene.fog = new THREE.FogExp2(0x93c5fd, 0.0068);
 
-    // Camera Rig: playerRig holds world position & yaw; camera holds pitch & WebXR/Gyro pose
     const playerRig = new THREE.Group();
     scene.add(playerRig);
 
     const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 450);
-    camera.position.set(0, 1.7, 0); // Eye height 1.7m
+    camera.position.set(0, 1.7, 0);
     playerRig.add(camera);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -437,14 +428,50 @@
     renderer.xr.enabled = true;
     container.appendChild(renderer.domElement);
 
-    // Standard WebXR VRButton (for Oculus/Quest/PCVR)
     const vrButton = VRButton.createButton(renderer);
     document.body.appendChild(vrButton);
 
-    // Stereoscopic Side-by-Side Effect for Phone VR Box (Cardboard)
     const stereoEffect = new StereoEffect(renderer);
     stereoEffect.setEyeSeparation(0.064);
     stereoEffect.setSize(window.innerWidth, window.innerHeight);
+
+    // VR Box Mode UI Trigger & IPD Slider
+    const enterVrBoxBtn = document.getElementById('enter-vr-box-btn');
+    const exitVrBoxBtn = document.getElementById('exit-vr-box-btn');
+    const vrBoxOverlay = document.getElementById('vr-box-overlay');
+    const ipdSlider = document.getElementById('ipd-slider');
+    const ipdValue = document.getElementById('ipd-value');
+
+    let isVrBoxMode = false;
+
+    enterVrBoxBtn.addEventListener('click', () => {
+      isVrBoxMode = true;
+      vrBoxOverlay.classList.add('active');
+      document.getElementById('main-hud').style.display = 'none';
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      if (window.screen.orientation && window.screen.orientation.lock) {
+        window.screen.orientation.lock('landscape').catch(() => {});
+      }
+      showToast('🥽 Entered VR Box Mode. Insert phone into headset.');
+    });
+
+    exitVrBoxBtn.addEventListener('click', () => {
+      isVrBoxMode = false;
+      vrBoxOverlay.classList.remove('active');
+      document.getElementById('main-hud').style.display = 'flex';
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      showToast('Exited VR Box Mode');
+    });
+
+    ipdSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      stereoEffect.setEyeSeparation(val);
+      ipdValue.textContent = val.toFixed(3) + 'm';
+    });
 
     // Atmospheric Lighting
     const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x365314, 0.85);
@@ -466,14 +493,12 @@
     scene.add(sunLight);
     scene.add(sunLight.target);
 
-    // Decorative Sun Disc & Low-Poly Clouds
     const sunDisc = new THREE.Mesh(
       new THREE.SphereGeometry(8, 16, 16),
       new THREE.MeshBasicMaterial({ color: 0xfef08a, fog: false })
     );
     scene.add(sunDisc);
 
-    // Infinite Water Plane that follows player XZ
     const waterGeo = new THREE.PlaneGeometry(600, 600, 1, 1);
     waterGeo.rotateX(-Math.PI / 2);
     const waterMat = new THREE.MeshStandardMaterial({
@@ -492,7 +517,6 @@
     // =========================================================================
     const activeChunks = new Map();
 
-    // Shared Low-Poly Geometries & Materials for Props
     const trunkGeo = new THREE.CylinderGeometry(0.22, 0.35, 1.6, 5);
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x78350f, flatShading: true });
     const leavesGeo = new THREE.ConeGeometry(1.4, 3.4, 6);
@@ -500,7 +524,6 @@
     const rockGeo = new THREE.DodecahedronGeometry(0.85, 0);
     const rockMat = new THREE.MeshStandardMaterial({ color: 0x64748b, flatShading: true });
 
-    // Deterministic pseudo-random helper per chunk cell
     function hash2D(ix, iz) {
       let n = Math.sin(ix * 127.1 + iz * 311.7 + WORLD_SEED) * 43758.5453123;
       return n - Math.floor(n);
@@ -547,17 +570,14 @@
       terrainMesh.receiveShadow = true;
       chunkGroup.add(terrainMesh);
 
-      // Scatter procedural low-poly trees & rocks deterministically
       const step = 8;
       for (let ox = 4; ox < CHUNK_SIZE; ox += step) {
         for (let oz = 4; oz < CHUNK_SIZE; oz += step) {
           const wx = startX + ox;
           const wz = startZ + oz;
           const r = hash2D(Math.floor(wx), Math.floor(wz));
-
           const wy = getTerrainHeight(wx, wz);
 
-          // Trees grow on grassy elevations
           if (wy > WATER_LEVEL + 1.2 && wy < 11.0 && r > 0.72) {
             const scale = 0.8 + (r - 0.72) * 3.2;
             const tree = new THREE.Group();
@@ -576,9 +596,8 @@
             tree.position.set(wx, wy - 0.15, wz);
             chunkGroup.add(tree);
           } else if (wy > WATER_LEVEL + 0.5 && wy < 19.0 && r < 0.08) {
-            // Boulders
             const rock = new THREE.Mesh(rockGeo, rockMat);
-            const s = 0.6 + r * 14;
+            const s = 0.6 + r * 1.4;
             rock.scale.set(s, s * 0.7, s);
             rock.rotation.set(r * 3, r * 5, r * 2);
             rock.position.set(wx, wy + 0.2, wz);
@@ -612,7 +631,6 @@
         }
       }
 
-      // Unload far chunks to keep memory & FPS fast
       for (const [key, chunk] of activeChunks.entries()) {
         if (!neededKeys.has(key)) {
           scene.remove(chunk.group);
@@ -624,8 +642,15 @@
     }
 
     // =========================================================================
-    // 4. PLAYER PHYSICS, PS4 DUALSHOCK 4 CONTROLLER, KEYBOARD, TOUCH & VR GYRO
+    // 4. MULTIPLAYER, STATE & AVATARS
     // =========================================================================
+    let peer = null;
+    let myPeerId = null;
+    let isHost = true;
+    let clientToHostConn = null;
+    const hostConnections = new Map();
+    const remotePlayers = new Map();
+
     const playerState = {
       pos: new THREE.Vector3(0, getTerrainHeight(0, 0) + 1.0, 0),
       velY: 0,
@@ -640,166 +665,6 @@
     document.getElementById('player-name-input').value = playerState.name;
     playerRig.position.copy(playerState.pos);
 
-    // Input States
-    const keys = {};
-    const touchInput = { moveX: 0, moveY: 0, lookX: 0, lookY: 0, jump: false };
-    let activeGamepadIndex = null;
-    let prevTrianglePressed = false;
-    let prevSquarePressed = false;
-    let prevTeleportPressed = false;
-    let prevSpectatePressed = false;
-    let teleportCycleIndex = 0;
-
-    // Camera / Spectate Mode: 'first' | 'third' | 'spectate'
-    let viewMode = 'first';
-    let spectatedPeerId = null;
-
-    // VR Box Mode & DeviceOrientation Gyro Tracking
-    let isVrBoxMode = false;
-    let gyroEnabled = false;
-    const deviceEuler = new THREE.Euler();
-    const deviceQuat = new THREE.Quaternion();
-    const screenTransform = new THREE.Quaternion();
-    const worldTransform = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -PI/2 around X
-
-    window.addEventListener('deviceorientation', (event) => {
-      if (!isVrBoxMode || event.alpha === null) return;
-      gyroEnabled = true;
-
-      const alpha = THREE.MathUtils.degToRad(event.alpha || 0); // Z
-      const beta = THREE.MathUtils.degToRad(event.beta || 0);   // X'
-      const gamma = THREE.MathUtils.degToRad(event.gamma || 0); // Y''
-      const orient = THREE.MathUtils.degToRad(window.screen?.orientation?.angle || window.orientation || 0);
-
-      deviceEuler.set(beta, alpha, -gamma, 'YXZ');
-      deviceQuat.setFromEuler(deviceEuler);
-      deviceQuat.multiply(worldTransform);
-      screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -orient);
-      deviceQuat.multiply(screenTransform);
-    });
-
-    // Toast Helper (Never uses alert())
-    function showToast(msg, colorClass = 'border-sky-400/50 text-sky-100') {
-      const container = document.getElementById('toast-container');
-      const el = document.createElement('div');
-      el.className = `px-4 py-2 rounded-full bg-slate-900/90 border ${colorClass} backdrop-blur-md text-xs font-semibold shadow-xl transition-all duration-300`;
-      el.textContent = msg;
-      container.appendChild(el);
-      setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(-8px)';
-        setTimeout(() => el.remove(), 300);
-      }, 2800);
-    }
-
-    // PS4 DualShock 4 Gamepad Connection Listeners
-    window.addEventListener('gamepadconnected', (e) => {
-      activeGamepadIndex = e.gamepad.index;
-      const dot = document.getElementById('gamepad-dot');
-      const text = document.getElementById('gamepad-text');
-      dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
-      const shortName = e.gamepad.id.includes('054c') || e.gamepad.id.toLowerCase().includes('dualshock') || e.gamepad.id.toLowerCase().includes('wireless controller')
-        ? 'PS4 DualShock 4 Connected'
-        : `Gamepad: ${e.gamepad.id.slice(0, 22)}`;
-      text.textContent = shortName;
-      showToast(`🎮 ${shortName}`, 'border-emerald-400/60 text-emerald-200');
-    });
-
-    window.addEventListener('gamepaddisconnected', (e) => {
-      if (activeGamepadIndex === e.gamepad.index) {
-        activeGamepadIndex = null;
-        document.getElementById('gamepad-dot').className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
-        document.getElementById('gamepad-text').textContent = 'PS4 Controller: Disconnected';
-        showToast('🎮 Controller disconnected', 'border-amber-400/60 text-amber-200');
-      }
-    });
-
-    function applyDeadzone(val, deadzone = 0.12) {
-      if (Math.abs(val) < deadzone) return 0;
-      return (val - Math.sign(val) * deadzone) / (1 - deadzone);
-    }
-
-    function pollGamepad() {
-      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-      let gp = activeGamepadIndex !== null ? gamepads[activeGamepadIndex] : null;
-      if (!gp) {
-        for (let i = 0; i < gamepads.length; i++) {
-          if (gamepads[i]) {
-            gp = gamepads[i];
-            activeGamepadIndex = i;
-            break;
-          }
-        }
-      }
-      if (!gp) return null;
-
-      // Standard DualShock 4 Mapping:
-      // Axes: [0]=LeftX, [1]=LeftY, [2]=RightX, [3]=RightY
-      // Buttons: [0]=Cross(X), [1]=Circle(O), [2]=Square, [3]=Triangle, [4]=L1, [5]=R1, [6]=L2, [7]=R2, [8]=Share, [9]=Options, [12]=DPadUp, [13]=DPadDown, [14]=DPadLeft, [15]=DPadRight
-      const lx = applyDeadzone(gp.axes[0] || 0);
-      const ly = applyDeadzone(gp.axes[1] || 0);
-      const rx = applyDeadzone(gp.axes[2] || 0);
-      const ry = applyDeadzone(gp.axes[3] || 0);
-
-      const crossPressed = gp.buttons[0]?.pressed || false;
-      const circlePressed = gp.buttons[1]?.pressed || false;
-      const squarePressed = gp.buttons[2]?.pressed || false;
-      const trianglePressed = gp.buttons[3]?.pressed || false;
-      const sprintPressed = (gp.buttons[4]?.pressed || gp.buttons[5]?.pressed || gp.buttons[6]?.value > 0.3 || gp.buttons[7]?.value > 0.3) || false;
-      
-      // Teleport shortcut on D-Pad Right ([15]) or Share ([8])
-      const teleportPressed = gp.buttons[15]?.pressed || gp.buttons[8]?.pressed || false;
-      // Spectate / 3rd-person toggle on D-Pad Up ([12])
-      const spectatePressed = gp.buttons[12]?.pressed || false;
-
-      // Edge-triggered Triangle -> Toggle Fly Mode
-      if (trianglePressed && !prevTrianglePressed) {
-        toggleFlyMode();
-      }
-      prevTrianglePressed = trianglePressed;
-
-      // Edge-triggered Square -> Reset cleanly onto terrain surface
-      if (squarePressed && !prevSquarePressed) {
-        const groundY = getTerrainHeight(playerState.pos.x, playerState.pos.z);
-        playerState.pos.y = groundY + 1.5;
-        playerState.velY = 0;
-        showToast('🔄 Reset to terrain surface');
-      }
-      prevSquarePressed = squarePressed;
-
-      // Edge-triggered Teleport to Next Player
-      if (teleportPressed && !prevTeleportPressed) {
-        teleportToNextExplorer();
-      }
-      prevTeleportPressed = teleportPressed;
-
-      // Edge-triggered Spectate / 3rd-Person View Toggle
-      if (spectatePressed && !prevSpectatePressed) {
-        cycleViewMode();
-      }
-      prevSpectatePressed = spectatePressed;
-
-      return { lx, ly, rx, ry, crossPressed, circlePressed, sprintPressed };
-    }
-
-    function toggleFlyMode() {
-      playerState.flyMode = !playerState.flyMode;
-      playerState.velY = 0;
-      const modeLabel = document.getElementById('move-mode-text');
-      modeLabel.textContent = playerState.flyMode ? 'FLY MODE' : 'WALK';
-      modeLabel.className = playerState.flyMode ? 'text-amber-400 font-semibold' : 'text-sky-400 font-semibold';
-      showToast(playerState.flyMode ? '🕊️ Fly Mode Enabled (✕ Up / ○ Down)' : '🥾 Walk Mode Enabled');
-    }
-
-    // Keyboard & Desktop PointerLock Controls
-    window.addEventListener('keydown', (e) => {
-      keys[e.code] = true;
-      if (e.code === 'KeyF') toggleFlyMode();
-      if (e.code === 'KeyT') teleportToNextExplorer();
-      if (e.code === 'KeyV') cycleViewMode();
-    });
-    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
-    // Create Stylized Low-Poly Explorer Avatar for Remote Players (with Glowing Visor & Sky Beacon)
     function createAvatarMesh(name, hexColor) {
       const group = new THREE.Group();
       const baseColor = new THREE.Color(hexColor || '#38bdf8');
@@ -814,7 +679,6 @@
         metalness: 0.8
       });
 
-      // Legs
       const legGeo = new THREE.BoxGeometry(0.22, 0.55, 0.24);
       const leftLeg = new THREE.Mesh(legGeo, limbMat);
       leftLeg.position.set(-0.16, 0.275, 0);
@@ -824,7 +688,6 @@
       rightLeg.castShadow = true;
       group.add(leftLeg, rightLeg);
 
-      // Torso & Backpack
       const torso = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.85, 0.36), bodyMat);
       torso.position.y = 0.98;
       torso.castShadow = true;
@@ -835,7 +698,6 @@
       pack.castShadow = true;
       group.add(pack);
 
-      // Arms
       const armGeo = new THREE.BoxGeometry(0.18, 0.72, 0.2);
       const leftArm = new THREE.Mesh(armGeo, bodyMat);
       leftArm.position.set(-0.46, 0.98, 0);
@@ -845,7 +707,6 @@
       rightArm.castShadow = true;
       group.add(leftArm, rightArm);
 
-      // Head + Glowing VR Headset Visor
       const headGroup = new THREE.Group();
       headGroup.position.set(0, 1.66, 0);
 
@@ -866,7 +727,6 @@
 
       group.add(headGroup);
 
-      // Ground Halo Ring + Vertical Sky Light Beacon (easy to spot across the infinite world)
       const ringGeo = new THREE.RingGeometry(0.65, 0.85, 24);
       ringGeo.rotateX(-Math.PI / 2);
       const ringMat = new THREE.MeshBasicMaterial({
@@ -892,7 +752,6 @@
       beacon.position.y = beaconHeight / 2 + 2.4;
       group.add(beacon);
 
-      // Floating Name & ID Tag Sprite
       const canvas = document.createElement('canvas');
       canvas.width = 320;
       canvas.height = 72;
@@ -922,12 +781,14 @@
       return { group, headGroup, sprite, beacon, groundRing, name, color: hexColor };
     }
 
-    // Local Player Avatar (visible when in 3rd-Person Self View)
     let localAvatar = null;
+    let viewMode = 'first';
+    let spectatedPeerId = null;
+
     function syncLocalAvatar() {
       if (!localAvatar) {
         localAvatar = createAvatarMesh(`${playerState.name} (You)`, playerState.color);
-        localAvatar.beacon.visible = false; // Hide giant sky beam on self
+        localAvatar.beacon.visible = false;
       }
       localAvatar.group.visible = (viewMode === 'third');
       localAvatar.group.position.copy(playerState.pos);
@@ -990,6 +851,7 @@
       }
     }
 
+    let teleportCycleIndex = 0;
     function cycleViewMode() {
       if (viewMode === 'first') {
         setViewMode('third');
@@ -1013,7 +875,6 @@
 
     document.getElementById('spectate-toggle-btn').addEventListener('click', cycleViewMode);
 
-    // Teleport local player 4.5 units in front of the next explorer, facing directly toward their avatar
     function teleportToNextExplorer() {
       if (remotePlayers.size === 0) {
         showToast('⚠️ No other explorers online to teleport to', 'border-amber-400/60 text-amber-200');
@@ -1029,7 +890,6 @@
         const targetPos = rp.group.position;
         const targetYaw = rp.group.rotation.y || rp.targetYaw || 0;
 
-        // Place local player 4.5 units in front of where the remote player is facing (or offset along Z)
         const offsetDist = 4.5;
         const spawnX = targetPos.x - Math.sin(targetYaw) * offsetDist;
         const spawnZ = targetPos.z - Math.cos(targetYaw) * offsetDist;
@@ -1039,7 +899,6 @@
         playerState.pos.set(spawnX, spawnY, spawnZ);
         playerState.velY = 0;
 
-        // Rotate our camera/rig yaw & pitch to look directly at the remote player's chest/head
         const dx = targetPos.x - spawnX;
         const dz = targetPos.z - spawnZ;
         const dy = (targetPos.y + 1.4) - (spawnY + 1.7);
@@ -1048,9 +907,7 @@
         playerState.yaw = Math.atan2(-dx, -dz);
         playerState.pitch = Math.max(-0.6, Math.min(0.6, Math.atan2(dy, horizDist)));
 
-        if (viewMode === 'spectate') {
-          setViewMode('first');
-        }
+        if (viewMode === 'spectate') setViewMode('first');
 
         playerRig.position.copy(playerState.pos);
         playerRig.rotation.y = playerState.yaw;
@@ -1068,7 +925,6 @@
         return;
       }
 
-      // Generate concise 6-char room ID for easy sharing
       const shortId = 'vr-' + Math.random().toString(36).substring(2, 8);
       peer = new Peer(shortId, { debug: 1 });
 
@@ -1076,7 +932,6 @@
         myPeerId = id;
         document.getElementById('my-peer-id').value = id;
 
-        // Check URL parameter ?join=<roomId> for instant invite link joining
         const params = new URLSearchParams(window.location.search);
         const joinId = params.get('join');
         if (joinId && joinId !== id) {
@@ -1084,14 +939,12 @@
         }
       });
 
-      // Incoming P2P connection (when acting as Host)
       peer.on('connection', (conn) => {
         hostConnections.set(conn.peer, conn);
 
         conn.on('data', (msg) => {
           if (msg.type === 'state') {
             upsertRemotePlayer(conn.peer, msg.payload);
-            // Relay this peer's state to all other connected peers
             for (const [otherId, otherConn] of hostConnections.entries()) {
               if (otherId !== conn.peer && otherConn.open) {
                 otherConn.send({ type: 'peer_state', id: conn.peer, payload: msg.payload });
@@ -1134,10 +987,8 @@
 
       conn.on('data', (msg) => {
         if (msg.type === 'state') {
-          // Direct state from Host
           upsertRemotePlayer(conn.peer, msg.payload);
         } else if (msg.type === 'peer_state') {
-          // Relayed state from another peer in the room
           upsertRemotePlayer(msg.id, msg.payload);
         } else if (msg.type === 'peer_leave') {
           removeRemotePlayer(msg.id);
@@ -1151,7 +1002,6 @@
       });
     }
 
-    // Broadcast local player state at 20Hz
     setInterval(() => {
       if (!myPeerId) return;
       const payload = {
@@ -1168,13 +1018,10 @@
         clientToHostConn.send({ type: 'state', payload });
       }
       for (const [, conn] of hostConnections.entries()) {
-        if (conn.open) {
-          conn.send({ type: 'state', payload });
-        }
+        if (conn.open) conn.send({ type: 'state', payload });
       }
     }, 50);
 
-    // UI Event Listeners for Multiplayer & HUD
     document.getElementById('copy-invite-btn').addEventListener('click', () => {
       const url = new URL(window.location.href);
       url.searchParams.set('join', myPeerId);
@@ -1208,14 +1055,148 @@
     });
 
     // =========================================================================
-    // 7. MAIN SIMULATION & RENDER LOOP (SUPPORTS STANDARD, VR BOX, AND WEBXR)
+    // 5. CONTROLS & DEVICEORIENTATION GYRO TRACKING
+    // =========================================================================
+    const keys = {};
+    const touchInput = { moveX: 0, moveY: 0, lookX: 0, lookY: 0, jump: false };
+    let activeGamepadIndex = null;
+    let prevTrianglePressed = false;
+    let prevSquarePressed = false;
+    let prevTeleportPressed = false;
+    let prevSpectatePressed = false;
+    let gyroEnabled = false;
+
+    const deviceEuler = new THREE.Euler();
+    const deviceQuat = new THREE.Quaternion();
+    const screenTransform = new THREE.Quaternion();
+    const worldTransform = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+
+    window.addEventListener('deviceorientation', (event) => {
+      if (!isVrBoxMode || event.alpha === null) return;
+      gyroEnabled = true;
+
+      const alpha = THREE.MathUtils.degToRad(event.alpha || 0);
+      const beta = THREE.MathUtils.degToRad(event.beta || 0);
+      const gamma = THREE.MathUtils.degToRad(event.gamma || 0);
+      const orient = THREE.MathUtils.degToRad(window.screen?.orientation?.angle || window.orientation || 0);
+
+      deviceEuler.set(beta, alpha, -gamma, 'YXZ');
+      deviceQuat.setFromEuler(deviceEuler);
+      deviceQuat.multiply(worldTransform);
+      screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -orient);
+      deviceQuat.multiply(screenTransform);
+    });
+
+    function showToast(msg, colorClass = 'border-sky-400/50 text-sky-100') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `px-4 py-2 rounded-full bg-slate-900/90 border ${colorClass} backdrop-blur-md text-xs font-semibold shadow-xl transition-all duration-300`;
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(-8px)';
+        setTimeout(() => el.remove(), 300);
+      }, 2800);
+    }
+
+    window.addEventListener('gamepadconnected', (e) => {
+      activeGamepadIndex = e.gamepad.index;
+      const dot = document.getElementById('gamepad-dot');
+      const text = document.getElementById('gamepad-text');
+      dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+      const shortName = 'PS4 DualShock 4 Connected';
+      text.textContent = shortName;
+      showToast(`🎮 ${shortName}`, 'border-emerald-400/60 text-emerald-200');
+    });
+
+    window.addEventListener('gamepaddisconnected', (e) => {
+      if (activeGamepadIndex === e.gamepad.index) {
+        activeGamepadIndex = null;
+        document.getElementById('gamepad-dot').className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
+        document.getElementById('gamepad-text').textContent = 'PS4 Controller: Disconnected';
+        showToast('🎮 Controller disconnected', 'border-amber-400/60 text-amber-200');
+      }
+    });
+
+    function applyDeadzone(val, deadzone = 0.12) {
+      if (Math.abs(val) < deadzone) return 0;
+      return (val - Math.sign(val) * deadzone) / (1 - deadzone);
+    }
+
+    function pollGamepad() {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      let gp = activeGamepadIndex !== null ? gamepads[activeGamepadIndex] : null;
+      if (!gp) {
+        for (let i = 0; i < gamepads.length; i++) {
+          if (gamepads[i]) {
+            gp = gamepads[i];
+            activeGamepadIndex = i;
+            break;
+          }
+        }
+      }
+      if (!gp) return null;
+
+      const lx = applyDeadzone(gp.axes[0] || 0);
+      const ly = applyDeadzone(gp.axes[1] || 0);
+      const rx = applyDeadzone(gp.axes[2] || 0);
+      const ry = applyDeadzone(gp.axes[3] || 0);
+
+      const crossPressed = gp.buttons[0]?.pressed || false;
+      const circlePressed = gp.buttons[1]?.pressed || false;
+      const squarePressed = gp.buttons[2]?.pressed || false;
+      const trianglePressed = gp.buttons[3]?.pressed || false;
+      const sprintPressed = (gp.buttons[4]?.pressed || gp.buttons[5]?.pressed || gp.buttons[6]?.value > 0.3 || gp.buttons[7]?.value > 0.3) || false;
+      
+      const teleportPressed = gp.buttons[15]?.pressed || gp.buttons[8]?.pressed || false;
+      const spectatePressed = gp.buttons[12]?.pressed || false;
+
+      if (trianglePressed && !prevTrianglePressed) toggleFlyMode();
+      prevTrianglePressed = trianglePressed;
+
+      if (squarePressed && !prevSquarePressed) {
+        const groundY = getTerrainHeight(playerState.pos.x, playerState.pos.z);
+        playerState.pos.y = groundY + 1.5;
+        playerState.velY = 0;
+        showToast('🔄 Reset to terrain surface');
+      }
+      prevSquarePressed = squarePressed;
+
+      if (teleportPressed && !prevTeleportPressed) teleportToNextExplorer();
+      prevTeleportPressed = teleportPressed;
+
+      if (spectatePressed && !prevSpectatePressed) cycleViewMode();
+      prevSpectatePressed = spectatePressed;
+
+      return { lx, ly, rx, ry, crossPressed, circlePressed, sprintPressed };
+    }
+
+    function toggleFlyMode() {
+      playerState.flyMode = !playerState.flyMode;
+      playerState.velY = 0;
+      const modeLabel = document.getElementById('move-mode-text');
+      modeLabel.textContent = playerState.flyMode ? 'FLY MODE' : 'WALK';
+      modeLabel.className = playerState.flyMode ? 'text-amber-400 font-semibold' : 'text-sky-400 font-semibold';
+      showToast(playerState.flyMode ? '🕊️ Fly Mode Enabled' : '🥾 Walk Mode Enabled');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      if (e.code === 'KeyF') toggleFlyMode();
+      if (e.code === 'KeyT') teleportToNextExplorer();
+      if (e.code === 'KeyV') cycleViewMode();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    // =========================================================================
+    // 6. MAIN SIMULATION & RENDER LOOP
     // =========================================================================
     const clock = new THREE.Clock();
     const forwardVec = new THREE.Vector3();
     const rightVec = new THREE.Vector3();
     const eulerHelper = new THREE.Euler(0, 0, 0, 'YXZ');
 
-    // Initialize initial terrain chunks & P2P networking
     updateChunks(0, 0);
     initMultiplayer();
 
@@ -1230,11 +1211,8 @@
 
     function animate() {
       const dt = Math.min(clock.getDelta(), 0.05);
-
-      // 1. Poll PS4 DualShock 4 Controller
       const gp = pollGamepad();
 
-      // 2. Gather Movement & Look Inputs (PS4 Controller + Keyboard + Mobile Touch)
       let moveForward = 0;
       let moveRight = 0;
       let lookYaw = 0;
@@ -1253,7 +1231,6 @@
         if (gp.sprintPressed) isSprinting = true;
       }
 
-      // Keyboard fallback
       if (keys['KeyW'] || keys['ArrowUp']) moveForward += 1;
       if (keys['KeyS'] || keys['ArrowDown']) moveForward -= 1;
       if (keys['KeyD'] || keys['ArrowRight']) moveRight += 1;
@@ -1262,20 +1239,10 @@
       if (keys['ShiftLeft'] || keys['ShiftRight']) isSprinting = true;
       if (keys['KeyC']) descendAction = true;
 
-      // Mobile touch fallback
-      if (Math.abs(touchInput.moveY) > 0.05) moveForward -= touchInput.moveY;
-      if (Math.abs(touchInput.moveX) > 0.05) moveRight += touchInput.moveX;
-      if (Math.abs(touchInput.lookX) > 0.05) lookYaw -= touchInput.lookX * 2.0 * dt;
-      if (Math.abs(touchInput.lookY) > 0.05) lookPitch -= touchInput.lookY * 1.6 * dt;
-      if (touchInput.jump) jumpAction = true;
-
-      // Update Yaw & Pitch
       playerState.yaw += lookYaw;
       playerState.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, playerState.pitch + lookPitch));
 
-      // Apply Rotation to Rig & Camera
       if (viewMode === 'spectate' && spectatedPeerId && remotePlayers.has(spectatedPeerId)) {
-        // Orbit / follow directly behind the spectated explorer's avatar
         const targetRp = remotePlayers.get(spectatedPeerId);
         playerRig.position.copy(targetRp.group.position);
         playerRig.rotation.y = playerState.yaw;
@@ -1290,27 +1257,16 @@
       }
 
       if (renderer.xr.isPresenting) {
-        // WebXR handles headset orientation automatically on camera
+        // WebXR headset handles orientation
       } else if (isVrBoxMode && gyroEnabled) {
-        // Combine phone gyroscope head-tracking with PS4 right-stick yaw
         camera.quaternion.copy(deviceQuat);
       } else {
         eulerHelper.set(playerState.pitch, 0, 0, 'YXZ');
         camera.quaternion.setFromEuler(eulerHelper);
       }
 
-      // Calculate Forward & Right vectors in XZ plane
-      // If in WebXR, orient movement relative to where the VR headset is looking
-      let moveHeading = playerState.yaw;
-      if (renderer.xr.isPresenting) {
-        const xrCam = renderer.xr.getCamera();
-        const dir = new THREE.Vector3();
-        xrCam.getWorldDirection(dir);
-        moveHeading = Math.atan2(-dir.x, -dir.z);
-      }
-
-      forwardVec.set(-Math.sin(moveHeading), 0, -Math.cos(moveHeading));
-      rightVec.set(Math.cos(moveHeading), 0, -Math.sin(moveHeading));
+      forwardVec.set(-Math.sin(playerState.yaw), 0, -Math.cos(playerState.yaw));
+      rightVec.set(Math.cos(playerState.yaw), 0, -Math.sin(playerState.yaw));
 
       const speed = (isSprinting ? 22.0 : 10.5) * (playerState.flyMode ? 1.6 : 1.0);
       const inputLen = Math.hypot(moveForward, moveRight);
@@ -1322,7 +1278,6 @@
       playerState.pos.addScaledVector(forwardVec, moveForward * speed * dt);
       playerState.pos.addScaledVector(rightVec, moveRight * speed * dt);
 
-      // Vertical Physics (Walk vs Fly)
       const groundY = getTerrainHeight(playerState.pos.x, playerState.pos.z);
 
       if (playerState.flyMode) {
@@ -1334,7 +1289,7 @@
           playerState.velY = 10.5;
           playerState.onGround = false;
         }
-        playerState.velY -= 26.0 * dt; // Gravity
+        playerState.velY -= 26.0 * dt;
         playerState.pos.y += playerState.velY * dt;
 
         if (playerState.pos.y <= groundY) {
@@ -1349,7 +1304,6 @@
       }
       syncLocalAvatar();
 
-      // 3. Keep Water, Sun & Infinite Chunks Centered Around Active Camera Rig
       const focusPos = playerRig.position;
       waterMesh.position.x = focusPos.x;
       waterMesh.position.z = focusPos.z;
@@ -1359,11 +1313,9 @@
 
       updateChunks(focusPos.x, focusPos.z);
 
-      // 4. Smoothly Interpolate Remote Multiplayer Avatars & Pulse Ground Ring
       const pulse = 0.85 + Math.sin(performance.now() * 0.004) * 0.15;
       for (const [, rp] of remotePlayers.entries()) {
         rp.group.position.lerp(rp.targetPos, Math.min(1, dt * 12));
-        // Smooth yaw interpolation
         let diff = rp.targetYaw - rp.group.rotation.y;
         while (diff < -Math.PI) diff += Math.PI * 2;
         while (diff > Math.PI) diff -= Math.PI * 2;
@@ -1372,7 +1324,6 @@
         if (rp.groundRing) rp.groundRing.scale.setScalar(pulse);
       }
 
-      // 5. Update HUD Coordinates periodically
       const now = performance.now();
       if (now - lastCoordUpdate > 200) {
         lastCoordUpdate = now;
@@ -1380,7 +1331,6 @@
           `X: ${Math.round(playerState.pos.x)} | Y: ${Math.round(playerState.pos.y)} | Z: ${Math.round(playerState.pos.z)}`;
       }
 
-      // 6. Render (Stereoscopic VR Box vs Standard / WebXR)
       if (isVrBoxMode && !renderer.xr.isPresenting) {
         stereoEffect.render(scene, camera);
       } else {
@@ -1388,7 +1338,6 @@
       }
     }
 
-    // Start WebXR-compatible animation loop on window load
     window.addEventListener('load', () => {
       renderer.setAnimationLoop(animate);
     });
