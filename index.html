@@ -147,12 +147,14 @@
         </div>
 
         <!-- Coordinates & Mode Indicator -->
-        <div class="inline-flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md text-[11px] text-slate-300 w-fit">
+        <div class="inline-flex flex-wrap items-center gap-2 sm:gap-3 px-3 py-1.5 rounded-xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md text-[11px] text-slate-300 w-fit">
           <span id="coords-text">X: 0 | Y: 12 | Z: 0</span>
           <span class="text-slate-600">•</span>
           <span id="move-mode-text" class="text-sky-400 font-semibold">WALK</span>
           <span class="text-slate-600">•</span>
           <button id="teleport-next-btn" class="text-emerald-400 hover:text-emerald-300 font-bold underline cursor-pointer">Teleport to Next</button>
+          <span class="text-slate-600">•</span>
+          <button id="spectate-toggle-btn" class="text-amber-300 hover:text-amber-200 font-bold underline cursor-pointer">View: 1st Person</button>
         </div>
       </div>
 
@@ -231,8 +233,9 @@
             <div class="flex justify-between"><span class="text-slate-400">Triangle (△)</span><span>Toggle Walk / Fly Mode</span></div>
             <div class="flex justify-between"><span class="text-slate-400">Square (□)</span><span>Reset to Surface</span></div>
             <div class="flex justify-between"><span class="text-slate-400">D-Pad Right / Share</span><span>Teleport to Next Explorer</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">D-Pad Up</span><span>Toggle 3rd-Person / Spectate</span></div>
             <div class="pt-1 mt-1 border-t border-slate-700/60 text-[10px] text-slate-400">
-              Desktop: Click canvas to look, WASD move, Space jump, Shift sprint, F fly, T teleport next.
+              Desktop: Click canvas to look, WASD move, Space jump, Shift sprint, F fly, T teleport next, V spectate/3rd-person.
             </div>
           </div>
 
@@ -644,6 +647,12 @@
     let prevTrianglePressed = false;
     let prevSquarePressed = false;
     let prevTeleportPressed = false;
+    let prevSpectatePressed = false;
+    let teleportCycleIndex = 0;
+
+    // Camera / Spectate Mode: 'first' | 'third' | 'spectate'
+    let viewMode = 'first';
+    let spectatedPeerId = null;
 
     // VR Box Mode & DeviceOrientation Gyro Tracking
     let isVrBoxMode = false;
@@ -740,6 +749,8 @@
       
       // Teleport shortcut on D-Pad Right ([15]) or Share ([8])
       const teleportPressed = gp.buttons[15]?.pressed || gp.buttons[8]?.pressed || false;
+      // Spectate / 3rd-person toggle on D-Pad Up ([12])
+      const spectatePressed = gp.buttons[12]?.pressed || false;
 
       // Edge-triggered Triangle -> Toggle Fly Mode
       if (trianglePressed && !prevTrianglePressed) {
@@ -762,6 +773,12 @@
       }
       prevTeleportPressed = teleportPressed;
 
+      // Edge-triggered Spectate / 3rd-Person View Toggle
+      if (spectatePressed && !prevSpectatePressed) {
+        cycleViewMode();
+      }
+      prevSpectatePressed = spectatePressed;
+
       return { lx, ly, rx, ry, crossPressed, circlePressed, sprintPressed };
     }
 
@@ -779,209 +796,143 @@
       keys[e.code] = true;
       if (e.code === 'KeyF') toggleFlyMode();
       if (e.code === 'KeyT') teleportToNextExplorer();
+      if (e.code === 'KeyV') cycleViewMode();
     });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
-
-    renderer.domElement.addEventListener('click', () => {
-      if (!isVrBoxMode && document.pointerLockElement !== renderer.domElement && window.innerWidth > 768) {
-        renderer.domElement.requestPointerLock?.();
-      }
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (document.pointerLockElement === renderer.domElement) {
-        playerState.yaw -= e.movementX * 0.0022;
-        playerState.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, playerState.pitch - e.movementY * 0.0022));
-      }
-    });
-
-    // Mobile Touch Virtual Joysticks
-    function setupTouchJoystick(zoneId, knobId, onUpdate) {
-      const zone = document.getElementById(zoneId);
-      const knob = document.getElementById(knobId);
-      let touchId = null;
-
-      zone.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        const t = e.changedTouches[0];
-        touchId = t.identifier;
-        updateKnob(t);
-      }, { passive: false });
-
-      zone.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        for (const t of e.changedTouches) {
-          if (t.identifier === touchId) updateKnob(t);
-        }
-      }, { passive: false });
-
-      const endTouch = (e) => {
-        for (const t of e.changedTouches) {
-          if (t.identifier === touchId) {
-            touchId = null;
-            knob.style.transform = 'translate(0px, 0px)';
-            onUpdate(0, 0);
-          }
-        }
-      };
-      zone.addEventListener('touchend', endTouch);
-      zone.addEventListener('touchcancel', endTouch);
-
-      function updateKnob(touch) {
-        const rect = zone.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const maxR = rect.width * 0.35;
-        let dx = touch.clientX - cx;
-        let dy = touch.clientY - cy;
-        const dist = Math.hypot(dx, dy);
-        if (dist > maxR) {
-          dx = (dx / dist) * maxR;
-          dy = (dy / dist) * maxR;
-        }
-        knob.style.transform = `translate(${dx}px, ${dy}px)`;
-        onUpdate(dx / maxR, dy / maxR);
-      }
-    }
-
-    setupTouchJoystick('touch-move-zone', 'touch-move-knob', (nx, ny) => {
-      touchInput.moveX = nx;
-      touchInput.moveY = ny;
-    });
-    setupTouchJoystick('touch-look-zone', 'touch-look-knob', (nx, ny) => {
-      touchInput.lookX = nx;
-      touchInput.lookY = ny;
-    });
-
-    document.getElementById('mobile-jump-btn').addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      touchInput.jump = true;
-    });
-    document.getElementById('mobile-jump-btn').addEventListener('touchend', () => {
-      touchInput.jump = false;
-    });
-    document.getElementById('mobile-fly-btn').addEventListener('click', toggleFlyMode);
-
-    // =========================================================================
-    // 5. VR BOX (STEREOSCOPIC CARDBOARD) MODE CONTROLS
-    // =========================================================================
-    const vrBoxOverlay = document.getElementById('vr-box-overlay');
-    const mainHud = document.getElementById('main-hud');
-
-    async function enterVrBoxMode() {
-      // Request iOS 13+ DeviceOrientation permission if needed
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        try {
-          const res = await DeviceOrientationEvent.requestPermission();
-          if (res !== 'granted') {
-            showToast('Gyroscope permission denied; use PS4 Right Stick to look', 'border-amber-400/60 text-amber-200');
-          }
-        } catch (err) {
-          console.warn('Gyro permission error:', err);
-        }
-      }
-
-      // Request Fullscreen & Landscape Lock for VR Box headset
-      try {
-        if (document.documentElement.requestFullscreen) {
-          await document.documentElement.requestFullscreen();
-        }
-        if (screen.orientation && screen.orientation.lock) {
-          await screen.orientation.lock('landscape').catch(() => {});
-        }
-      } catch (e) {
-        // Fallback smoothly if browser blocks fullscreen/lock
-      }
-
-      isVrBoxMode = true;
-      mainHud.style.display = 'none';
-      vrButton.style.display = 'none';
-      vrBoxOverlay.classList.add('active');
-      stereoEffect.setSize(window.innerWidth, window.innerHeight);
-      showToast('🥽 VR Box Mode Active — Insert phone into VR headset!');
-    }
-
-    function exitVrBoxMode() {
-      isVrBoxMode = false;
-      gyroEnabled = false;
-      mainHud.style.display = 'flex';
-      vrButton.style.display = 'block';
-      vrBoxOverlay.classList.remove('active');
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
-    }
-
-    document.getElementById('enter-vr-box-btn').addEventListener('click', enterVrBoxMode);
-    document.getElementById('exit-vr-box-btn').addEventListener('click', exitVrBoxMode);
-
-    document.getElementById('ipd-slider').addEventListener('input', (e) => {
-      const ipd = parseFloat(e.target.value);
-      document.getElementById('ipd-value').textContent = `${ipd.toFixed(3)}m`;
-      stereoEffect.setEyeSeparation(ipd);
-    });
-
-    // =========================================================================
-    // 6. SERVERLESS P2P MULTIPLAYER VIA PEERJS (GITHUB PAGES READY)
-    // =========================================================================
-    const remotePlayers = new Map(); // peerId -> { mesh, headMesh, targetPos, targetYaw, targetPitch, name, color }
-    let peer = null;
-    let myPeerId = '';
-    let isHost = true;
-    const hostConnections = new Map(); // Used when we are Host: peerId -> DataConnection
-    let clientToHostConn = null;       // Used when we are Client: DataConnection to Host
-
-    // Create Stylized Low-Poly Explorer Avatar for Remote Players
+    // Create Stylized Low-Poly Explorer Avatar for Remote Players (with Glowing Visor & Sky Beacon)
     function createAvatarMesh(name, hexColor) {
       const group = new THREE.Group();
-      const bodyMat = new THREE.MeshStandardMaterial({ color: hexColor, flatShading: true });
+      const baseColor = new THREE.Color(hexColor || '#38bdf8');
+      const bodyMat = new THREE.MeshStandardMaterial({ color: baseColor, flatShading: true, roughness: 0.45 });
+      const limbMat = new THREE.MeshStandardMaterial({ color: baseColor.clone().multiplyScalar(0.75), flatShading: true });
       const skinMat = new THREE.MeshStandardMaterial({ color: 0xfde68a, flatShading: true });
-      const visorMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.8 });
+      const visorMat = new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        emissive: baseColor,
+        emissiveIntensity: 1.4,
+        roughness: 0.15,
+        metalness: 0.8
+      });
 
-      // Torso
-      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.9, 0.38), bodyMat);
-      torso.position.y = 0.95;
+      // Legs
+      const legGeo = new THREE.BoxGeometry(0.22, 0.55, 0.24);
+      const leftLeg = new THREE.Mesh(legGeo, limbMat);
+      leftLeg.position.set(-0.16, 0.275, 0);
+      leftLeg.castShadow = true;
+      const rightLeg = new THREE.Mesh(legGeo, limbMat);
+      rightLeg.position.set(0.16, 0.275, 0);
+      rightLeg.castShadow = true;
+      group.add(leftLeg, rightLeg);
+
+      // Torso & Backpack
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.85, 0.36), bodyMat);
+      torso.position.y = 0.98;
       torso.castShadow = true;
       group.add(torso);
 
-      // Head + VR Visor
-      const headGroup = new THREE.Group();
-      headGroup.position.set(0, 1.65, 0);
+      const pack = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.56, 0.2), limbMat);
+      pack.position.set(0, 1.02, 0.26);
+      pack.castShadow = true;
+      group.add(pack);
 
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.46, 0.46), skinMat);
+      // Arms
+      const armGeo = new THREE.BoxGeometry(0.18, 0.72, 0.2);
+      const leftArm = new THREE.Mesh(armGeo, bodyMat);
+      leftArm.position.set(-0.46, 0.98, 0);
+      leftArm.castShadow = true;
+      const rightArm = new THREE.Mesh(armGeo, bodyMat);
+      rightArm.position.set(0.46, 0.98, 0);
+      rightArm.castShadow = true;
+      group.add(leftArm, rightArm);
+
+      // Head + Glowing VR Headset Visor
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 1.66, 0);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.48), skinMat);
       head.castShadow = true;
       headGroup.add(head);
 
-      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.18, 0.14), visorMat);
-      visor.position.set(0, 0.02, -0.22);
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.2, 0.16), visorMat);
+      visor.position.set(0, 0.03, -0.22);
       headGroup.add(visor);
+
+      const strap = new THREE.Mesh(
+        new THREE.BoxGeometry(0.51, 0.1, 0.51),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6 })
+      );
+      strap.position.set(0, 0.04, 0.01);
+      headGroup.add(strap);
 
       group.add(headGroup);
 
-      // Floating Name Sprite
+      // Ground Halo Ring + Vertical Sky Light Beacon (easy to spot across the infinite world)
+      const ringGeo = new THREE.RingGeometry(0.65, 0.85, 24);
+      ringGeo.rotateX(-Math.PI / 2);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: baseColor,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.75
+      });
+      const groundRing = new THREE.Mesh(ringGeo, ringMat);
+      groundRing.position.y = 0.05;
+      group.add(groundRing);
+
+      const beaconHeight = 90;
+      const beaconGeo = new THREE.CylinderGeometry(0.12, 0.35, beaconHeight, 12, 1, true);
+      const beaconMat = new THREE.MeshBasicMaterial({
+        color: baseColor,
+        transparent: true,
+        opacity: 0.22,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+      beacon.position.y = beaconHeight / 2 + 2.4;
+      group.add(beacon);
+
+      // Floating Name & ID Tag Sprite
       const canvas = document.createElement('canvas');
-      canvas.width = 256;
-      canvas.height = 64;
+      canvas.width = 320;
+      canvas.height = 72;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
-      ctx.roundRect(16, 10, 224, 44, 16);
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.84)';
+      ctx.beginPath();
+      ctx.roundRect(12, 10, 296, 52, 18);
       ctx.fill();
+      ctx.strokeStyle = hexColor || '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
       ctx.font = 'bold 24px Inter, sans-serif';
       ctx.fillStyle = '#f8fafc';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(name || 'Explorer', 128, 33);
+      ctx.fillText(name || 'Explorer', 160, 37);
 
       const tex = new THREE.CanvasTexture(canvas);
       const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
       const sprite = new THREE.Sprite(spriteMat);
-      sprite.position.set(0, 2.25, 0);
-      sprite.scale.set(2.2, 0.55, 1);
+      sprite.position.set(0, 2.38, 0);
+      sprite.scale.set(2.6, 0.6, 1);
       group.add(sprite);
 
       scene.add(group);
-      return { group, headGroup, sprite, name, color: hexColor };
+      return { group, headGroup, sprite, beacon, groundRing, name, color: hexColor };
+    }
+
+    // Local Player Avatar (visible when in 3rd-Person Self View)
+    let localAvatar = null;
+    function syncLocalAvatar() {
+      if (!localAvatar) {
+        localAvatar = createAvatarMesh(`${playerState.name} (You)`, playerState.color);
+        localAvatar.beacon.visible = false; // Hide giant sky beam on self
+      }
+      localAvatar.group.visible = (viewMode === 'third');
+      localAvatar.group.position.copy(playerState.pos);
+      localAvatar.group.rotation.y = playerState.yaw;
+      localAvatar.headGroup.rotation.x = playerState.pitch;
     }
 
     function upsertRemotePlayer(id, data) {
@@ -1011,6 +962,10 @@
       if (rp) {
         scene.remove(rp.group);
         remotePlayers.delete(id);
+        if (spectatedPeerId === id) {
+          spectatedPeerId = null;
+          if (viewMode === 'spectate') setViewMode('first');
+        }
         updatePlayerCountUI();
       }
     }
@@ -1020,23 +975,88 @@
       document.getElementById('player-count-text').textContent = `Explorers: ${total}`;
     }
 
-    // Teleport local player position to the next available remote explorer
+    function setViewMode(mode) {
+      viewMode = mode;
+      const btn = document.getElementById('spectate-toggle-btn');
+      if (viewMode === 'first') {
+        camera.position.set(0, 1.7, 0);
+        btn.textContent = 'View: 1st Person';
+      } else if (viewMode === 'third') {
+        camera.position.set(0, 2.6, 4.5);
+        btn.textContent = 'View: 3rd Person';
+      } else if (viewMode === 'spectate') {
+        camera.position.set(0, 2.6, 4.8);
+        btn.textContent = 'View: Spectating';
+      }
+    }
+
+    function cycleViewMode() {
+      if (viewMode === 'first') {
+        setViewMode('third');
+        showToast('🎥 3rd-Person Self View');
+      } else if (viewMode === 'third') {
+        if (remotePlayers.size > 0) {
+          const ids = Array.from(remotePlayers.keys());
+          spectatedPeerId = ids[teleportCycleIndex % ids.length];
+          setViewMode('spectate');
+          const target = remotePlayers.get(spectatedPeerId);
+          showToast(`🔭 Spectating ${target?.name || 'Explorer'}`, 'border-amber-400/60 text-amber-200');
+        } else {
+          setViewMode('first');
+          showToast('👁️ 1st-Person View');
+        }
+      } else {
+        setViewMode('first');
+        showToast('👁️ 1st-Person View');
+      }
+    }
+
+    document.getElementById('spectate-toggle-btn').addEventListener('click', cycleViewMode);
+
+    // Teleport local player 4.5 units in front of the next explorer, facing directly toward their avatar
     function teleportToNextExplorer() {
       if (remotePlayers.size === 0) {
         showToast('⚠️ No other explorers online to teleport to', 'border-amber-400/60 text-amber-200');
         return;
       }
       const remoteIds = Array.from(remotePlayers.keys());
-      // Pick the first remote player or cycle through them
-      const targetId = remoteIds[Math.floor(Math.random() * remoteIds.length)];
+      const targetId = remoteIds[teleportCycleIndex % remoteIds.length];
+      teleportCycleIndex++;
+
       const rp = remotePlayers.get(targetId);
       if (rp) {
-        playerState.pos.copy(rp.group.position);
-        playerState.pos.y += 2.0; // Place slightly above their head
+        spectatedPeerId = targetId;
+        const targetPos = rp.group.position;
+        const targetYaw = rp.group.rotation.y || rp.targetYaw || 0;
+
+        // Place local player 4.5 units in front of where the remote player is facing (or offset along Z)
+        const offsetDist = 4.5;
+        const spawnX = targetPos.x - Math.sin(targetYaw) * offsetDist;
+        const spawnZ = targetPos.z - Math.cos(targetYaw) * offsetDist;
+        const groundY = getTerrainHeight(spawnX, spawnZ);
+        const spawnY = Math.max(groundY, targetPos.y);
+
+        playerState.pos.set(spawnX, spawnY, spawnZ);
         playerState.velY = 0;
+
+        // Rotate our camera/rig yaw & pitch to look directly at the remote player's chest/head
+        const dx = targetPos.x - spawnX;
+        const dz = targetPos.z - spawnZ;
+        const dy = (targetPos.y + 1.4) - (spawnY + 1.7);
+        const horizDist = Math.hypot(dx, dz);
+
+        playerState.yaw = Math.atan2(-dx, -dz);
+        playerState.pitch = Math.max(-0.6, Math.min(0.6, Math.atan2(dy, horizDist)));
+
+        if (viewMode === 'spectate') {
+          setViewMode('first');
+        }
+
         playerRig.position.copy(playerState.pos);
+        playerRig.rotation.y = playerState.yaw;
         updateChunks(playerState.pos.x, playerState.pos.z);
-        showToast(`✨ Teleported to ${rp.name || 'Explorer'}!`, 'border-emerald-400/60 text-emerald-200');
+
+        showToast(`✨ Spawned in front of ${rp.name || 'Explorer'}!`, 'border-emerald-400/60 text-emerald-200');
       }
     }
 
@@ -1254,7 +1274,20 @@
       playerState.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, playerState.pitch + lookPitch));
 
       // Apply Rotation to Rig & Camera
-      playerRig.rotation.y = playerState.yaw;
+      if (viewMode === 'spectate' && spectatedPeerId && remotePlayers.has(spectatedPeerId)) {
+        // Orbit / follow directly behind the spectated explorer's avatar
+        const targetRp = remotePlayers.get(spectatedPeerId);
+        playerRig.position.copy(targetRp.group.position);
+        playerRig.rotation.y = playerState.yaw;
+        camera.position.set(0, 2.5, 4.8);
+      } else {
+        playerRig.rotation.y = playerState.yaw;
+        if (viewMode === 'third') {
+          camera.position.set(0, 2.5, 4.5);
+        } else {
+          camera.position.set(0, 1.7, 0);
+        }
+      }
 
       if (renderer.xr.isPresenting) {
         // WebXR handles headset orientation automatically on camera
@@ -1311,18 +1344,23 @@
         }
       }
 
-      playerRig.position.copy(playerState.pos);
+      if (viewMode !== 'spectate' || !spectatedPeerId || !remotePlayers.has(spectatedPeerId)) {
+        playerRig.position.copy(playerState.pos);
+      }
+      syncLocalAvatar();
 
-      // 3. Keep Water, Sun & Infinite Chunks Centered Around Player
-      waterMesh.position.x = playerState.pos.x;
-      waterMesh.position.z = playerState.pos.z;
-      sunLight.position.set(playerState.pos.x + 60, 110, playerState.pos.z + 40);
-      sunLight.target.position.copy(playerState.pos);
-      sunDisc.position.set(playerState.pos.x + 150, 220, playerState.pos.z + 100);
+      // 3. Keep Water, Sun & Infinite Chunks Centered Around Active Camera Rig
+      const focusPos = playerRig.position;
+      waterMesh.position.x = focusPos.x;
+      waterMesh.position.z = focusPos.z;
+      sunLight.position.set(focusPos.x + 60, 110, focusPos.z + 40);
+      sunLight.target.position.copy(focusPos);
+      sunDisc.position.set(focusPos.x + 150, 220, focusPos.z + 100);
 
-      updateChunks(playerState.pos.x, playerState.pos.z);
+      updateChunks(focusPos.x, focusPos.z);
 
-      // 4. Smoothly Interpolate Remote Multiplayer Avatars
+      // 4. Smoothly Interpolate Remote Multiplayer Avatars & Pulse Ground Ring
+      const pulse = 0.85 + Math.sin(performance.now() * 0.004) * 0.15;
       for (const [, rp] of remotePlayers.entries()) {
         rp.group.position.lerp(rp.targetPos, Math.min(1, dt * 12));
         // Smooth yaw interpolation
@@ -1331,6 +1369,7 @@
         while (diff > Math.PI) diff -= Math.PI * 2;
         rp.group.rotation.y += diff * Math.min(1, dt * 12);
         rp.headGroup.rotation.x = THREE.MathUtils.lerp(rp.headGroup.rotation.x, rp.targetPitch, Math.min(1, dt * 12));
+        if (rp.groundRing) rp.groundRing.scale.setScalar(pulse);
       }
 
       // 5. Update HUD Coordinates periodically
