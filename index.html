@@ -2,1749 +2,2167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AETHERIA // Autonomous Robot Civilization</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #030712;
-            font-family: 'Rajdhani', sans-serif;
-            color: #e2e8f0;
-        }
-        canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            touch-action: none;
-        }
-        .font-orbitron {
-            font-family: 'Orbitron', sans-serif;
-        }
-        .glass-panel {
-            background: rgba(8, 15, 30, 0.72);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(56, 189, 248, 0.08);
-        }
-        .btn-cyber {
-            background: linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(99, 102, 241, 0.22));
-            border: 1px solid rgba(56, 189, 248, 0.45);
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-        .btn-cyber:hover, .btn-cyber:active {
-            background: linear-gradient(135deg, rgba(14, 165, 233, 0.45), rgba(99, 102, 241, 0.45));
-            border-color: #38bdf8;
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.45);
-            transform: translateY(-1px);
-        }
-        .btn-vr {
-            background: linear-gradient(135deg, #0284c7, #4f46e5);
-            border: 1px solid #7dd3fc;
-            box-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
-        }
-        .btn-vr:hover {
-            box-shadow: 0 0 28px rgba(56, 189, 248, 0.85);
-            filter: brightness(1.12);
-        }
-        .pulse-dot {
-            animation: pulseAnim 2s infinite;
-        }
-        @keyframes pulseAnim {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.85); }
-        }
-        /* Custom scrollbar for event log */
-        ::-webkit-scrollbar {
-            width: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.4);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(56, 189, 248, 0.4);
-            border-radius: 4px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VOXEL ROYALE VR — PS4 Controller Battle Royale</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0b1320;
+      font-family: 'Inter', sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .font-display {
+      font-family: 'Rajdhani', sans-serif;
+    }
+    /* Custom styling for Three.js VRButton */
+    #VRButton {
+      position: fixed !important;
+      bottom: 20px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      width: auto !important;
+      min-width: 170px !important;
+      padding: 12px 24px !important;
+      border: 2px solid #38bdf8 !important;
+      border-radius: 9999px !important;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(37, 99, 235, 0.95)) !important;
+      color: #ffffff !important;
+      font-family: 'Rajdhani', sans-serif !important;
+      font-weight: 800 !important;
+      font-size: 16px !important;
+      letter-spacing: 0.08em !important;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.55) !important;
+      cursor: pointer !important;
+      z-index: 60 !important;
+      transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    #VRButton:hover {
+      transform: translateX(-50%) scale(1.05) !important;
+      box-shadow: 0 0 35px rgba(56, 189, 248, 0.85) !important;
+    }
+    @keyframes pulseDamage {
+      0% { opacity: 0.65; }
+      100% { opacity: 0; }
+    }
+    .damage-flash {
+      animation: pulseDamage 0.35s ease-out forwards;
+    }
+  </style>
+  <!-- Import Map for Three.js & WebXR Addons -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
-<body>
+<body class="text-white">
 
-    <!-- Three.js WebGL Mount -->
-    <div id="canvas-container" class="fixed inset-0 z-0"></div>
+  <!-- Damage & Storm Screen Vignette -->
+  <div id="damageOverlay" class="pointer-events-none fixed inset-0 z-20 opacity-0 transition-opacity duration-150"
+       style="background: radial-gradient(circle, transparent 55%, rgba(239, 68, 68, 0.72) 100%);"></div>
+  <div id="stormOverlay" class="pointer-events-none fixed inset-0 z-20 opacity-0 transition-opacity duration-300"
+       style="background: radial-gradient(circle, transparent 50%, rgba(168, 85, 247, 0.6) 100%);"></div>
+  <div id="scopeOverlay" class="pointer-events-none fixed inset-0 z-20 hidden items-center justify-center bg-black/40">
+    <div class="relative w-[72vmin] h-[72vmin] rounded-full border-4 border-sky-400/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.75)] flex items-center justify-center">
+      <div class="absolute w-full h-[1px] bg-sky-400/60"></div>
+      <div class="absolute h-full w-[1px] bg-sky-400/60"></div>
+      <div class="w-2 h-2 rounded-full bg-red-500"></div>
+    </div>
+  </div>
 
-    <!-- Center Crosshair Reticle for Observer Targeting -->
-    <div id="reticle" class="fixed inset-0 pointer-events-none z-10 flex items-center justify-center transition-opacity duration-300">
-        <div class="w-6 h-6 rounded-full border border-cyan-400/50 flex items-center justify-center">
-            <div class="w-1 h-1 rounded-full bg-cyan-300"></div>
+  <!-- Desktop HUD Overlay -->
+  <div id="hud" class="pointer-events-none fixed inset-0 z-30 flex flex-col justify-between p-4 sm:p-6">
+    <!-- Top Row: Minimap, Alive Counter, Controller Badge, Kill Feed -->
+    <div class="flex items-start justify-between gap-4">
+      <!-- Top-Left: Radar Minimap & Zone Timer -->
+      <div class="flex flex-col gap-2">
+        <div class="relative w-32 h-32 sm:w-40 sm:h-40 rounded-2xl bg-slate-900/80 border-2 border-slate-700/80 backdrop-blur-md overflow-hidden shadow-xl">
+          <canvas id="minimapCanvas" width="160" height="160" class="w-full h-full"></canvas>
+          <div id="radarScanBadge" class="hidden absolute bottom-1 left-1 right-1 text-center text-[10px] font-bold uppercase tracking-wider bg-cyan-500/80 text-slate-950 rounded px-1">
+            Radar Pulse Active
+          </div>
         </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/70 backdrop-blur-md text-xs font-semibold">
+          <span class="w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse"></span>
+          <span id="zoneStatusText" class="text-purple-200">Storm Safe</span>
+        </div>
+      </div>
+
+      <!-- Top-Center: Alive & Eliminations Counter + PS4 Status -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="flex items-center gap-3 px-4 py-2 rounded-2xl bg-slate-900/85 border border-slate-700/80 backdrop-blur-md shadow-xl">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs uppercase tracking-wider text-slate-400 font-bold">Alive</span>
+            <span id="aliveCount" class="font-display text-2xl sm:text-3xl font-extrabold text-amber-400">20</span>
+          </div>
+          <div class="w-[1px] h-6 bg-slate-700"></div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs uppercase tracking-wider text-slate-400 font-bold">Elims</span>
+            <span id="killCount" class="font-display text-2xl sm:text-3xl font-extrabold text-rose-400">0</span>
+          </div>
+        </div>
+
+        <!-- PS4 Controller Connection Pill -->
+        <div id="gamepadStatus" class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700 text-xs font-medium text-slate-300">
+          <span id="gamepadDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span id="gamepadText">Press any PS4 button to link controller</span>
+        </div>
+      </div>
+
+      <!-- Top-Right: Kill Feed -->
+      <div id="killFeed" class="hidden sm:flex flex-col items-end gap-1.5 w-64"></div>
     </div>
 
-    <!-- Stereo VR Box Split Divider (Only visible in VR Box Mode) -->
-    <div id="vr-box-overlay" class="hidden fixed inset-0 pointer-events-none z-30">
-        <div class="absolute top-0 bottom-0 left-1/2 w-0.5 bg-black/90"></div>
-        <button id="exit-vr-box-btn" class="pointer-events-auto absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-red-600/80 text-white font-orbitron text-xs tracking-wider border border-red-300 shadow-lg">
-            EXIT VR BOX
+    <!-- Center Crosshair, Hitmarker & Pickup Prompt -->
+    <div class="relative flex flex-col items-center justify-center">
+      <!-- Dynamic Crosshair -->
+      <div id="crosshair" class="relative w-10 h-10 flex items-center justify-center transition-all duration-100">
+        <div id="chTop" class="absolute top-0 w-[2px] h-2.5 bg-white shadow"></div>
+        <div id="chBottom" class="absolute bottom-0 w-[2px] h-2.5 bg-white shadow"></div>
+        <div id="chLeft" class="absolute left-0 h-[2px] w-2.5 bg-white shadow"></div>
+        <div id="chRight" class="absolute right-0 h-[2px] w-2.5 bg-white shadow"></div>
+        <div class="w-1 h-1 rounded-full bg-sky-400"></div>
+        <!-- Hitmarker X -->
+        <div id="hitmarker" class="opacity-0 transition-opacity duration-75 absolute inset-0 flex items-center justify-center">
+          <div class="w-5 h-[2px] bg-rose-500 rotate-45 absolute"></div>
+          <div class="w-5 h-[2px] bg-rose-500 -rotate-45 absolute"></div>
+        </div>
+      </div>
+
+      <!-- Loot Pickup Prompt -->
+      <div id="lootPrompt" class="hidden mt-6 px-4 py-2 rounded-xl bg-slate-900/90 border border-amber-400/80 shadow-lg flex items-center gap-2 text-sm font-bold">
+        <span class="px-2 py-0.5 rounded-md bg-pink-500/20 border border-pink-400 text-pink-300 text-xs">□ SQUARE / E</span>
+        <span id="lootPromptText" class="text-amber-300">Pick up Assault Rifle</span>
+      </div>
+
+      <!-- Toast / Tactical Action Feedback -->
+      <div id="actionToast" class="opacity-0 transition-opacity duration-200 mt-3 px-3.5 py-1 rounded-full bg-sky-500/20 border border-sky-400/50 text-sky-200 text-xs font-semibold">
+        Location Pinged!
+      </div>
+    </div>
+
+    <!-- Bottom Row: Health/Shield/Stance, Weapon Slots, Quick PS4 Controls -->
+    <div class="flex flex-col md:flex-row items-center md:items-end justify-between gap-4 pb-12 sm:pb-2">
+      <!-- Bottom-Left: Shield, Health, Stance & Supplies -->
+      <div class="w-full max-w-xs p-3.5 rounded-2xl bg-slate-900/85 border border-slate-700/80 backdrop-blur-md shadow-xl flex flex-col gap-2">
+        <div class="flex items-center justify-between text-xs font-bold">
+          <span id="stanceBadge" class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 uppercase">Standing</span>
+          <div class="flex items-center gap-3 text-slate-300">
+            <span title="Medkits (Triangle)">🩹 <strong id="medkitCount" class="text-white">2</strong></span>
+            <span title="Grenades (D-Pad Right)">💣 <strong id="grenadeCount" class="text-white">2</strong></span>
+          </div>
+        </div>
+        <!-- Shield Bar -->
+        <div class="relative w-full h-3.5 rounded-lg bg-slate-800 overflow-hidden border border-sky-500/30">
+          <div id="shieldBar" class="h-full bg-gradient-to-r from-sky-500 to-cyan-300 transition-all duration-150" style="width: 100%;"></div>
+          <span id="shieldText" class="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold text-white drop-shadow">100 SHIELD</span>
+        </div>
+        <!-- Health Bar -->
+        <div class="relative w-full h-4 rounded-lg bg-slate-800 overflow-hidden border border-emerald-500/30">
+          <div id="healthBar" class="h-full bg-gradient-to-r from-emerald-600 to-lime-400 transition-all duration-150" style="width: 100%;"></div>
+          <span id="healthText" class="absolute inset-0 flex items-center justify-center text-[11px] font-extrabold text-white drop-shadow">100 HP</span>
+        </div>
+      </div>
+
+      <!-- Bottom-Right: 4 Weapon Inventory Slots + D-Pad Hint -->
+      <div class="flex flex-col items-center md:items-end gap-2">
+        <div id="weaponSlots" class="flex items-center gap-2">
+          <!-- Populated dynamically -->
+        </div>
+        <div class="hidden lg:flex items-center gap-3 px-3 py-1 rounded-xl bg-slate-900/75 border border-slate-800 text-[11px] text-slate-300">
+          <span><strong class="text-sky-400">L2</strong> Aim</span>
+          <span><strong class="text-rose-400">R2</strong> Shoot</span>
+          <span><strong class="text-amber-400">L1/R1</strong> Swap</span>
+          <span><strong class="text-emerald-400">✕</strong> Jump</span>
+          <span><strong class="text-orange-400">○</strong> Crawl</span>
+          <span><strong class="text-pink-400">□</strong> Loot</span>
+          <span><strong class="text-teal-400">△</strong> Heal</span>
+          <span><strong class="text-indigo-400">↑</strong> Ping</span>
+          <span><strong class="text-indigo-400">←</strong> Scan</span>
+          <span><strong class="text-indigo-400">→</strong> Grenade</span>
+          <span><strong class="text-indigo-400">↓</strong> Drop</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start / Pause / Game Over Modal Overlay -->
+  <div id="menuOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+    <div class="max-w-2xl w-full rounded-3xl bg-slate-900 border border-slate-700/90 p-6 sm:p-8 shadow-2xl text-center flex flex-col gap-5">
+      <div>
+        <span class="inline-block px-3 py-1 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 text-xs font-bold uppercase tracking-widest mb-2">
+          WebXR VR + PS4 DualShock 4 Ready
+        </span>
+        <h1 id="menuTitle" class="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-white">
+          VOXEL ROYALE <span class="text-sky-400">VR</span>
+        </h1>
+        <p id="menuSubtitle" class="text-slate-300 text-sm sm:text-base mt-1">
+          Drop into the voxel island, loot weapons, outlast 19 AI rivals, and survive the shrinking storm.
+        </p>
+      </div>
+
+      <!-- End-of-match stats (hidden on initial start) -->
+      <div id="matchSummary" class="hidden grid grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-800/80 border border-slate-700">
+        <div>
+          <div class="text-xs text-slate-400 uppercase font-bold">Placement</div>
+          <div id="summaryRank" class="font-display text-2xl font-extrabold text-amber-400">#1</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 uppercase font-bold">Eliminations</div>
+          <div id="summaryKills" class="font-display text-2xl font-extrabold text-rose-400">0</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 uppercase font-bold">Survival Time</div>
+          <div id="summaryTime" class="font-display text-2xl font-extrabold text-sky-400">0:00</div>
+        </div>
+      </div>
+
+      <!-- PS4 DualShock 4 Control Guide Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-left text-xs bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-bold text-sky-400">L2 / R2 Triggers</div>
+          <div class="text-slate-300">Aim Down Sights / Shoot</div>
+        </div>
+        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-bold text-purple-400">Left / Right Sticks</div>
+          <div class="text-slate-300">Move / Look & VR Turn</div>
+        </div>
+        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-bold text-amber-400">L1 / R1 Bumpers</div>
+          <div class="text-slate-300">Previous / Next Weapon</div>
+        </div>
+        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-bold text-emerald-400">✕ Cross & ○ Circle</div>
+          <div class="text-slate-300">Jump / Toggle Crawl</div>
+        </div>
+        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-bold text-pink-400">□ Square & △ Triangle</div>
+          <div class="text-slate-300">Pick Up Loot / Use Medkit</div>
+        </div>
+        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-bold text-cyan-400">D-Pad ↑ ↓ ← →</div>
+          <div class="text-slate-300">Ping / Drop / Scan / Grenade</div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <button id="startBtn" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-display font-extrabold text-xl tracking-wide shadow-lg shadow-sky-500/30 transition transform hover:scale-105 cursor-pointer">
+          DEPLOY TO ISLAND
         </button>
+      </div>
+      <p class="text-[11px] text-slate-400">
+        Tip: Connect your PS4 DualShock 4 via USB or Bluetooth and press <strong>✕ (Cross)</strong> to deploy! Keyboard + Mouse fallback also supported.
+      </p>
     </div>
+  </div>
 
-    <!-- Main Futuristic Observer HUD -->
-    <div id="hud-layer" class="fixed inset-0 pointer-events-none z-20 flex flex-col justify-between p-3 sm:p-5 transition-opacity duration-300">
-        
-        <!-- Top Bar: Civilization Clock, Phase, VR & Controller Status -->
-        <div class="flex flex-wrap items-start justify-between gap-3">
-            
-            <!-- Left: World Clock & Daily Schedule Phase -->
-            <div class="glass-panel rounded-xl px-4 py-2.5 pointer-events-auto flex items-center gap-4">
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 pulse-dot"></span>
-                        <span class="font-orbitron text-xs sm:text-sm font-bold tracking-widest text-cyan-300">AETHERIA // NEXUS-9</span>
-                    </div>
-                    <div class="flex items-baseline gap-3 mt-0.5">
-                        <span id="sim-clock" class="font-orbitron text-lg sm:text-2xl font-black text-white">DAY 01 • 07:00</span>
-                        <span id="sim-phase" class="px-2 py-0.5 rounded text-xs font-bold tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/40">
-                            MORNING WAKE
-                        </span>
-                    </div>
-                </div>
-                <div class="h-9 w-px bg-slate-700/80 hidden sm:block"></div>
-                <div class="hidden sm:flex flex-col text-xs text-slate-300">
-                    <span>POPULATION: <strong id="pop-count" class="text-cyan-300">22 UNITS</strong></span>
-                    <span>TOOLS INVENTED: <strong id="tools-count" class="text-emerald-400">0</strong></span>
-                </div>
-            </div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { VRButton } from 'three/addons/webxr/VRButton.js';
 
-            <!-- Center/Right: VR Buttons & PS4 Controller Badge -->
-            <div class="flex flex-wrap items-center gap-2 pointer-events-auto">
-                <!-- PS4 Gamepad Status -->
-                <div id="gamepad-badge" class="glass-panel rounded-xl px-3 py-2 flex items-center gap-2 text-xs font-semibold">
-                    <svg class="w-5 h-5 text-slate-400" id="gamepad-icon" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17.5 7H6.5C3.46 7 1 9.46 1 12.5C1 15.54 3.46 18 6.5 18C8.32 18 9.93 17.11 10.94 15.75H13.06C14.07 17.11 15.68 18 17.5 18C20.54 18 23 15.54 23 12.5C23 9.46 20.54 7 17.5 7ZM8 13.5H6.5V15H5.5V13.5H4V12.5H5.5V11H6.5V12.5H8V13.5ZM16.5 14C15.95 14 15.5 13.55 15.5 13C15.5 12.45 15.95 12 16.5 12C17.05 12 17.5 12.45 17.5 13C17.5 13.55 17.05 14 16.5 14ZM18.5 12C17.95 12 17.5 11.55 17.5 11C17.5 10.45 17.95 10 18.5 10C19.05 10 19.5 10.45 19.5 11C19.5 11.55 19.05 12 18.5 12Z"/>
-                    </svg>
-                    <span id="gamepad-text" class="text-slate-400">PS4: PRESS ANY BUTTON</span>
-                </div>
+    // =========================================================================
+    // 1. PROCEDURAL WEB AUDIO SYNTHESIZER (No external audio dependencies)
+    // =========================================================================
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playTone(freq, endFreq, duration, type = 'sawtooth', gainVal = 0.15) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration);
+        gain.gain.setValueAtTime(gainVal, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration);
+      }
+      playNoise(duration, filterFreq = 1200, gainVal = 0.2) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(filterFreq, now);
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(gainVal, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+      }
+      shoot(weaponId) {
+        this.init();
+        if (weaponId === 'ar') {
+          this.playNoise(0.09, 2200, 0.18);
+          this.playTone(320, 90, 0.08, 'square', 0.12);
+        } else if (weaponId === 'shotgun') {
+          this.playNoise(0.22, 1100, 0.32);
+          this.playTone(160, 45, 0.2, 'sawtooth', 0.2);
+        } else if (weaponId === 'sniper') {
+          this.playNoise(0.28, 3400, 0.3);
+          this.playTone(680, 65, 0.25, 'sawtooth', 0.22);
+        } else if (weaponId === 'rocket') {
+          this.playNoise(0.35, 900, 0.26);
+          this.playTone(220, 75, 0.32, 'triangle', 0.2);
+        }
+      }
+      explosion() {
+        this.init();
+        this.playNoise(0.55, 650, 0.45);
+        this.playTone(110, 28, 0.5, 'sawtooth', 0.35);
+      }
+      hitmarker() {
+        this.init();
+        this.playTone(1400, 900, 0.05, 'triangle', 0.18);
+      }
+      pickup() {
+        this.init();
+        this.playTone(520, 880, 0.12, 'sine', 0.16);
+      }
+      heal() {
+        this.init();
+        this.playTone(400, 760, 0.35, 'sine', 0.16);
+      }
+      ping() {
+        this.init();
+        this.playTone(980, 1320, 0.14, 'sine', 0.14);
+      }
+      jump() {
+        this.init();
+        this.playTone(180, 340, 0.1, 'sine', 0.1);
+      }
+    }
+    const sfx = new SoundFX();
 
-                <!-- Time Speed Control -->
-                <button id="btn-speed" class="btn-cyber rounded-xl px-3 py-2 font-orbitron text-xs font-bold text-cyan-200" title="Triangle Button on PS4">
-                    SPEED: <span id="speed-label">1X</span>
-                </button>
+    // =========================================================================
+    // 2. WEAPON CATALOG & CONSTANTS
+    // =========================================================================
+    const WEAPONS = {
+      ar: {
+        id: 'ar',
+        name: 'Voxel AR',
+        short: 'AR',
+        color: '#38bdf8',
+        hex: 0x38bdf8,
+        damage: 24,
+        fireRate: 0.13,
+        spread: 0.025,
+        adsSpread: 0.007,
+        pellets: 1,
+        speed: 145,
+        magSize: 30,
+        reloadTime: 1.4,
+        recoil: 0.018,
+        adsZoom: 52,
+        explosive: false
+      },
+      shotgun: {
+        id: 'shotgun',
+        name: 'Pump Shotgun',
+        short: 'SG',
+        color: '#f59e0b',
+        hex: 0xf59e0b,
+        damage: 16,
+        fireRate: 0.78,
+        spread: 0.085,
+        adsSpread: 0.048,
+        pellets: 7,
+        speed: 110,
+        magSize: 8,
+        reloadTime: 1.7,
+        recoil: 0.055,
+        adsZoom: 62,
+        explosive: false
+      },
+      sniper: {
+        id: 'sniper',
+        name: 'Rail Sniper',
+        short: 'SNP',
+        color: '#a855f7',
+        hex: 0xa855f7,
+        damage: 92,
+        fireRate: 1.15,
+        spread: 0.04,
+        adsSpread: 0.001,
+        pellets: 1,
+        speed: 230,
+        magSize: 5,
+        reloadTime: 1.9,
+        recoil: 0.075,
+        adsZoom: 24,
+        explosive: false
+      },
+      rocket: {
+        id: 'rocket',
+        name: 'Voxel RPG',
+        short: 'RPG',
+        color: '#f43f5e',
+        hex: 0xf43f5e,
+        damage: 115,
+        fireRate: 1.45,
+        spread: 0.015,
+        adsSpread: 0.005,
+        pellets: 1,
+        speed: 62,
+        magSize: 3,
+        reloadTime: 2.1,
+        recoil: 0.085,
+        adsZoom: 55,
+        explosive: true
+      }
+    };
 
-                <!-- Stereoscopic Mobile VR Box Button -->
-                <button id="btn-vr-box" class="btn-cyber rounded-xl px-3 py-2 font-orbitron text-xs font-bold text-indigo-200 flex items-center gap-1.5">
-                    <span>🥽</span> VR BOX
-                </button>
+    const MAP_RADIUS = 135;
+    const TOTAL_COMBATANTS = 20;
 
-                <!-- Native WebXR VR Button -->
-                <button id="btn-webxr" class="btn-vr rounded-xl px-4 py-2 font-orbitron text-xs font-bold text-white flex items-center gap-1.5">
-                    <span>ENTER VR</span>
-                </button>
-            </div>
-        </div>
+    // =========================================================================
+    // 3. THREE.JS SCENE, RENDERER & WEBXR VR SETUP
+    // =========================================================================
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x7dd3fc);
+    scene.fog = new THREE.FogExp2(0x7dd3fc, 0.0042);
 
-        <!-- Middle Area: Target Robot Inspector (Right) & PS4 Controls Guide (Left) -->
-        <div class="flex items-center justify-between my-auto pointer-events-none">
-            
-            <!-- Left: Compact Observer Controls / District Teleport -->
-            <div class="glass-panel rounded-xl p-3 pointer-events-auto hidden md:flex flex-col gap-2 w-60">
-                <div class="font-orbitron text-[11px] font-bold tracking-wider text-cyan-400 border-b border-slate-700/70 pb-1">
-                    OBSERVER TELEPORT [L1 / R1]
-                </div>
-                <div class="grid grid-cols-2 gap-1.5 text-xs font-semibold">
-                    <button data-zone="overview" class="zone-btn btn-cyber rounded-lg py-1.5 px-2 text-center">🌌 OVERVIEW</button>
-                    <button data-zone="pods" class="zone-btn btn-cyber rounded-lg py-1.5 px-2 text-center">🔋 SLEEP PODS</button>
-                    <button data-zone="foundry" class="zone-btn btn-cyber rounded-lg py-1.5 px-2 text-center">🛠️ FOUNDRY</button>
-                    <button data-zone="academy" class="zone-btn btn-cyber rounded-lg py-1.5 px-2 text-center">🧠 ACADEMY</button>
-                    <button data-zone="arena" class="zone-btn btn-cyber rounded-lg py-1.5 px-2 text-center col-span-2">⚡ ZERO-G SPORTS ARENA</button>
-                </div>
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 450);
 
-                <div class="font-orbitron text-[11px] font-bold tracking-wider text-cyan-400 border-b border-slate-700/70 pb-1 mt-1">
-                    PS4 DUALSHOCK 4 MAP
-                </div>
-                <div class="text-[11px] text-slate-300 space-y-0.5 leading-tight">
-                    <div><strong class="text-white">L-Stick:</strong> Fly Move &nbsp;|&nbsp; <strong class="text-white">R-Stick:</strong> Look</div>
-                    <div><strong class="text-white">L2 / R2:</strong> Altitude Down / Up</div>
-                    <div><strong class="text-white">L1 / R1:</strong> Cycle Districts / Bots</div>
-                    <div><strong class="text-cyan-300">✕ Cross:</strong> Follow / Unfollow Bot</div>
-                    <div><strong class="text-emerald-300">△ Triangle:</strong> Time Speed (1x/3x/8x)</div>
-                    <div><strong class="text-pink-300">□ Square:</strong> Toggle HUD</div>
-                    <div><strong class="text-rose-300">○ Circle:</strong> Overview Vantage</div>
-                </div>
-            </div>
+    // Camera Rig allows smooth PS4 joystick locomotion + head tracking in WebXR VR
+    const cameraRig = new THREE.Group();
+    cameraRig.position.set(0, 0, 45);
+    cameraRig.add(camera);
+    scene.add(cameraRig);
 
-            <!-- Right: Selected / Followed Robot Live Telemetry -->
-            <div id="robot-inspector" class="glass-panel rounded-xl p-3.5 pointer-events-auto w-64 sm:w-72 transition-all duration-300">
-                <div class="flex items-center justify-between border-b border-slate-700/80 pb-1.5">
-                    <div>
-                        <div class="text-[10px] font-orbitron tracking-widest text-cyan-400">NEURAL LINK INSPECTOR</div>
-                        <div id="insp-name" class="font-orbitron text-base font-bold text-white">UNIT-01 // ALPHA</div>
-                    </div>
-                    <span id="insp-team" class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
-                        TEAM CYAN
-                    </span>
-                </div>
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
 
-                <div class="mt-2.5 space-y-2 text-xs">
-                    <div class="flex justify-between">
-                        <span class="text-slate-400">STATE:</span>
-                        <span id="insp-state" class="font-bold text-amber-300 tracking-wide">WAKING UP</span>
-                    </div>
-                    <div>
-                        <div class="flex justify-between mb-0.5">
-                            <span class="text-slate-400">CORE ENERGY:</span>
-                            <span id="insp-energy-val" class="font-bold text-emerald-400">92%</span>
-                        </div>
-                        <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                            <div id="insp-energy-bar" class="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-300" style="width: 92%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between mb-0.5">
-                            <span class="text-slate-400">NEURAL KNOWLEDGE:</span>
-                            <span id="insp-know-val" class="font-bold text-purple-400">LVL 3 (45%)</span>
-                        </div>
-                        <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                            <div id="insp-know-bar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-400 transition-all duration-300" style="width: 45%"></div>
-                        </div>
-                    </div>
-                    <div class="flex justify-between items-center pt-1 border-t border-slate-800">
-                        <span class="text-slate-400">INVENTED TOOL:</span>
-                        <span id="insp-tool" class="font-bold text-cyan-200">None Yet</span>
-                    </div>
-                </div>
+    // Add WebXR VR Button
+    const vrButton = VRButton.createButton(renderer);
+    document.body.appendChild(vrButton);
 
-                <div class="mt-3 flex gap-2">
-                    <button id="btn-follow-bot" class="btn-cyber flex-1 rounded-lg py-1.5 font-orbitron text-[11px] font-bold text-cyan-200">
-                        📷 FOLLOW BOT [✕]
-                    </button>
-                    <button id="btn-next-bot" class="btn-cyber rounded-lg px-3 py-1.5 font-orbitron text-[11px] font-bold text-white" title="Next Robot">
-                        NEXT ➔
-                    </button>
-                </div>
-            </div>
-        </div>
+    // Lighting
+    const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x3f6212, 0.85);
+    scene.add(hemiLight);
 
-        <!-- Bottom Bar: Live Civilization Event Feed & Mobile/Quick Controls -->
-        <div class="flex flex-wrap items-end justify-between gap-3">
-            
-            <!-- Live Event Log -->
-            <div class="glass-panel rounded-xl p-2.5 pointer-events-auto w-full sm:w-96 max-h-28 overflow-hidden flex flex-col">
-                <div class="flex items-center justify-between text-[10px] font-orbitron text-cyan-400 tracking-wider mb-1">
-                    <span>CIVILIZATION TELEMETRY LOG</span>
-                    <span id="arena-score" class="text-white font-bold">ARENA: CYAN 0 - 0 SOLAR</span>
-                </div>
-                <div id="event-log" class="text-xs space-y-1 overflow-y-auto pr-1 text-slate-200 font-medium">
-                    <!-- Dynamic logs injected here -->
-                </div>
-            </div>
+    const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.35);
+    dirLight.position.set(80, 130, 60);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 10;
+    dirLight.shadow.camera.far = 320;
+    const d = 140;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    scene.add(dirLight);
 
-            <!-- Quick Touch / Mobile District & Camera Bar -->
-            <div class="glass-panel rounded-xl p-2 pointer-events-auto flex items-center gap-1.5 overflow-x-auto max-w-full">
-                <button data-zone="overview" class="zone-btn btn-cyber rounded-lg px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">🌌 CITY</button>
-                <button data-zone="pods" class="zone-btn btn-cyber rounded-lg px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">🔋 PODS</button>
-                <button data-zone="foundry" class="zone-btn btn-cyber rounded-lg px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">🛠️ WORK</button>
-                <button data-zone="academy" class="zone-btn btn-cyber rounded-lg px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">🧠 LEARN</button>
-                <button data-zone="arena" class="zone-btn btn-cyber rounded-lg px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">⚡ SPORTS</button>
-                <button id="btn-toggle-hud" class="btn-cyber rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-300 whitespace-nowrap" title="Square Button on PS4">👁️ HUD</button>
-            </div>
-        </div>
-    </div>
+    // =========================================================================
+    // 4. VOXEL ISLAND WORLD GENERATION & COLLIDERS
+    // =========================================================================
+    const colliders = []; // { minX, maxX, minZ, maxZ, height }
+    const worldGroup = new THREE.Group();
+    scene.add(worldGroup);
 
-    <!-- Floating Restore HUD Pill (When HUD is hidden via Square Button) -->
-    <button id="btn-show-hud" class="hidden fixed bottom-4 right-4 z-30 glass-panel rounded-full px-4 py-2 font-orbitron text-xs font-bold text-cyan-300 border border-cyan-400/50 shadow-lg">
-        👁️ SHOW HUD [□]
-    </button>
+    function createVoxelBox(w, h, d, color, x, y, z, castShadow = true, receiveShadow = true) {
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.78, metalness: 0.08 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      worldGroup.add(mesh);
+      return mesh;
+    }
 
-    <!-- Toast Notification Banner -->
-    <div id="toast-banner" class="fixed top-20 left-1/2 -translate-x-1/2 z-40 pointer-events-none opacity-0 transition-opacity duration-300 glass-panel rounded-full px-5 py-2 font-orbitron text-xs font-bold text-cyan-200 border border-cyan-400/60 shadow-xl">
-        Notification
-    </div>
+    function buildVoxelIsland() {
+      // Ocean water plane
+      const waterGeo = new THREE.PlaneGeometry(900, 900);
+      const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.25, metalness: 0.3 });
+      const water = new THREE.Mesh(waterGeo, waterMat);
+      water.rotation.x = -Math.PI / 2;
+      water.position.y = -1.2;
+      worldGroup.add(water);
 
-    <script>
-        /**
-         * ============================================================================
-         * AETHERIA // FUTURISTIC DIGITAL CIVILIZATION SIMULATION
-         * ============================================================================
-         * Architecture:
-         * 1. WebGLRenderer + Native WebXR Support + Custom Stereoscopic VR Box Mode
-         * 2. Observer Rig (Camera Dolly supporting Free-Fly, Follow-Bot, WebXR, & PS4)
-         * 3. PS4 DualShock 4 Gamepad Controller Manager (Sticks, Triggers, Face Buttons)
-         * 4. Dynamic Day/Night Cycle & Civilization Scheduler
-         * 5. Four Architectural Districts:
-         *    - Residential Charging Pods (Sleep / Wake)
-         *    - Cyber-Foundry & Workshop (Work / Procedural Tool Invention)
-         *    - Data Academy / Neural Nexus (Learning / Knowledge Absorption)
-         *    - Zero-G Neon Arena (Team Hover-Ball Sports Match)
-         * 6. 22 Autonomous Procedural Robots with Individual AI State Machines
-         * ============================================================================
-         */
+      // Sandy beach base
+      createVoxelBox(MAP_RADIUS * 2.15, 1.2, MAP_RADIUS * 2.15, 0xfde047, 0, -0.6, 0, false, true);
 
-        // --- GLOBAL SIMULATION STATE ---
-        const SIM = {
-            timeHours: 6.8,          // Start just before 07:00 Morning Wake
-            day: 1,
-            timeSpeed: 1,            // 1x, 3x, 8x
-            speedOptions: [1, 3, 8],
-            speedIdx: 0,
-            phase: 'WAKING',         // WAKING, WORKING, LEARNING, SPORTS, SLEEPING
-            totalToolsInvented: 0,
-            scoreCyan: 0,
-            scoreSolar: 0,
-            vrBoxMode: false,
-            hudVisible: true,
-            followMode: false,
-            selectedRobotIndex: 0,
-            currentZoneIndex: 0
-        };
+      // Main vibrant voxel grass terrain
+      createVoxelBox(MAP_RADIUS * 1.92, 1.0, MAP_RADIUS * 1.92, 0x4ade80, 0, -0.45, 0, false, true);
 
-        // --- DISTRICT COORDINATES ---
-        const DISTRICTS = {
-            overview: { name: 'PANORAMIC OVERLOOK', pos: new THREE.Vector3(0, 42, 68), lookAt: new THREE.Vector3(0, 4, 0) },
-            pods:     { name: 'RESIDENTIAL CHARGING PODS', pos: new THREE.Vector3(-42, 16, -24), lookAt: new THREE.Vector3(-42, 3, -42) },
-            foundry:  { name: 'CYBER-FOUNDRY & WORKSHOP', pos: new THREE.Vector3(42, 16, -24), lookAt: new THREE.Vector3(42, 4, -42) },
-            academy:  { name: 'NEURAL DATA ACADEMY', pos: new THREE.Vector3(-42, 18, 56), lookAt: new THREE.Vector3(-42, 5, 38) },
-            arena:    { name: 'ZERO-G NEON SPORTS ARENA', pos: new THREE.Vector3(42, 20, 62), lookAt: new THREE.Vector3(42, 2, 38) }
-        };
-        const ZONE_KEYS = ['overview', 'pods', 'foundry', 'academy', 'arena'];
+      // Central Voxel Plaza / Fort
+      createVoxelBox(26, 0.3, 26, 0x94a3b8, 0, 0.15, 0, false, true);
+      // Corner cover walls at center
+      const wallOffsets = [
+        [-10, -10, 6, 2.6, 1.2], [10, -10, 6, 2.6, 1.2],
+        [-10, 10, 6, 2.6, 1.2], [10, 10, 6, 2.6, 1.2],
+        [0, -12, 5, 1.4, 1.2], [0, 12, 5, 1.4, 1.2]
+      ];
+      wallOffsets.forEach(([wx, wz, ww, wh, wd]) => {
+        createVoxelBox(ww, wh, wd, 0x64748b, wx, wh / 2, wz);
+        colliders.push({ minX: wx - ww / 2, maxX: wx + ww / 2, minZ: wz - wd / 2, maxZ: wz + wd / 2, height: wh });
+      });
 
-        // --- THREE.JS CORE SETUP ---
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x04091a);
-        scene.fog = new THREE.FogExp2(0x04091a, 0.0055);
+      // Deterministic pseudo-random helper for consistent layout
+      let seed = 4219;
+      const rand = () => {
+        seed = (seed * 16807) % 2147483647;
+        return (seed - 1) / 2147483646;
+      };
 
-        const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 450);
+      // Voxel Buildings / Bunkers around the island
+      const buildingCoords = [
+        [-45, -40], [48, -38], [-42, 46], [44, 44],
+        [0, -68], [0, 68], [-72, 0], [72, 0],
+        [-28, -82], [32, 78]
+      ];
+      buildingCoords.forEach(([bx, bz], idx) => {
+        const bw = 10 + (idx % 3) * 2;
+        const bd = 10;
+        const bh = 4.6;
+        const wallColor = idx % 2 === 0 ? 0xe2e8f0 : 0xfdba74;
+        const roofColor = idx % 2 === 0 ? 0xef4444 : 0x3b82f6;
 
-        // Observer Rig: Moving/rotating this rig moves the user in both Desktop & WebXR VR
-        const observerRig = new THREE.Group();
-        observerRig.position.copy(DISTRICTS.overview.pos);
-        observerRig.add(camera);
-        scene.add(observerRig);
+        // Back wall
+        createVoxelBox(bw, bh, 1, wallColor, bx, bh / 2, bz - bd / 2);
+        colliders.push({ minX: bx - bw / 2, maxX: bx + bw / 2, minZ: bz - bd / 2 - 0.5, maxZ: bz - bd / 2 + 0.5, height: bh });
 
-        // Initial camera orientation looking at city center
-        let camYaw = 0;
-        let camPitch = -0.45;
-        let targetRigPos = DISTRICTS.overview.pos.clone();
-        let isTransitioningCamera = false;
+        // Left & Right walls
+        createVoxelBox(1, bh, bd, wallColor, bx - bw / 2, bh / 2, bz);
+        colliders.push({ minX: bx - bw / 2 - 0.5, maxX: bx - bw / 2 + 0.5, minZ: bz - bd / 2, maxZ: bz + bd / 2, height: bh });
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.xr.enabled = true;
-        container.appendChild(renderer.domElement);
+        createVoxelBox(1, bh, bd, wallColor, bx + bw / 2, bh / 2, bz);
+        colliders.push({ minX: bx + bw / 2 - 0.5, maxX: bx + bw / 2 + 0.5, minZ: bz - bd / 2, maxZ: bz + bd / 2, height: bh });
 
-        // Stereo Cameras for VR Box / Cardboard Mode
-        const stereoCamera = new THREE.StereoCamera();
-        stereoCamera.aspect = 0.5;
-        stereoCamera.eyeSep = 0.064;
+        // Front doorway pillars
+        const doorGap = 3.6;
+        const sideW = (bw - doorGap) / 2;
+        createVoxelBox(sideW, bh, 1, wallColor, bx - bw / 2 + sideW / 2, bh / 2, bz + bd / 2);
+        colliders.push({ minX: bx - bw / 2, maxX: bx - bw / 2 + sideW, minZ: bz + bd / 2 - 0.5, maxZ: bz + bd / 2 + 0.5, height: bh });
 
-        // --- LIGHTING & SKY DOME ---
-        const ambientLight = new THREE.AmbientLight(0x334155, 0.9);
-        scene.add(ambientLight);
+        createVoxelBox(sideW, bh, 1, wallColor, bx + bw / 2 - sideW / 2, bh / 2, bz + bd / 2);
+        colliders.push({ minX: bx + bw / 2 - sideW, maxX: bx + bw / 2, minZ: bz + bd / 2 - 0.5, maxZ: bz + bd / 2 + 0.5, height: bh });
 
-        const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.7);
-        scene.add(hemiLight);
+        // Voxel Roof
+        createVoxelBox(bw + 1.2, 0.8, bd + 1.2, roofColor, bx, bh + 0.4, bz);
+      });
 
-        const sunLight = new THREE.DirectionalLight(0xfffbeb, 1.4);
-        sunLight.position.set(60, 90, 40);
-        sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048;
-        sunLight.shadow.mapSize.height = 2048;
-        sunLight.shadow.camera.near = 10;
-        sunLight.shadow.camera.far = 240;
-        const d = 95;
-        sunLight.shadow.camera.left = -d;
-        sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d;
-        sunLight.shadow.camera.bottom = -d;
-        scene.add(sunLight);
+      // Voxel Trees & Rocks
+      for (let i = 0; i < 65; i++) {
+        const angle = rand() * Math.PI * 2;
+        const dist = 18 + rand() * (MAP_RADIUS - 26);
+        const tx = Math.cos(angle) * dist;
+        const tz = Math.sin(angle) * dist;
 
-        // Glowing Celestial Orb (Sun / Cyber Moon)
-        const celestialOrb = new THREE.Mesh(
-            new THREE.SphereGeometry(6, 24, 24),
-            new THREE.MeshBasicMaterial({ color: 0xfef08a })
+        // Avoid overlapping building interiors
+        if (buildingCoords.some(([bx, bz]) => Math.hypot(tx - bx, tz - bz) < 11)) continue;
+
+        if (i % 3 === 0) {
+          // Voxel Rock Cluster
+          const rw = 2.2 + rand() * 2.2;
+          const rh = 1.6 + rand() * 2.0;
+          const rd = 2.2 + rand() * 2.2;
+          createVoxelBox(rw, rh, rd, 0x78716c, tx, rh / 2, tz);
+          colliders.push({ minX: tx - rw / 2, maxX: tx + rw / 2, minZ: tz - rd / 2, maxZ: tz + rd / 2, height: rh });
+        } else {
+          // Voxel Tree
+          const trunkH = 3.2 + rand() * 1.5;
+          createVoxelBox(1.1, trunkH, 1.1, 0x78350f, tx, trunkH / 2, tz);
+          const leafColor = i % 2 === 0 ? 0x16a34a : 0x22c55e;
+          createVoxelBox(4.2, 2.4, 4.2, leafColor, tx, trunkH + 1.0, tz);
+          createVoxelBox(2.6, 1.6, 2.6, leafColor, tx, trunkH + 2.8, tz);
+          colliders.push({ minX: tx - 0.65, maxX: tx + 0.65, minZ: tz - 0.65, maxZ: tz + 0.65, height: trunkH + 2 });
+        }
+      }
+    }
+    buildVoxelIsland();
+
+    // =========================================================================
+    // 5. SHRINKING BATTLE ROYALE STORM ZONE RING
+    // =========================================================================
+    const stormState = {
+      currentRadius: MAP_RADIUS * 1.05,
+      targetRadius: 18,
+      shrinkSpeed: 0.85,
+      centerX: 0,
+      centerZ: 0,
+      damagePerSec: 8
+    };
+
+    const stormGeo = new THREE.CylinderGeometry(1, 1, 65, 64, 1, true);
+    const stormMat = new THREE.MeshBasicMaterial({
+      color: 0xa855f7,
+      transparent: true,
+      opacity: 0.32,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const stormMesh = new THREE.Mesh(stormGeo, stormMat);
+    stormMesh.position.y = 32.5;
+    stormMesh.scale.set(stormState.currentRadius, 1, stormState.currentRadius);
+    scene.add(stormMesh);
+
+    // =========================================================================
+    // 6. FIRST-PERSON VOXEL WEAPON VIEWMODEL & 3D VR DIEGETIC HUD
+    // =========================================================================
+    const weaponHolder = new THREE.Group();
+    camera.add(weaponHolder);
+
+    function buildVoxelWeaponMesh(weaponId) {
+      const group = new THREE.Group();
+      const wDef = WEAPONS[weaponId];
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 });
+      const accentMat = new THREE.MeshStandardMaterial({ color: wDef.hex, roughness: 0.35, emissive: wDef.hex, emissiveIntensity: 0.25 });
+
+      if (weaponId === 'ar') {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.14, 0.55), darkMat);
+        const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.32), accentMat);
+        barrel.position.set(0, 0.02, -0.38);
+        const mag = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.2, 0.11), accentMat);
+        mag.position.set(0, -0.14, -0.05);
+        mag.rotation.x = 0.2;
+        group.add(body, barrel, mag);
+      } else if (weaponId === 'shotgun') {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.15, 0.62), darkMat);
+        const pump = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.11, 0.24), accentMat);
+        pump.position.set(0, -0.02, -0.24);
+        group.add(body, pump);
+      } else if (weaponId === 'sniper') {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.13, 0.85), darkMat);
+        const scope = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.32), accentMat);
+        scope.position.set(0, 0.12, -0.05);
+        group.add(body, scope);
+      } else if (weaponId === 'rocket') {
+        const tube = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.85), darkMat);
+        const warhead = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.18), accentMat);
+        warhead.position.set(0, 0, -0.46);
+        group.add(tube, warhead);
+      }
+      return group;
+    }
+
+    let currentViewWeaponMesh = null;
+    const muzzleFlashLight = new THREE.PointLight(0xfbbf24, 0, 12);
+    muzzleFlashLight.position.set(0, 0.05, -0.8);
+    weaponHolder.add(muzzleFlashLight);
+
+    // 3D Diegetic HUD attached inside VR Camera so VR players see HP/Shield/Ammo/Alive!
+    const vrHudCanvas = document.createElement('canvas');
+    vrHudCanvas.width = 512;
+    vrHudCanvas.height = 160;
+    const vrHudCtx = vrHudCanvas.getContext('2d');
+    const vrHudTexture = new THREE.CanvasTexture(vrHudCanvas);
+    const vrHudMat = new THREE.MeshBasicMaterial({ map: vrHudTexture, transparent: true, depthTest: false });
+    const vrHudPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.175), vrHudMat);
+    vrHudPlane.position.set(0, -0.34, -0.95);
+    vrHudPlane.rotation.x = -0.28;
+    vrHudPlane.visible = false;
+    camera.add(vrHudPlane);
+
+    function updateVRDiegeticHUD() {
+      vrHudPlane.visible = renderer.xr.isPresenting;
+      if (!vrHudPlane.visible) return;
+
+      const ctx = vrHudCtx;
+      ctx.clearRect(0, 0, 512, 160);
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+      ctx.beginPath();
+      ctx.roundRect(8, 8, 496, 144, 22);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      const slot = player.inventory[player.activeSlot];
+      const wName = slot ? WEAPONS[slot.id].name : 'Empty';
+      const ammoTxt = slot ? `${slot.ammo} / ${WEAPONS[slot.id].magSize}` : '--';
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText(`SHIELD: ${Math.ceil(player.shield)}`, 28, 48);
+
+      ctx.fillStyle = '#4ade80';
+      ctx.fillText(`HP: ${Math.ceil(player.hp)}`, 220, 48);
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillText(`ALIVE: ${getAliveCount()}`, 360, 48);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 26px sans-serif';
+      ctx.fillText(`${wName}  [${ammoTxt}]`, 28, 96);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '18px sans-serif';
+      ctx.fillText(`Medkits: ${player.medkits} (△) | Grenades: ${player.grenades} (→) | ${player.crawling ? 'CRAWLING' : 'STANDING'}`, 28, 132);
+
+      vrHudTexture.needsUpdate = true;
+    }
+
+    // =========================================================================
+    // 7. PLAYER STATE & INVENTORY
+    // =========================================================================
+    const player = {
+      alive: true,
+      hp: 100,
+      maxHp: 100,
+      shield: 100,
+      maxShield: 100,
+      yaw: 0,
+      pitch: 0,
+      velY: 0,
+      grounded: true,
+      crawling: false,
+      currentEyeHeight: 1.75,
+      aiming: false,
+      fireCooldown: 0,
+      reloading: 0,
+      recoilOffset: 0,
+      medkits: 2,
+      grenades: 2,
+      kills: 0,
+      radarPulseTimer: 0,
+      inventory: [
+        { id: 'ar', ammo: 30 },
+        { id: 'shotgun', ammo: 8 },
+        null,
+        null
+      ],
+      activeSlot: 0
+    };
+
+    function equipSlot(index) {
+      player.activeSlot = (index + 4) % 4;
+      player.reloading = 0;
+      if (currentViewWeaponMesh) {
+        weaponHolder.remove(currentViewWeaponMesh);
+      }
+      const item = player.inventory[player.activeSlot];
+      if (item) {
+        currentViewWeaponMesh = buildVoxelWeaponMesh(item.id);
+        weaponHolder.add(currentViewWeaponMesh);
+      } else {
+        currentViewWeaponMesh = null;
+      }
+      renderWeaponSlotsUI();
+    }
+
+    // =========================================================================
+    // 8. FLOOR LOOT SYSTEM (WEAPONS, MEDKITS, SHIELD)
+    // =========================================================================
+    const lootItems = []; // { mesh, type: 'weapon'|'medkit'|'shield', weaponId?, ammo?, x, z }
+
+    function spawnLoot(type, x, z, weaponId = null, customAmmo = null) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.75, z);
+
+      // Glowing base ring
+      const ringGeo = new THREE.RingGeometry(0.55, 0.78, 24);
+      const color = type === 'weapon' ? WEAPONS[weaponId].hex : (type === 'medkit' ? 0x22c55e : 0x38bdf8);
+      const ringMat = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.75 });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = -0.68;
+      group.add(ring);
+
+      if (type === 'weapon') {
+        const wMesh = buildVoxelWeaponMesh(weaponId);
+        wMesh.scale.set(1.4, 1.4, 1.4);
+        group.add(wMesh);
+      } else if (type === 'medkit') {
+        const box = new THREE.Mesh(
+          new THREE.BoxGeometry(0.65, 0.45, 0.5),
+          new THREE.MeshStandardMaterial({ color: 0xffffff })
         );
-        scene.add(celestialOrb);
+        const cross1 = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.48, 0.12), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+        const cross2 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.48, 0.32), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+        group.add(box, cross1, cross2);
+      } else if (type === 'shield') {
+        const pot = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.24, 0.28, 0.55, 12),
+          new THREE.MeshStandardMaterial({ color: 0x0ea5e9, emissive: 0x0284c7, emissiveIntensity: 0.4 })
+        );
+        group.add(pot);
+      }
 
-        // Starfield Particle Dome
-        const starGeo = new THREE.BufferGeometry();
-        const starCount = 1200;
-        const starPositions = new Float32Array(starCount * 3);
-        for (let i = 0; i < starCount; i++) {
-            const r = 180 + Math.random() * 120;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(Math.random() * 0.95);
-            starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-            starPositions[i * 3 + 1] = r * Math.cos(phi) + 10;
-            starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+      scene.add(group);
+      lootItems.push({
+        mesh: group,
+        type,
+        weaponId,
+        ammo: weaponId ? (customAmmo ?? WEAPONS[weaponId].magSize) : 0,
+        x,
+        z
+      });
+    }
+
+    function populateInitialLoot() {
+      const weaponKeys = ['ar', 'shotgun', 'sniper', 'rocket'];
+      for (let i = 0; i < 34; i++) {
+        const angle = (i / 34) * Math.PI * 2 + (i % 5) * 0.2;
+        const dist = 12 + ((i * 29) % (MAP_RADIUS - 24));
+        const lx = Math.cos(angle) * dist;
+        const lz = Math.sin(angle) * dist;
+        if (i % 4 === 0) {
+          spawnLoot('medkit', lx, lz);
+        } else if (i % 5 === 0) {
+          spawnLoot('shield', lx, lz);
+        } else {
+          const wKey = weaponKeys[i % weaponKeys.length];
+          spawnLoot('weapon', lx, lz, wKey);
         }
-        starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-        const starMat = new THREE.PointsMaterial({ color: 0x93c5fd, size: 0.9, transparent: true, opacity: 0.8 });
-        const starField = new THREE.Points(starGeo, starMat);
-        scene.add(starField);
+      }
+    }
 
-        // --- UTILITY: UI LOGGING & TOASTS ---
-        const eventLogEl = document.getElementById('event-log');
-        function addLog(message, accentColor = 'text-cyan-300') {
-            const entry = document.createElement('div');
-            const hrs = Math.floor(SIM.timeHours).toString().padStart(2, '0');
-            const mins = Math.floor((SIM.timeHours % 1) * 60).toString().padStart(2, '0');
-            entry.innerHTML = `<span class="text-slate-500 font-mono">[${hrs}:${mins}]</span> <span class="${accentColor}">${message}</span>`;
-            eventLogEl.prepend(entry);
-            if (eventLogEl.children.length > 25) {
-                eventLogEl.removeChild(eventLogEl.lastChild);
-            }
-        }
+    // =========================================================================
+    // 9. VOXEL AI BOTS (BATTLE ROYALE RIVALS)
+    // =========================================================================
+    const bots = [];
+    const BOT_NAMES = [
+      'VoxelKnight', 'CubeHunter', 'PixelRanger', 'BlockBuster', 'NovaBot',
+      'ShadowCube', 'SkyBuilder', 'StormChaser', 'NeonVoxel', 'FrostByte',
+      'BlazeRunner', 'EchoUnit', 'TitanBlock', 'ApexCube', 'VortexAI',
+      'GhostVoxel', 'CrimsonBot', 'ZeroGravity', 'HyperCube'
+    ];
 
-        let toastTimeout = null;
-        function showToast(text) {
-            const toast = document.getElementById('toast-banner');
-            toast.textContent = text;
-            toast.style.opacity = '1';
-            clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.style.opacity = '0';
-            }, 2200);
-        }
+    function createVoxelBotMesh(shirtColor) {
+      const root = new THREE.Group();
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xfcd34d });
+      const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor });
+      const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
 
-        // --- BUILD FUTURISTIC CITY ENVIRONMENT ---
-        const cityGroup = new THREE.Group();
-        scene.add(cityGroup);
+      // Legs
+      const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.75, 0.32), pantsMat);
+      leftLeg.position.set(-0.2, 0.375, 0);
+      leftLeg.castShadow = true;
 
-        // Main Cybernetic Ground Platform & Neon Grid
-        const groundGeo = new THREE.CylinderGeometry(115, 120, 4, 64);
-        const groundMat = new THREE.MeshStandardMaterial({
-            color: 0x091124,
-            roughness: 0.45,
-            metalness: 0.75
+      const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.75, 0.32), pantsMat);
+      rightLeg.position.set(0.2, 0.375, 0);
+      rightLeg.castShadow = true;
+
+      // Torso
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.85, 0.42), shirtMat);
+      torso.position.set(0, 1.175, 0);
+      torso.castShadow = true;
+
+      // Head
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.56, 0.56), skinMat);
+      head.position.set(0, 1.9, 0);
+      head.castShadow = true;
+
+      // Visor
+      const visor = new THREE.Mesh(
+        new THREE.BoxGeometry(0.46, 0.14, 0.08),
+        new THREE.MeshBasicMaterial({ color: 0x0f172a })
+      );
+      visor.position.set(0, 1.92, 0.27);
+
+      // Right arm + gun
+      const gun = new THREE.Mesh(
+        new THREE.BoxGeometry(0.14, 0.16, 0.65),
+        new THREE.MeshStandardMaterial({ color: 0x334155 })
+      );
+      gun.position.set(0.48, 1.25, 0.28);
+
+      // Radar highlight beacon (shown during D-Pad Left scan)
+      const beacon = new THREE.Mesh(
+        new THREE.BoxGeometry(0.95, 2.4, 0.95),
+        new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true, transparent: true, opacity: 0.85 })
+      );
+      beacon.position.y = 1.2;
+      beacon.visible = false;
+
+      root.add(leftLeg, rightLeg, torso, head, visor, gun, beacon);
+      return { root, leftLeg, rightLeg, beacon };
+    }
+
+    function spawnBots() {
+      const shirtColors = [0xef4444, 0xf97316, 0x8b5cf6, 0xec4899, 0x14b8a6, 0xeab308];
+      const weaponKeys = ['ar', 'shotgun', 'sniper', 'ar', 'shotgun'];
+
+      for (let i = 0; i < TOTAL_COMBATANTS - 1; i++) {
+        const angle = (i / (TOTAL_COMBATANTS - 1)) * Math.PI * 2;
+        const dist = 35 + (i % 5) * 18;
+        const bx = Math.cos(angle) * dist;
+        const bz = Math.sin(angle) * dist;
+        const parts = createVoxelBotMesh(shirtColors[i % shirtColors.length]);
+        parts.root.position.set(bx, 0, bz);
+        scene.add(parts.root);
+
+        bots.push({
+          id: i,
+          name: BOT_NAMES[i % BOT_NAMES.length],
+          alive: true,
+          hp: 100,
+          weaponId: weaponKeys[i % weaponKeys.length],
+          mesh: parts.root,
+          leftLeg: parts.leftLeg,
+          rightLeg: parts.rightLeg,
+          beacon: parts.beacon,
+          wanderAngle: Math.random() * Math.PI * 2,
+          changeDirTimer: 1 + Math.random() * 2,
+          fireCooldown: 0.6 + Math.random() * 1.2,
+          walkPhase: Math.random() * 6
         });
-        const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-        groundMesh.position.y = -2;
-        groundMesh.receiveShadow = true;
-        cityGroup.add(groundMesh);
+      }
+    }
 
-        const gridHelper = new THREE.GridHelper(200, 50, 0x0ea5e9, 0x1e293b);
-        gridHelper.position.y = 0.02;
-        cityGroup.add(gridHelper);
+    // =========================================================================
+    // 10. PROJECTILES, GRENADES, PINGS & VOXEL PARTICLES
+    // =========================================================================
+    const projectiles = []; // { mesh, vel, owner: 'player'|botObj, damage, explosive, life }
+    const grenades = [];    // { mesh, vel, timer }
+    const particles = [];   // { mesh, vel, life, maxLife }
+    let pingMarker = null;
+    let pingTimer = 0;
 
-        // Central Spire & Elevated Glowing Walkways Connecting Districts
-        function buildCentralNexusAndWalkways() {
-            // Central Monument Spire
-            const coreBase = new THREE.Mesh(
-                new THREE.CylinderGeometry(7, 10, 3, 8),
-                new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.85, roughness: 0.2 })
-            );
-            coreBase.position.y = 1.5;
-            coreBase.receiveShadow = true;
-            cityGroup.add(coreBase);
+    function spawnTracer(origin, dir, speed, colorHex, owner, damage, explosive = false) {
+      const geo = explosive
+        ? new THREE.BoxGeometry(0.28, 0.28, 0.55)
+        : new THREE.BoxGeometry(0.08, 0.08, 0.85);
+      const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.copy(origin);
+      mesh.lookAt(origin.clone().add(dir));
+      scene.add(mesh);
 
-            const spireMat = new THREE.MeshStandardMaterial({
-                color: 0x38bdf8,
-                emissive: 0x0284c7,
-                emissiveIntensity: 1.5,
-                wireframe: true
-            });
-            const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(4.5, 0), spireMat);
-            crystal.position.y = 12;
-            crystal.name = 'centralCrystal';
-            cityGroup.add(crystal);
+      projectiles.push({
+        mesh,
+        vel: dir.clone().multiplyScalar(speed),
+        owner,
+        damage,
+        explosive,
+        life: 2.2
+      });
+    }
 
-            // Neon Pathways radiating to the 4 quadrants
-            const pathTargets = [
-                new THREE.Vector3(-42, 0.08, -42),
-                new THREE.Vector3(42, 0.08, -42),
-                new THREE.Vector3(-42, 0.08, 38),
-                new THREE.Vector3(42, 0.08, 38)
-            ];
-            const pathMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9 });
-            pathTargets.forEach(target => {
-                const dist = target.length();
-                const pathGeo = new THREE.BoxGeometry(2.4, 0.12, dist);
-                const pathMesh = new THREE.Mesh(pathGeo, pathMat);
-                pathMesh.position.copy(target).multiplyScalar(0.5);
-                pathMesh.lookAt(target);
-                cityGroup.add(pathMesh);
-            });
+    function spawnExplosion(pos, radius, maxDamage, attackerOwner) {
+      sfx.explosion();
+      for (let i = 0; i < 26; i++) {
+        const size = 0.25 + Math.random() * 0.45;
+        const col = i % 2 === 0 ? 0xf97316 : 0xfacc15;
+        const pMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(size, size, size),
+          new THREE.MeshBasicMaterial({ color: col })
+        );
+        pMesh.position.copy(pos);
+        scene.add(pMesh);
+        const vel = new THREE.Vector3(
+          (Math.random() - 0.5) * 18,
+          4 + Math.random() * 14,
+          (Math.random() - 0.5) * 18
+        );
+        particles.push({ mesh: pMesh, vel, life: 0.65, maxLife: 0.65 });
+      }
 
-            // Perimeter Skyline Towers for Depth
-            const towerMat = new THREE.MeshStandardMaterial({ color: 0x0b152c, metalness: 0.8, roughness: 0.25 });
-            const neonTrimMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-            for (let i = 0; i < 24; i++) {
-                const angle = (i / 24) * Math.PI * 2;
-                const radius = 92 + (i % 3) * 7;
-                const h = 18 + (i * 7) % 34;
-                const tower = new THREE.Mesh(new THREE.BoxGeometry(6, h, 6), towerMat);
-                tower.position.set(Math.cos(angle) * radius, h / 2, Math.sin(angle) * radius);
-                tower.lookAt(0, h / 2, 0);
-                cityGroup.add(tower);
-
-                const trim = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.4, 6.2), neonTrimMat);
-                trim.position.set(tower.position.x, h - 1.5, tower.position.z);
-                trim.rotation.copy(tower.rotation);
-                cityGroup.add(trim);
-            }
+      // Splash damage to bots
+      bots.forEach(bot => {
+        if (!bot.alive) return;
+        const d = bot.mesh.position.distanceTo(pos);
+        if (d <= radius) {
+          const dmg = Math.round(maxDamage * (1 - d / radius));
+          damageBot(bot, dmg, attackerOwner);
         }
-        buildCentralNexusAndWalkways();
+      });
 
-        // --- DISTRICT 1: RESIDENTIAL CHARGING PODS (NW: -42, 0, -42) ---
-        const chargingPods = [];
-        function buildChargingPodsDistrict() {
-            const center = new THREE.Vector3(-42, 0, -42);
-            const pad = new THREE.Mesh(
-                new THREE.CylinderGeometry(24, 26, 0.5, 32),
-                new THREE.MeshStandardMaterial({ color: 0x0f1d36, metalness: 0.7, roughness: 0.3 })
-            );
-            pad.position.set(center.x, 0.25, center.z);
-            pad.receiveShadow = true;
-            cityGroup.add(pad);
-
-            // Create 24 individual hexagonal charging pods in concentric rings
-            const podCount = 24;
-            for (let i = 0; i < podCount; i++) {
-                const ring = i < 10 ? 0 : 1;
-                const idxInRing = ring === 0 ? i : i - 10;
-                const totalInRing = ring === 0 ? 10 : 14;
-                const angle = (idxInRing / totalInRing) * Math.PI * 2;
-                const radius = ring === 0 ? 9.5 : 17.5;
-
-                const px = center.x + Math.cos(angle) * radius;
-                const pz = center.z + Math.sin(angle) * radius;
-
-                const podGroup = new THREE.Group();
-                podGroup.position.set(px, 0.5, pz);
-
-                // Base platform
-                const base = new THREE.Mesh(
-                    new THREE.CylinderGeometry(1.7, 2.0, 0.5, 6),
-                    new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 })
-                );
-                base.position.y = 0.25;
-                podGroup.add(base);
-
-                // Glowing Energy Ring
-                const ringMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
-                const energyRing = new THREE.Mesh(new THREE.TorusGeometry(1.55, 0.08, 8, 24), ringMat);
-                energyRing.rotation.x = Math.PI / 2;
-                energyRing.position.y = 0.55;
-                podGroup.add(energyRing);
-
-                // Translucent Recharge Canopy Dome
-                const domeMat = new THREE.MeshPhysicalMaterial({
-                    color: 0x38bdf8,
-                    transparent: true,
-                    opacity: 0.16,
-                    roughness: 0.1,
-                    metalness: 0.1
-                });
-                const dome = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.6, 3.6, 6, 1, true), domeMat);
-                dome.position.y = 2.3;
-                podGroup.add(dome);
-
-                cityGroup.add(podGroup);
-                chargingPods.push({
-                    position: new THREE.Vector3(px, 0.6, pz),
-                    ringMesh: energyRing,
-                    domeMesh: dome,
-                    occupiedBy: null
-                });
-            }
+      // Splash damage to player
+      if (player.alive) {
+        const playerPos = new THREE.Vector3(cameraRig.position.x, 1.0, cameraRig.position.z);
+        const d = playerPos.distanceTo(pos);
+        if (d <= radius) {
+          const dmg = Math.round(maxDamage * 0.65 * (1 - d / radius));
+          damagePlayer(dmg, 'Explosion');
         }
-        buildChargingPodsDistrict();
-
-        // --- DISTRICT 2: CYBER-FOUNDRY & TOOL INVENTION WORKSHOP (NE: 42, 0, -42) ---
-        const workStations = [];
-        const floatingPrototypes = [];
-        function buildCyberFoundryDistrict() {
-            const center = new THREE.Vector3(42, 0, -42);
-            const floor = new THREE.Mesh(
-                new THREE.BoxGeometry(44, 0.5, 44),
-                new THREE.MeshStandardMaterial({ color: 0x131c31, metalness: 0.75, roughness: 0.3 })
-            );
-            floor.position.set(center.x, 0.25, center.z);
-            floor.receiveShadow = true;
-            cityGroup.add(floor);
-
-            // Central Holographic Invention Core
-            const forgeCore = new THREE.Mesh(
-                new THREE.CylinderGeometry(4, 5, 1.5, 8),
-                new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.2 })
-            );
-            forgeCore.position.set(center.x, 1.0, center.z);
-            cityGroup.add(forgeCore);
-
-            const holoForge = new THREE.Mesh(
-                new THREE.IcosahedronGeometry(2.4, 1),
-                new THREE.MeshBasicMaterial({ color: 0xf59e0b, wireframe: true })
-            );
-            holoForge.position.set(center.x, 5.2, center.z);
-            holoForge.name = 'holoForge';
-            cityGroup.add(holoForge);
-
-            // 12 Robotic Workbenches & Tool Fabrication Stations
-            for (let i = 0; i < 12; i++) {
-                const angle = (i / 12) * Math.PI * 2;
-                const radius = 14.5;
-                const wx = center.x + Math.cos(angle) * radius;
-                const wz = center.z + Math.sin(angle) * radius;
-
-                const bench = new THREE.Mesh(
-                    new THREE.BoxGeometry(2.6, 1.3, 1.8),
-                    new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.25 })
-                );
-                bench.position.set(wx, 1.15, wz);
-                bench.lookAt(center.x, 1.15, center.z);
-                bench.castShadow = true;
-                cityGroup.add(bench);
-
-                // Holographic blueprint emitter on table
-                const holoPad = new THREE.Mesh(
-                    new THREE.PlaneGeometry(1.8, 1.1),
-                    new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide })
-                );
-                holoPad.rotation.x = -Math.PI / 2;
-                holoPad.position.set(wx, 1.82, wz);
-                cityGroup.add(holoPad);
-
-                // Floating prototype mesh above table
-                const proto = new THREE.Mesh(
-                    new THREE.TorusKnotGeometry(0.45, 0.14, 32, 8),
-                    new THREE.MeshBasicMaterial({ color: 0xfbbf24, wireframe: true })
-                );
-                proto.position.set(wx, 2.8, wz);
-                cityGroup.add(proto);
-                floatingPrototypes.push(proto);
-
-                // Stand position in front of table
-                const standPos = new THREE.Vector3(
-                    center.x + Math.cos(angle) * (radius + 2.4),
-                    0.5,
-                    center.z + Math.sin(angle) * (radius + 2.4)
-                );
-                workStations.push({
-                    standPos,
-                    lookTarget: new THREE.Vector3(wx, 1.8, wz),
-                    occupiedBy: null
-                });
-            }
-        }
-        buildCyberFoundryDistrict();
-
-        // --- DISTRICT 3: DATA ACADEMY / NEURAL NEXUS (SW: -42, 0, 38) ---
-        const academySeats = [];
-        const academyRings = [];
-        function buildDataAcademyDistrict() {
-            const center = new THREE.Vector3(-42, 0, 38);
-            const floor = new THREE.Mesh(
-                new THREE.CylinderGeometry(23, 25, 0.5, 32),
-                new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.7, roughness: 0.3 })
-            );
-            floor.position.set(center.x, 0.25, center.z);
-            floor.receiveShadow = true;
-            cityGroup.add(floor);
-
-            // Central Knowledge Obelisk & Rotating Data Rings
-            const obelisk = new THREE.Mesh(
-                new THREE.ConeGeometry(2.2, 11, 4),
-                new THREE.MeshStandardMaterial({
-                    color: 0x6366f1,
-                    emissive: 0x4f46e5,
-                    emissiveIntensity: 1.2,
-                    metalness: 0.9,
-                    roughness: 0.1
-                })
-            );
-            obelisk.position.set(center.x, 6, center.z);
-            cityGroup.add(obelisk);
-
-            for (let r = 0; r < 3; r++) {
-                const ring = new THREE.Mesh(
-                    new THREE.TorusGeometry(4.5 + r * 2.2, 0.12, 12, 48),
-                    new THREE.MeshBasicMaterial({ color: r % 2 === 0 ? 0xa855f7 : 0x38bdf8 })
-                );
-                ring.position.set(center.x, 7 + r * 1.4, center.z);
-                ring.rotation.x = Math.PI / 3 + r * 0.4;
-                cityGroup.add(ring);
-                academyRings.push(ring);
-            }
-
-            // Amphitheater Learning Nodes around the Obelisk
-            for (let i = 0; i < 16; i++) {
-                const angle = (i / 16) * Math.PI * 2;
-                const radius = i % 2 === 0 ? 11 : 16;
-                const sx = center.x + Math.cos(angle) * radius;
-                const sz = center.z + Math.sin(angle) * radius;
-
-                const nodePad = new THREE.Mesh(
-                    new THREE.CylinderGeometry(1.2, 1.4, 0.3, 16),
-                    new THREE.MeshStandardMaterial({ color: 0x312e81, emissive: 0x3730a3, emissiveIntensity: 0.5 })
-                );
-                nodePad.position.set(sx, 0.65, sz);
-                cityGroup.add(nodePad);
-
-                academySeats.push({
-                    position: new THREE.Vector3(sx, 0.8, sz),
-                    lookTarget: new THREE.Vector3(center.x, 6, center.z),
-                    occupiedBy: null
-                });
-            }
-        }
-        buildDataAcademyDistrict();
-
-        // --- DISTRICT 4: ZERO-G / NEON SPORTS ARENA (SE: 42, 0, 38) ---
-        const ARENA_CENTER = new THREE.Vector3(42, 0.5, 38);
-        const ARENA_W = 34; // X span: 25 to 59
-        const ARENA_D = 22; // Z span: 27 to 49
-        let sportsBall = null;
-        const ballVelocity = new THREE.Vector3(0.15, 0, 0.1);
-        const goalParticles = [];
-
-        function buildSportsArenaDistrict() {
-            // Stadium Deck
-            const deck = new THREE.Mesh(
-                new THREE.BoxGeometry(ARENA_W + 6, 0.5, ARENA_D + 6),
-                new THREE.MeshStandardMaterial({ color: 0x091326, metalness: 0.8, roughness: 0.25 })
-            );
-            deck.position.set(ARENA_CENTER.x, 0.25, ARENA_CENTER.z);
-            deck.receiveShadow = true;
-            cityGroup.add(deck);
-
-            // Glowing Pitch Markings
-            const borderMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-            const wallN = new THREE.Mesh(new THREE.BoxGeometry(ARENA_W, 1.2, 0.3), borderMat);
-            wallN.position.set(ARENA_CENTER.x, 1.1, ARENA_CENTER.z - ARENA_D / 2);
-            cityGroup.add(wallN);
-
-            const wallS = new THREE.Mesh(new THREE.BoxGeometry(ARENA_W, 1.2, 0.3), borderMat);
-            wallS.position.set(ARENA_CENTER.x, 1.1, ARENA_CENTER.z + ARENA_D / 2);
-            cityGroup.add(wallS);
-
-            // Center Circle
-            const midRing = new THREE.Mesh(
-                new THREE.RingGeometry(3.2, 3.5, 32),
-                new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-            );
-            midRing.rotation.x = -Math.PI / 2;
-            midRing.position.set(ARENA_CENTER.x, 0.53, ARENA_CENTER.z);
-            cityGroup.add(midRing);
-
-            // Left Goal (Team Cyan Defends) & Right Goal (Team Solar Defends)
-            const goalLeft = new THREE.Mesh(
-                new THREE.TorusGeometry(3.2, 0.22, 12, 32, Math.PI),
-                new THREE.MeshBasicMaterial({ color: 0x06b6d4 })
-            );
-            goalLeft.rotation.y = Math.PI / 2;
-            goalLeft.position.set(ARENA_CENTER.x - ARENA_W / 2, 0.6, ARENA_CENTER.z);
-            cityGroup.add(goalLeft);
-
-            const goalRight = new THREE.Mesh(
-                new THREE.TorusGeometry(3.2, 0.22, 12, 32, Math.PI),
-                new THREE.MeshBasicMaterial({ color: 0xf43f5e })
-            );
-            goalRight.rotation.y = -Math.PI / 2;
-            goalRight.position.set(ARENA_CENTER.x + ARENA_W / 2, 0.6, ARENA_CENTER.z);
-            cityGroup.add(goalRight);
-
-            // Kinetic Energy Ball
-            sportsBall = new THREE.Mesh(
-                new THREE.SphereGeometry(0.85, 24, 24),
-                new THREE.MeshStandardMaterial({
-                    color: 0xffffff,
-                    emissive: 0x38bdf8,
-                    emissiveIntensity: 2.2,
-                    roughness: 0.1
-                })
-            );
-            sportsBall.position.set(ARENA_CENTER.x, 1.6, ARENA_CENTER.z);
-            cityGroup.add(sportsBall);
-        }
-        buildSportsArenaDistrict();
-
-        function spawnGoalCelebration(pos, colorHex) {
-            for (let i = 0; i < 24; i++) {
-                const p = new THREE.Mesh(
-                    new THREE.OctahedronGeometry(0.28, 0),
-                    new THREE.MeshBasicMaterial({ color: colorHex })
-                );
-                p.position.copy(pos);
-                const vel = new THREE.Vector3(
-                    (Math.random() - 0.5) * 14,
-                    4 + Math.random() * 10,
-                    (Math.random() - 0.5) * 14
-                );
-                scene.add(p);
-                goalParticles.push({ mesh: p, vel, life: 1.4 });
-            }
-        }
-
-        // --- PROCEDURAL TOOL GENERATOR ---
-        const TOOL_TYPES = [
-            { name: 'Plasma Wrench', color: 0x38bdf8, shape: 'wrench' },
-            { name: 'Quantum Scanner', color: 0xa855f7, shape: 'scanner' },
-            { name: 'Gravity Hammer', color: 0xf59e0b, shape: 'hammer' },
-            { name: 'Nano-Welder', color: 0x10b981, shape: 'welder' }
-        ];
-
-        function createProceduralToolMesh(toolDef) {
-            const group = new THREE.Group();
-            const handleMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.2 });
-            const glowMat = new THREE.MeshBasicMaterial({ color: toolDef.color });
-
-            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.85, 8), handleMat);
-            shaft.position.y = 0.35;
-            group.add(shaft);
-
-            if (toolDef.shape === 'hammer') {
-                const head = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.25, 0.25), glowMat);
-                head.position.y = 0.78;
-                group.add(head);
-            } else if (toolDef.shape === 'scanner') {
-                const dish = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.05, 8, 16), glowMat);
-                dish.position.y = 0.8;
-                group.add(dish);
-            } else if (toolDef.shape === 'wrench') {
-                const claw = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.06, 8, 16, Math.PI * 1.4), glowMat);
-                claw.position.y = 0.8;
-                group.add(claw);
-            } else {
-                const tip = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.4, 8), glowMat);
-                tip.position.y = 0.85;
-                group.add(tip);
-            }
-            return group;
-        }
-
-        // --- AUTONOMOUS ROBOTS POPULATION (22 INDIVIDUALS) ---
-        const robots = [];
-        const ROBOT_NAMES = [
-            'ALPHA', 'NOVA', 'ORION', 'PULSE', 'VEX', 'KAIROS', 'LYRA', 'ECHO',
-            'ZENITH', 'CIPHER', 'SOLIS', 'AURA', 'TITAN', 'NEXUS', 'VECTOR', 'ATLAS',
-            'ION', 'FLUX', 'QUANTA', 'STRIDER', 'PRISM', 'COBALT'
-        ];
-
-        class AutonomousRobot {
-            constructor(index) {
-                this.index = index;
-                this.id = `UNIT-${String(index + 1).padStart(2, '0')} // ${ROBOT_NAMES[index % ROBOT_NAMES.length]}`;
-                this.team = index % 2 === 0 ? 'CYAN' : 'SOLAR';
-                this.teamColor = this.team === 'CYAN' ? 0x06b6d4 : 0xf43f5e;
-                this.pod = chargingPods[index];
-                this.pod.occupiedBy = this;
-
-                // Life Stats
-                this.energy = 65 + Math.floor(Math.random() * 35);
-                this.knowledge = 10 + Math.floor(Math.random() * 35);
-                this.knowledgeLevel = 1 + Math.floor(this.knowledge / 25);
-                this.inventedTool = null;
-                this.workProgress = Math.random() * 100;
-
-                // AI State
-                this.state = 'WAKING';
-                this.targetPos = this.pod.position.clone();
-                this.assignedStation = null;
-                this.assignedSeat = null;
-                this.bobPhase = Math.random() * Math.PI * 2;
-
-                // Build Articulated Procedural 3D Robot Mesh
-                this.mesh = new THREE.Group();
-                this.mesh.position.copy(this.pod.position);
-
-                const armorMat = new THREE.MeshStandardMaterial({
-                    color: 0xe2e8f0,
-                    metalness: 0.75,
-                    roughness: 0.25
-                });
-                const trimMat = new THREE.MeshStandardMaterial({
-                    color: this.teamColor,
-                    emissive: this.teamColor,
-                    emissiveIntensity: 0.65,
-                    metalness: 0.5,
-                    roughness: 0.2
-                });
-
-                // Hover Thruster Base
-                const hoverBase = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.7, 12), trimMat);
-                hoverBase.rotation.x = Math.PI;
-                hoverBase.position.y = 0.55;
-                this.mesh.add(hoverBase);
-
-                // Torso
-                this.torso = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.35, 1.05, 12), armorMat);
-                this.torso.position.y = 1.35;
-                this.torso.castShadow = true;
-                this.mesh.add(this.torso);
-
-                // Chest Core Reactor
-                const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), trimMat);
-                core.position.set(0, 1.4, 0.38);
-                this.mesh.add(core);
-
-                // Head & Glowing Visor
-                this.head = new THREE.Group();
-                this.head.position.y = 2.15;
-                const skull = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.46, 0.56), armorMat);
-                skull.castShadow = true;
-                this.head.add(skull);
-
-                this.visorMat = new THREE.MeshBasicMaterial({ color: this.teamColor });
-                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.16, 0.08), this.visorMat);
-                visor.position.set(0, 0.02, 0.27);
-                this.head.add(visor);
-                this.mesh.add(this.head);
-
-                // Articulated Left & Right Arms
-                this.leftArm = new THREE.Group();
-                this.leftArm.position.set(-0.62, 1.65, 0);
-                const lLimb = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.75, 8), armorMat);
-                lLimb.position.y = -0.3;
-                this.leftArm.add(lLimb);
-                this.mesh.add(this.leftArm);
-
-                this.rightArm = new THREE.Group();
-                this.rightArm.position.set(0.62, 1.65, 0);
-                const rLimb = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.75, 8), armorMat);
-                rLimb.position.y = -0.3;
-                this.rightArm.add(rLimb);
-                this.mesh.add(this.rightArm);
-
-                // Floating Status Halo Ring
-                this.statusHalo = new THREE.Mesh(
-                    new THREE.RingGeometry(0.32, 0.4, 20),
-                    new THREE.MeshBasicMaterial({ color: 0xfbbf24, side: THREE.DoubleSide })
-                );
-                this.statusHalo.rotation.x = Math.PI / 2;
-                this.statusHalo.position.y = 2.75;
-                this.mesh.add(this.statusHalo);
-
-                scene.add(this.mesh);
-            }
-
-            releaseReservations() {
-                if (this.assignedStation && this.assignedStation.occupiedBy === this) {
-                    this.assignedStation.occupiedBy = null;
-                    this.assignedStation = null;
-                }
-                if (this.assignedSeat && this.assignedSeat.occupiedBy === this) {
-                    this.assignedSeat.occupiedBy = null;
-                    this.assignedSeat = null;
-                }
-            }
-
-            assignTaskForPhase(phase) {
-                this.releaseReservations();
-
-                if (phase === 'SLEEPING') {
-                    this.state = 'SLEEPING';
-                    this.targetPos.copy(this.pod.position);
-                } else if (phase === 'WAKING') {
-                    this.state = 'WAKING';
-                    // Step slightly outside pod to stretch/boot up
-                    const dir = this.pod.position.clone().sub(new THREE.Vector3(-42, 0, -42)).normalize();
-                    this.targetPos.copy(this.pod.position).addScaledVector(dir, 2.5);
-                } else if (phase === 'WORKING') {
-                    // Half work/invent at Foundry, others gather resources or patrol
-                    const freeStation = workStations.find(s => !s.occupiedBy);
-                    if (freeStation) {
-                        freeStation.occupiedBy = this;
-                        this.assignedStation = freeStation;
-                        this.state = Math.random() > 0.45 ? 'INVENTING' : 'WORKING';
-                        this.targetPos.copy(freeStation.standPos);
-                    } else {
-                        this.state = 'WORKING';
-                        const angle = (this.index / 22) * Math.PI * 2;
-                        this.targetPos.set(42 + Math.cos(angle) * 19, 0.5, -42 + Math.sin(angle) * 19);
-                    }
-                } else if (phase === 'LEARNING') {
-                    const freeSeat = academySeats.find(s => !s.occupiedBy);
-                    if (freeSeat) {
-                        freeSeat.occupiedBy = this;
-                        this.assignedSeat = freeSeat;
-                        this.state = 'LEARNING';
-                        this.targetPos.copy(freeSeat.position);
-                    } else {
-                        this.state = 'LEARNING';
-                        const angle = (this.index / 22) * Math.PI * 2;
-                        this.targetPos.set(-42 + Math.cos(angle) * 19, 0.5, 38 + Math.sin(angle) * 19);
-                    }
-                } else if (phase === 'SPORTS') {
-                    // First 12 robots play on pitch; remaining 10 cheer around perimeter!
-                    if (this.index < 12) {
-                        this.state = 'COMPETING';
-                    } else {
-                        this.state = 'SPECTATING';
-                        const side = this.index % 2 === 0 ? -1 : 1;
-                        const offsetX = ((this.index - 12) - 4.5) * 3.2;
-                        this.targetPos.set(ARENA_CENTER.x + offsetX, 0.5, ARENA_CENTER.z + side * (ARENA_D / 2 + 2.2));
-                    }
-                }
-            }
-
-            inventNewTool() {
-                const toolDef = TOOL_TYPES[Math.floor(Math.random() * TOOL_TYPES.length)];
-                this.inventedTool = toolDef.name;
-                SIM.totalToolsInvented++;
-                document.getElementById('tools-count').textContent = SIM.totalToolsInvented;
-
-                // Attach 3D tool mesh to robot's right arm
-                if (this.toolMesh) {
-                    this.rightArm.remove(this.toolMesh);
-                }
-                this.toolMesh = createProceduralToolMesh(toolDef);
-                this.toolMesh.position.set(0, -0.65, 0.15);
-                this.toolMesh.rotation.x = Math.PI / 2;
-                this.rightArm.add(this.toolMesh);
-
-                addLog(`${this.id} invented [${toolDef.name}]!`, 'text-amber-300');
-            }
-
-            update(dt, elapsed) {
-                this.bobPhase += dt * 4.5;
-
-                // 1. Dynamic Target Calculation for Sports Players
-                if (this.state === 'COMPETING' && sportsBall) {
-                    const isCyan = this.team === 'CYAN';
-                    const homeX = ARENA_CENTER.x + (isCyan ? -8 : 8);
-                    const homeZ = ARENA_CENTER.z + (((this.index % 6) - 2.5) * 3.4);
-
-                    // Closest players on each team chase the ball; others hold tactical formation
-                    const distToBall = this.mesh.position.distanceTo(sportsBall.position);
-                    if (distToBall < 13 || this.index < 4) {
-                        this.targetPos.set(sportsBall.position.x, 0.5, sportsBall.position.z);
-                    } else {
-                        this.targetPos.set(homeX, 0.5, homeZ);
-                    }
-                }
-
-                // 2. Smooth Movement & Obstacle Avoidance
-                const flatPos = new THREE.Vector3(this.mesh.position.x, 0, this.mesh.position.z);
-                const flatTarget = new THREE.Vector3(this.targetPos.x, 0, this.targetPos.z);
-                const diff = flatTarget.sub(flatPos);
-                const dist = diff.length();
-
-                const moveSpeed = this.state === 'COMPETING' ? 11.5 : 8.5;
-                const isMoving = dist > 0.45;
-
-                if (isMoving) {
-                    diff.normalize();
-                    // Soft separation from neighboring robots
-                    for (let other of robots) {
-                        if (other === this) continue;
-                        const sep = flatPos.clone().sub(new THREE.Vector3(other.mesh.position.x, 0, other.mesh.position.z));
-                        const d = sep.length();
-                        if (d > 0.01 && d < 1.5) {
-                            diff.addScaledVector(sep.normalize(), (1.5 - d) * 0.9);
-                        }
-                    }
-                    diff.normalize();
-                    this.mesh.position.x += diff.x * moveSpeed * dt;
-                    this.mesh.position.z += diff.z * moveSpeed * dt;
-
-                    // Face travel direction smoothly
-                    const targetAngle = Math.atan2(diff.x, diff.z);
-                    this.mesh.rotation.y = targetAngle;
-                } else {
-                    // Look at workstation / obelisk / arena when arrived
-                    if (this.assignedStation) {
-                        this.mesh.lookAt(this.assignedStation.lookTarget.x, this.mesh.position.y, this.assignedStation.lookTarget.z);
-                    } else if (this.assignedSeat) {
-                        this.mesh.lookAt(this.assignedSeat.lookTarget.x, this.mesh.position.y, this.assignedSeat.lookTarget.z);
-                    } else if (this.state === 'SPECTATING' && sportsBall) {
-                        this.mesh.lookAt(sportsBall.position.x, this.mesh.position.y, sportsBall.position.z);
-                    }
-                }
-
-                // 3. Kick / Pass Energy Ball if Competing
-                if (this.state === 'COMPETING' && sportsBall) {
-                    const ballDist = this.mesh.position.distanceTo(sportsBall.position);
-                    if (ballDist < 1.75) {
-                        const enemyGoalX = this.team === 'CYAN' ? ARENA_CENTER.x + ARENA_W / 2 : ARENA_CENTER.x - ARENA_W / 2;
-                        const kickDir = new THREE.Vector3(
-                            enemyGoalX - sportsBall.position.x,
-                            0,
-                            (ARENA_CENTER.z + (Math.random() - 0.5) * 6) - sportsBall.position.z
-                        ).normalize();
-                        ballVelocity.copy(kickDir).multiplyScalar(16 + Math.random() * 6);
-                        ballVelocity.y = 3.5;
-                    }
-                }
-
-                // 4. State-Specific Life Progression & Articulated Animations
-                const effectiveState = isMoving && this.state !== 'COMPETING' ? 'COMMUTING' : this.state;
-                this.displayState = effectiveState;
-
-                if (effectiveState === 'SLEEPING') {
-                    // Docked inside charging pod
-                    this.mesh.position.y = 0.35;
-                    this.head.rotation.x = 0.35; // Head tilted down in sleep mode
-                    this.visorMat.color.setHex(0x1e293b); // Dimmed visor
-                    this.statusHalo.material.color.setHex(0x10b981);
-                    this.leftArm.rotation.x = 0;
-                    this.rightArm.rotation.x = 0;
-                    this.energy = Math.min(100, this.energy + dt * 4.5);
-                } else {
-                    // Hover bobbing
-                    this.mesh.position.y = 0.5 + Math.sin(this.bobPhase) * 0.14;
-                    this.head.rotation.x = 0;
-                    this.visorMat.color.setHex(this.teamColor);
-
-                    if (effectiveState === 'WORKING' || effectiveState === 'INVENTING') {
-                        this.statusHalo.material.color.setHex(0xf59e0b);
-                        this.rightArm.rotation.x = -0.9 + Math.sin(elapsed * 12 + this.index) * 0.45;
-                        this.leftArm.rotation.x = -0.6 + Math.cos(elapsed * 10 + this.index) * 0.3;
-                        this.energy = Math.max(15, this.energy - dt * 1.1);
-
-                        // Advance invention progress
-                        this.workProgress += dt * (12 + this.knowledgeLevel * 3);
-                        if (this.workProgress >= 100) {
-                            this.workProgress = 0;
-                            if (this.state === 'INVENTING' || !this.inventedTool) {
-                                this.inventNewTool();
-                            }
-                        }
-                    } else if (effectiveState === 'LEARNING') {
-                        this.statusHalo.material.color.setHex(0xa855f7);
-                        this.head.rotation.x = -0.25; // Looking up at data rings
-                        this.leftArm.rotation.x = -0.4;
-                        this.rightArm.rotation.x = -0.4;
-                        this.knowledge += dt * 3.8;
-                        this.knowledgeLevel = 1 + Math.floor(this.knowledge / 25);
-                        this.energy = Math.max(15, this.energy - dt * 0.6);
-                    } else if (effectiveState === 'COMPETING') {
-                        this.statusHalo.material.color.setHex(0x38bdf8);
-                        this.leftArm.rotation.x = Math.sin(this.bobPhase * 2) * 0.7;
-                        this.rightArm.rotation.x = -Math.sin(this.bobPhase * 2) * 0.7;
-                        this.energy = Math.max(12, this.energy - dt * 1.6);
-                    } else if (effectiveState === 'SPECTATING') {
-                        this.statusHalo.material.color.setHex(0x38bdf8);
-                        // Cheer arms up!
-                        this.leftArm.rotation.x = -2.4 + Math.sin(elapsed * 8 + this.index) * 0.4;
-                        this.rightArm.rotation.x = -2.4 + Math.cos(elapsed * 8 + this.index) * 0.4;
-                    } else {
-                        // WAKING or COMMUTING
-                        this.statusHalo.material.color.setHex(0x22d3ee);
-                        this.leftArm.rotation.x = Math.sin(this.bobPhase) * 0.4;
-                        this.rightArm.rotation.x = -Math.sin(this.bobPhase) * 0.4;
-                    }
-                }
-            }
-        }
-
-        // Instantiate 22 Autonomous Robots
-        for (let i = 0; i < 22; i++) {
-            robots.push(new AutonomousRobot(i));
-        }
-
-        function assignAllRobotsToPhase(phase) {
-            robots.forEach(bot => bot.assignTaskForPhase(phase));
-        }
-        assignAllRobotsToPhase('WAKING');
-        addLog('Simulation initialized. 22 autonomous units online.', 'text-cyan-300');
-
-        // --- PS4 DUALSHOCK 4 GAMEPAD CONTROLLER & INPUT SYSTEM ---
-        const inputState = {
-            keys: {},
-            isDragging: false,
-            lastMouseX: 0,
-            lastMouseY: 0,
-            gamepadConnected: false,
-            prevButtons: []
-        };
-
-        window.addEventListener('gamepadconnected', (e) => {
-            inputState.gamepadConnected = true;
-            const badge = document.getElementById('gamepad-text');
-            const icon = document.getElementById('gamepad-icon');
-            badge.textContent = 'PS4 CONTROLLER CONNECTED';
-            badge.className = 'text-emerald-300 font-bold';
-            icon.className = 'w-5 h-5 text-emerald-400';
-            showToast('🎮 PS4 DualShock 4 Connected!');
-            addLog('Observer neural link paired with PS4 Controller.', 'text-emerald-400');
+      }
+    }
+
+    function spawnHitParticles(pos, colorHex, count = 8) {
+      for (let i = 0; i < count; i++) {
+        const pMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, 0.18, 0.18),
+          new THREE.MeshBasicMaterial({ color: colorHex })
+        );
+        pMesh.position.copy(pos);
+        scene.add(pMesh);
+        particles.push({
+          mesh: pMesh,
+          vel: new THREE.Vector3((Math.random() - 0.5) * 9, 2 + Math.random() * 6, (Math.random() - 0.5) * 9),
+          life: 0.4,
+          maxLife: 0.4
         });
+      }
+    }
 
-        window.addEventListener('gamepaddisconnected', () => {
-            inputState.gamepadConnected = false;
-            const badge = document.getElementById('gamepad-text');
-            const icon = document.getElementById('gamepad-icon');
-            badge.textContent = 'PS4: DISCONNECTED';
-            badge.className = 'text-slate-400';
-            icon.className = 'w-5 h-5 text-slate-400';
-        });
+    // =========================================================================
+    // 11. COMBAT, DAMAGE, KILL FEED & MATCH LIFECYCLE
+    // =========================================================================
+    let gameRunning = false;
+    let matchElapsed = 0;
 
-        function applyDeadzone(val, threshold = 0.14) {
-            return Math.abs(val) < threshold ? 0 : (val - Math.sign(val) * threshold) / (1 - threshold);
+    function addKillFeed(killerName, victimName, isPlayerInvolved = false) {
+      const feed = document.getElementById('killFeed');
+      const item = document.createElement('div');
+      item.className = `px-3 py-1 rounded-lg text-xs font-semibold backdrop-blur-md border ${
+        isPlayerInvolved
+          ? 'bg-rose-950/85 border-rose-500/70 text-rose-100'
+          : 'bg-slate-900/80 border-slate-700/70 text-slate-300'
+      }`;
+      item.textContent = `${killerName} eliminated ${victimName}`;
+      feed.prepend(item);
+      if (feed.children.length > 5) {
+        feed.removeChild(feed.lastChild);
+      }
+      setTimeout(() => {
+        if (item.parentNode) item.remove();
+      }, 6000);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('actionToast');
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.style.opacity = '0';
+      }, 1800);
+    }
+
+    function triggerHitmarker() {
+      sfx.hitmarker();
+      const hm = document.getElementById('hitmarker');
+      hm.style.opacity = '1';
+      clearTimeout(hm._t);
+      hm._t = setTimeout(() => { hm.style.opacity = '0'; }, 120);
+    }
+
+    function getAliveCount() {
+      let count = player.alive ? 1 : 0;
+      for (const b of bots) if (b.alive) count++;
+      return count;
+    }
+
+    function damageBot(bot, amount, attacker) {
+      if (!bot.alive) return;
+      bot.hp -= amount;
+      spawnHitParticles(bot.mesh.position.clone().add(new THREE.Vector3(0, 1.3, 0)), 0xfbbf24, 6);
+
+      if (attacker === 'player') {
+        triggerHitmarker();
+      }
+
+      if (bot.hp <= 0) {
+        bot.alive = false;
+        bot.mesh.visible = false;
+        spawnHitParticles(bot.mesh.position.clone().add(new THREE.Vector3(0, 1.1, 0)), 0xef4444, 18);
+
+        // Drop bot loot on ground
+        spawnLoot('weapon', bot.mesh.position.x, bot.mesh.position.z, bot.weaponId);
+        if (Math.random() < 0.65) {
+          spawnLoot(Math.random() < 0.5 ? 'medkit' : 'shield', bot.mesh.position.x + 0.9, bot.mesh.position.z);
         }
 
-        function pollPS4Gamepad(dt) {
-            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-            let gp = null;
-            for (let i = 0; i < gamepads.length; i++) {
-                if (gamepads[i] && gamepads[i].connected) {
-                    gp = gamepads[i];
-                    break;
-                }
-            }
-            if (!gp) return;
+        if (attacker === 'player') {
+          player.kills++;
+          addKillFeed('YOU', bot.name, true);
+        } else {
+          const killerName = attacker && attacker.name ? attacker.name : 'Storm';
+          addKillFeed(killerName, bot.name, false);
+        }
+        checkMatchEnd();
+      }
+    }
 
-            if (!inputState.gamepadConnected) {
-                inputState.gamepadConnected = true;
-                document.getElementById('gamepad-text').textContent = 'PS4 CONTROLLER CONNECTED';
-                document.getElementById('gamepad-text').className = 'text-emerald-300 font-bold';
-                document.getElementById('gamepad-icon').className = 'w-5 h-5 text-emerald-400';
-            }
+    function damagePlayer(amount, sourceName = 'Enemy') {
+      if (!player.alive || !gameRunning) return;
+      if (player.shield > 0) {
+        const absorbed = Math.min(player.shield, amount);
+        player.shield -= absorbed;
+        amount -= absorbed;
+      }
+      if (amount > 0) {
+        player.hp = Math.max(0, player.hp - amount);
+      }
 
-            // Standard Gamepad Mapping (DualShock 4 / DualSense):
-            // Axes: 0 = Left Stick X, 1 = Left Stick Y, 2 = Right Stick X, 3 = Right Stick Y
-            const lx = applyDeadzone(gp.axes[0] || 0);
-            const ly = applyDeadzone(gp.axes[1] || 0);
-            const rx = applyDeadzone(gp.axes[2] || 0);
-            const ry = applyDeadzone(gp.axes[3] || 0);
+      const dmgEl = document.getElementById('damageOverlay');
+      dmgEl.style.opacity = '0.75';
+      clearTimeout(dmgEl._t);
+      dmgEl._t = setTimeout(() => { dmgEl.style.opacity = '0'; }, 220);
 
-            // Triggers: Button 6 = L2 (Descend), Button 7 = R2 (Ascend)
-            const l2 = gp.buttons[6] ? gp.buttons[6].value : 0;
-            const r2 = gp.buttons[7] ? gp.buttons[7].value : 0;
+      if (player.hp <= 0) {
+        player.alive = false;
+        addKillFeed(sourceName, 'YOU', true);
+        endMatch(false);
+      }
+    }
 
-            // Camera Look (Right Stick)
-            if (rx !== 0 || ry !== 0) {
-                camYaw -= rx * 1.9 * dt;
-                camPitch = Math.max(-1.35, Math.min(1.2, camPitch - ry * 1.45 * dt));
-            }
+    function checkMatchEnd() {
+      if (!gameRunning) return;
+      const alive = getAliveCount();
+      if (player.alive && alive === 1) {
+        endMatch(true);
+      }
+    }
 
-            // Movement (Left Stick + L2/R2)
-            if (lx !== 0 || ly !== 0 || l2 > 0.08 || r2 > 0.08) {
-                // Cancel auto-follow or transition when user manually flies
-                if (SIM.followMode) {
-                    toggleFollowMode(false);
-                }
-                isTransitioningCamera = false;
+    function endMatch(victory) {
+      gameRunning = false;
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
+      }
+      const rank = victory ? 1 : getAliveCount() + 1;
+      const mins = Math.floor(matchElapsed / 60);
+      const secs = Math.floor(matchElapsed % 60).toString().padStart(2, '0');
 
-                const forward = new THREE.Vector3(-Math.sin(camYaw), 0, -Math.cos(camYaw));
-                const right = new THREE.Vector3(Math.cos(camYaw), 0, -Math.sin(camYaw));
-                const flySpeed = 34 * dt;
+      document.getElementById('menuTitle').innerHTML = victory
+        ? `<span class="text-amber-400">VICTORY ROYALE!</span>`
+        : `<span class="text-rose-500">ELIMINATED</span>`;
+      document.getElementById('menuSubtitle').textContent = victory
+        ? 'You are the last voxel warrior standing on the island!'
+        : `You finished #${rank} out of ${TOTAL_COMBATANTS} combatants.`;
 
-                observerRig.position.addScaledVector(forward, -ly * flySpeed);
-                observerRig.position.addScaledVector(right, lx * flySpeed);
-                observerRig.position.y += (r2 - l2) * 26 * dt;
-                observerRig.position.y = Math.max(1.8, Math.min(120, observerRig.position.y));
-            }
+      document.getElementById('summaryRank').textContent = `#${rank}`;
+      document.getElementById('summaryKills').textContent = `${player.kills}`;
+      document.getElementById('summaryTime').textContent = `${mins}:${secs}`;
+      document.getElementById('matchSummary').classList.remove('hidden');
+      document.getElementById('startBtn').textContent = 'PLAY AGAIN';
+      document.getElementById('menuOverlay').classList.remove('hidden');
+    }
 
-            // Edge-triggered Face Buttons & Bumpers
-            const isJustPressed = (btnIdx) => {
-                const pressed = gp.buttons[btnIdx] && gp.buttons[btnIdx].pressed;
-                const wasPressed = inputState.prevButtons[btnIdx] || false;
-                return pressed && !wasPressed;
-            };
+    // =========================================================================
+    // 12. PLAYER ACTIONS (SHOOT, LOOT, HEAL, PING, SCAN, GRENADE, DROP, CRAWL)
+    // =========================================================================
+    function getAimDirection() {
+      const dir = new THREE.Vector3(0, 0, -1);
+      if (renderer.xr.isPresenting) {
+        const xrCam = renderer.xr.getCamera();
+        xrCam.getWorldDirection(dir);
+      } else {
+        camera.getWorldDirection(dir);
+      }
+      return dir.normalize();
+    }
 
-            // Button 0: Cross (X) -> Toggle Follow Robot Mode
-            if (isJustPressed(0)) {
-                toggleFollowMode(!SIM.followMode);
-            }
-            // Button 1: Circle (O) -> Return to City Panoramic Overview
-            if (isJustPressed(1)) {
-                teleportToZone('overview');
-            }
-            // Button 2: Square ([]) -> Toggle HUD Visibility
-            if (isJustPressed(2)) {
-                toggleHUD();
-            }
-            // Button 3: Triangle (/\) -> Cycle Time Speed
-            if (isJustPressed(3)) {
-                cycleTimeSpeed();
-            }
-            // Button 4: L1 -> Previous District (or Previous Bot if in Follow Mode)
-            if (isJustPressed(4)) {
-                if (SIM.followMode) {
-                    selectRobot((SIM.selectedRobotIndex - 1 + robots.length) % robots.length);
-                } else {
-                    SIM.currentZoneIndex = (SIM.currentZoneIndex - 1 + ZONE_KEYS.length) % ZONE_KEYS.length;
-                    teleportToZone(ZONE_KEYS[SIM.currentZoneIndex]);
-                }
-            }
-            // Button 5: R1 -> Next District (or Next Bot if in Follow Mode)
-            if (isJustPressed(5)) {
-                if (SIM.followMode) {
-                    selectRobot((SIM.selectedRobotIndex + 1) % robots.length);
-                } else {
-                    SIM.currentZoneIndex = (SIM.currentZoneIndex + 1) % ZONE_KEYS.length;
-                    teleportToZone(ZONE_KEYS[SIM.currentZoneIndex]);
-                }
-            }
-            // D-Pad Left (14) / Right (15) -> Cycle Inspected Robot anytime
-            if (isJustPressed(14)) {
-                selectRobot((SIM.selectedRobotIndex - 1 + robots.length) % robots.length);
-            }
-            if (isJustPressed(15)) {
-                selectRobot((SIM.selectedRobotIndex + 1) % robots.length);
-            }
+    function getMuzzleWorldPos() {
+      const pos = new THREE.Vector3();
+      if (currentViewWeaponMesh) {
+        currentViewWeaponMesh.getWorldPosition(pos);
+      } else {
+        camera.getWorldPosition(pos);
+      }
+      return pos;
+    }
 
-            // Save button states for next frame
-            inputState.prevButtons = gp.buttons.map(b => b.pressed);
+    function playerFireWeapon() {
+      const slot = player.inventory[player.activeSlot];
+      if (!slot) return;
+      if (player.reloading > 0 || player.fireCooldown > 0) return;
+
+      const wDef = WEAPONS[slot.id];
+      if (slot.ammo <= 0) {
+        player.reloading = wDef.reloadTime;
+        showToast(`Reloading ${wDef.name}...`);
+        return;
+      }
+
+      slot.ammo--;
+      player.fireCooldown = wDef.fireRate;
+      player.recoilOffset = Math.min(0.14, player.recoilOffset + wDef.recoil);
+      if (!renderer.xr.isPresenting) {
+        player.pitch = Math.min(Math.PI / 2.2, player.pitch + wDef.recoil * 0.65);
+      }
+      muzzleFlashLight.intensity = 4.5;
+      sfx.shoot(wDef.id);
+
+      const baseDir = getAimDirection();
+      const muzzlePos = getMuzzleWorldPos().addScaledVector(baseDir, 0.55);
+      const spreadAngle = (player.aiming ? wDef.adsSpread : wDef.spread) * (player.crawling ? 0.65 : 1.0);
+
+      for (let i = 0; i < wDef.pellets; i++) {
+        const dir = baseDir.clone();
+        dir.x += (Math.random() - 0.5) * spreadAngle;
+        dir.y += (Math.random() - 0.5) * spreadAngle;
+        dir.z += (Math.random() - 0.5) * spreadAngle;
+        dir.normalize();
+        spawnTracer(muzzlePos, dir, wDef.speed, wDef.hex, 'player', wDef.damage, wDef.explosive);
+      }
+
+      if (slot.ammo === 0) {
+        player.reloading = wDef.reloadTime;
+        showToast(`Reloading ${wDef.name}...`);
+      }
+      renderWeaponSlotsUI();
+    }
+
+    function findNearestLoot() {
+      let nearest = null;
+      let bestDist = 3.2;
+      for (const item of lootItems) {
+        const d = Math.hypot(item.x - cameraRig.position.x, item.z - cameraRig.position.z);
+        if (d < bestDist) {
+          bestDist = d;
+          nearest = item;
+        }
+      }
+      return nearest;
+    }
+
+    function playerPickupLoot() {
+      const item = findNearestLoot();
+      if (!item) return;
+
+      sfx.pickup();
+      if (item.type === 'medkit') {
+        player.medkits++;
+        showToast('+1 Medkit Collected');
+      } else if (item.type === 'shield') {
+        player.shield = Math.min(player.maxShield, player.shield + 50);
+        showToast('+50 Shield Restored');
+      } else if (item.type === 'weapon') {
+        // Look for an empty slot first, otherwise replace active slot
+        let targetSlot = player.inventory.findIndex(s => s === null);
+        if (targetSlot === -1) {
+          targetSlot = player.activeSlot;
+          const old = player.inventory[targetSlot];
+          if (old) {
+            spawnLoot('weapon', cameraRig.position.x, cameraRig.position.z, old.id, old.ammo);
+          }
+        }
+        player.inventory[targetSlot] = { id: item.weaponId, ammo: item.ammo };
+        equipSlot(targetSlot);
+        showToast(`Equipped ${WEAPONS[item.weaponId].name}`);
+      }
+
+      scene.remove(item.mesh);
+      const idx = lootItems.indexOf(item);
+      if (idx !== -1) lootItems.splice(idx, 1);
+    }
+
+    function playerDropWeapon() {
+      const current = player.inventory[player.activeSlot];
+      if (!current) {
+        showToast('No weapon in active slot');
+        return;
+      }
+      const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+      const dropX = cameraRig.position.x + forward.x * 1.8;
+      const dropZ = cameraRig.position.z + forward.z * 1.8;
+      spawnLoot('weapon', dropX, dropZ, current.id, current.ammo);
+      player.inventory[player.activeSlot] = null;
+      equipSlot(player.activeSlot);
+      showToast(`Dropped ${WEAPONS[current.id].name}`);
+    }
+
+    function playerUseMedkit() {
+      if (player.medkits <= 0) {
+        showToast('No Medkits remaining!');
+        return;
+      }
+      if (player.hp >= player.maxHp && player.shield >= player.maxShield) {
+        showToast('Health & Shield already full');
+        return;
+      }
+      player.medkits--;
+      player.hp = Math.min(player.maxHp, player.hp + 55);
+      player.shield = Math.min(player.maxShield, player.shield + 35);
+      sfx.heal();
+      showToast('Used Medkit (+55 HP, +35 Shield)');
+    }
+
+    function playerPingLocation() {
+      sfx.ping();
+      const origin = new THREE.Vector3();
+      camera.getWorldPosition(origin);
+      const dir = getAimDirection();
+
+      // Raycast against ground plane y=0 or max 90m
+      let dist = 60;
+      if (dir.y < -0.02) {
+        dist = Math.min(110, Math.max(5, -origin.y / dir.y));
+      }
+      const target = origin.clone().addScaledVector(dir, dist);
+      target.y = 0;
+
+      if (!pingMarker) {
+        const g = new THREE.Group();
+        const beam = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.18, 0.18, 28, 12),
+          new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65 })
+        );
+        beam.position.y = 14;
+        const diamond = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.75),
+          new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
+        );
+        diamond.position.y = 2.4;
+        g.add(beam, diamond);
+        pingMarker = g;
+        scene.add(pingMarker);
+      }
+      pingMarker.position.copy(target);
+      pingMarker.visible = true;
+      pingTimer = 12;
+      showToast(`Pinged Location (${Math.round(dist)}m)`);
+    }
+
+    function playerRadarScan() {
+      sfx.ping();
+      player.radarPulseTimer = 6.0;
+      bots.forEach(b => {
+        if (b.alive) b.beacon.visible = true;
+      });
+      document.getElementById('radarScanBadge').classList.remove('hidden');
+      showToast('Tactical Radar Pulse Activated!');
+    }
+
+    function playerThrowGrenade() {
+      if (player.grenades <= 0) {
+        showToast('No Frag Grenades left!');
+        return;
+      }
+      player.grenades--;
+      const origin = new THREE.Vector3();
+      camera.getWorldPosition(origin);
+      const dir = getAimDirection();
+
+      const gMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.34, 0.28),
+        new THREE.MeshStandardMaterial({ color: 0x15803d })
+      );
+      gMesh.position.copy(origin).addScaledVector(dir, 0.8);
+      scene.add(gMesh);
+
+      const vel = dir.multiplyScalar(24);
+      vel.y += 6.5;
+      grenades.push({ mesh: gMesh, vel, timer: 2.3 });
+      showToast('Frag Grenade Out!');
+    }
+
+    function playerJump() {
+      if (player.crawling) {
+        player.crawling = false;
+        showToast('Stood Up');
+        return;
+      }
+      if (player.grounded) {
+        player.velY = 8.2;
+        player.grounded = false;
+        sfx.jump();
+      }
+    }
+
+    function playerToggleCrawl() {
+      player.crawling = !player.crawling;
+      showToast(player.crawling ? 'Prone / Crawling (Stealth + Accuracy)' : 'Standing');
+    }
+
+    // =========================================================================
+    // 13. PS4 DUALSHOCK 4 CONTROLLER + KEYBOARD/MOUSE INPUT MANAGER
+    // =========================================================================
+    const prevGamepadButtons = new Array(18).fill(false);
+    let gamepadConnected = false;
+
+    window.addEventListener('gamepadconnected', (e) => {
+      gamepadConnected = true;
+      document.getElementById('gamepadDot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
+      document.getElementById('gamepadText').textContent = `PS4 Controller Linked: ${e.gamepad.id.slice(0, 26)}`;
+      showToast('PS4 DualShock 4 Connected!');
+    });
+
+    window.addEventListener('gamepaddisconnected', () => {
+      gamepadConnected = false;
+      document.getElementById('gamepadDot').className = 'w-2 h-2 rounded-full bg-rose-400';
+      document.getElementById('gamepadText').textContent = 'Controller disconnected — press button to reconnect';
+    });
+
+    // Keyboard & Mouse Fallback State
+    const keys = {};
+    let mouseDownLeft = false;
+    let mouseDownRight = false;
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      if (!gameRunning) return;
+      if (e.code === 'Space') playerJump();
+      if (e.code === 'KeyC') playerToggleCrawl();
+      if (e.code === 'KeyE') playerPickupLoot();
+      if (e.code === 'KeyH' || e.code === 'Digit5') playerUseMedkit();
+      if (e.code === 'KeyG') playerThrowGrenade();
+      if (e.code === 'KeyQ') playerPingLocation();
+      if (e.code === 'KeyT') playerRadarScan();
+      if (e.code === 'KeyX') playerDropWeapon();
+      if (e.code === 'Digit1') equipSlot(0);
+      if (e.code === 'Digit2') equipSlot(1);
+      if (e.code === 'Digit3') equipSlot(2);
+      if (e.code === 'Digit4') equipSlot(3);
+      if (e.code === 'KeyR') {
+        const s = player.inventory[player.activeSlot];
+        if (s && s.ammo < WEAPONS[s.id].magSize) player.reloading = WEAPONS[s.id].reloadTime;
+      }
+    });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    window.addEventListener('mousedown', (e) => {
+      if (!gameRunning) return;
+      sfx.init();
+      if (!renderer.xr.isPresenting && document.pointerLockElement !== renderer.domElement) {
+        renderer.domElement.requestPointerLock?.();
+      }
+      if (e.button === 0) mouseDownLeft = true;
+      if (e.button === 2) mouseDownRight = true;
+    });
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) mouseDownLeft = false;
+      if (e.button === 2) mouseDownRight = false;
+    });
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('mousemove', (e) => {
+      if (!gameRunning || renderer.xr.isPresenting) return;
+      if (document.pointerLockElement === renderer.domElement) {
+        const sens = player.aiming ? 0.0011 : 0.0022;
+        player.yaw -= e.movementX * sens;
+        player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch - e.movementY * sens));
+      }
+    });
+
+    function applyDeadzone(val, dz = 0.14) {
+      if (Math.abs(val) < dz) return 0;
+      return (val - Math.sign(val) * dz) / (1 - dz);
+    }
+
+    function pollInputs(dt) {
+      let moveX = 0;
+      let moveZ = 0;
+      let lookX = 0;
+      let lookY = 0;
+      let wantAim = mouseDownRight;
+      let wantShoot = mouseDownLeft;
+
+      // Keyboard movement fallback
+      if (keys['KeyW'] || keys['ArrowUp']) moveZ -= 1;
+      if (keys['KeyS'] || keys['ArrowDown']) moveZ += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
+
+      // Poll Standard Gamepad API (PS4 DualShock 4)
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      let gp = null;
+      for (const candidate of gamepads) {
+        if (candidate && candidate.connected) {
+          gp = candidate;
+          break;
+        }
+      }
+
+      if (gp) {
+        if (!gamepadConnected) {
+          gamepadConnected = true;
+          document.getElementById('gamepadDot').className = 'w-2 h-2 rounded-full bg-emerald-400';
+          document.getElementById('gamepadText').textContent = `PS4 Controller Active`;
         }
 
-        // --- KEYBOARD, MOUSE & TOUCH FALLBACK NAVIGATION ---
-        window.addEventListener('keydown', (e) => {
-            inputState.keys[e.code] = true;
-            if (e.code === 'KeyF') toggleFollowMode(!SIM.followMode);
-            if (e.code === 'KeyH') toggleHUD();
-            if (e.code === 'KeyT') cycleTimeSpeed();
-        });
-        window.addEventListener('keyup', (e) => {
-            inputState.keys[e.code] = false;
-        });
-
-        renderer.domElement.addEventListener('pointerdown', (e) => {
-            inputState.isDragging = true;
-            inputState.lastMouseX = e.clientX;
-            inputState.lastMouseY = e.clientY;
-        });
-        window.addEventListener('pointermove', (e) => {
-            if (!inputState.isDragging) return;
-            const dx = e.clientX - inputState.lastMouseX;
-            const dy = e.clientY - inputState.lastMouseY;
-            inputState.lastMouseX = e.clientX;
-            inputState.lastMouseY = e.clientY;
-
-            camYaw -= dx * 0.0045;
-            camPitch = Math.max(-1.35, Math.min(1.2, camPitch - dy * 0.0045));
-        });
-        window.addEventListener('pointerup', () => {
-            inputState.isDragging = false;
-        });
-
-        // Mobile DeviceOrientation Gyroscope Support when in VR Box Mode
-        window.addEventListener('deviceorientation', (e) => {
-            if (!SIM.vrBoxMode || e.alpha === null) return;
-            const alpha = THREE.MathUtils.degToRad(e.alpha || 0);
-            const beta = THREE.MathUtils.degToRad(e.beta || 0);
-            camYaw = alpha;
-            camPitch = Math.max(-1.2, Math.min(1.2, beta - Math.PI / 2));
-        });
-
-        function updateKeyboardMovement(dt) {
-            const k = inputState.keys;
-            let moveZ = 0, moveX = 0, moveY = 0;
-            if (k['KeyW'] || k['ArrowUp']) moveZ -= 1;
-            if (k['KeyS'] || k['ArrowDown']) moveZ += 1;
-            if (k['KeyA'] || k['ArrowLeft']) moveX -= 1;
-            if (k['KeyD'] || k['ArrowRight']) moveX += 1;
-            if (k['Space'] || k['KeyE']) moveY += 1;
-            if (k['ShiftLeft'] || k['KeyQ']) moveY -= 1;
-
-            if (moveZ !== 0 || moveX !== 0 || moveY !== 0) {
-                if (SIM.followMode) toggleFollowMode(false);
-                isTransitioningCamera = false;
-
-                const forward = new THREE.Vector3(-Math.sin(camYaw), 0, -Math.cos(camYaw));
-                const right = new THREE.Vector3(Math.cos(camYaw), 0, -Math.sin(camYaw));
-                const speed = 32 * dt;
-
-                observerRig.position.addScaledVector(forward, -moveZ * speed);
-                observerRig.position.addScaledVector(right, moveX * speed);
-                observerRig.position.y = Math.max(1.8, Math.min(120, observerRig.position.y + moveY * 24 * dt));
-            }
+        // Left Joystick: Move (Axes 0, 1)
+        const lx = applyDeadzone(gp.axes[0] || 0);
+        const ly = applyDeadzone(gp.axes[1] || 0);
+        if (lx !== 0 || ly !== 0) {
+          moveX = lx;
+          moveZ = ly;
         }
 
-        // --- CAMERA TELEPORT, FOLLOW-BOT & HUD CONTROLS ---
-        function teleportToZone(zoneKey) {
-            const zone = DISTRICTS[zoneKey];
-            if (!zone) return;
-            toggleFollowMode(false);
-            targetRigPos.copy(zone.pos);
-            isTransitioningCamera = true;
+        // Right Joystick: Look (Axes 2, 3)
+        const rx = applyDeadzone(gp.axes[2] || 0);
+        const ry = applyDeadzone(gp.axes[3] || 0);
+        lookX = rx;
+        lookY = ry;
 
-            // Compute yaw/pitch looking toward district focal point
-            const dir = zone.lookAt.clone().sub(zone.pos).normalize();
-            camYaw = Math.atan2(-dir.x, -dir.z);
-            camPitch = Math.asin(dir.y);
-            showToast(`📍 ${zone.name}`);
+        const btnPressed = (idx) => Boolean(gp.buttons[idx] && (gp.buttons[idx].pressed || gp.buttons[idx].value > 0.5));
+        const justPressed = (idx) => btnPressed(idx) && !prevGamepadButtons[idx];
+
+        // Allow pressing X (Cross) on start screen to deploy immediately!
+        if (!gameRunning) {
+          if (justPressed(0)) {
+            startMatch();
+          }
+          for (let i = 0; i < 18; i++) prevGamepadButtons[i] = btnPressed(i);
+          return;
         }
 
-        function selectRobot(idx) {
-            SIM.selectedRobotIndex = idx;
-            const bot = robots[idx];
-            showToast(`🔗 Linked to ${bot.id}`);
+        // L2 (Button 6) -> Aim
+        if ((gp.buttons[6] && gp.buttons[6].value > 0.25) || btnPressed(6)) {
+          wantAim = true;
         }
 
-        function toggleFollowMode(enable) {
-            SIM.followMode = enable;
-            isTransitioningCamera = false;
-            const btn = document.getElementById('btn-follow-bot');
-            if (SIM.followMode) {
-                btn.textContent = '🔓 UNFOLLOW [✕]';
-                btn.classList.add('border-amber-400', 'text-amber-300');
-                showToast(`📷 Following ${robots[SIM.selectedRobotIndex].id}`);
-            } else {
-                btn.textContent = '📷 FOLLOW BOT [✕]';
-                btn.classList.remove('border-amber-400', 'text-amber-300');
-            }
+        // R2 (Button 7) -> Shoot
+        if ((gp.buttons[7] && gp.buttons[7].value > 0.25) || btnPressed(7)) {
+          wantShoot = true;
         }
 
-        function cycleTimeSpeed() {
-            SIM.speedIdx = (SIM.speedIdx + 1) % SIM.speedOptions.length;
-            SIM.timeSpeed = SIM.speedOptions[SIM.speedIdx];
-            document.getElementById('speed-label').textContent = `${SIM.timeSpeed}X`;
-            showToast(`⏱️ Simulation Speed: ${SIM.timeSpeed}X`);
+        // L1 (4) & R1 (5) -> Change Weapons
+        if (justPressed(4)) equipSlot(player.activeSlot - 1);
+        if (justPressed(5)) equipSlot(player.activeSlot + 1);
+
+        // X / Cross (0) -> Jump
+        if (justPressed(0)) playerJump();
+
+        // Circle (1) -> Toggle Crawl
+        if (justPressed(1)) playerToggleCrawl();
+
+        // Square (2) -> Pick up weapon / loot
+        if (justPressed(2)) playerPickupLoot();
+
+        // Triangle (3) -> Use Medkit / Shield
+        if (justPressed(3)) playerUseMedkit();
+
+        // D-Pad Up (12) -> Ping Location
+        if (justPressed(12)) playerPingLocation();
+
+        // D-Pad Down (13) -> Drop Current Weapon
+        if (justPressed(13)) playerDropWeapon();
+
+        // D-Pad Left (14) -> Tactical Radar Scan
+        if (justPressed(14)) playerRadarScan();
+
+        // D-Pad Right (15) -> Throw Frag Grenade
+        if (justPressed(15)) playerThrowGrenade();
+
+        for (let i = 0; i < 18; i++) {
+          prevGamepadButtons[i] = btnPressed(i);
+        }
+      }
+
+      if (!gameRunning) return;
+
+      // Apply Right Joystick Look
+      const lookSpeed = wantAim ? 1.45 : 2.55;
+      player.yaw -= lookX * lookSpeed * dt;
+      if (!renderer.xr.isPresenting) {
+        player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch - lookY * lookSpeed * 0.8 * dt));
+      }
+
+      // Apply Aim State & FOV Zoom
+      player.aiming = wantAim;
+      const activeWeapon = player.inventory[player.activeSlot];
+      const targetFov = (player.aiming && activeWeapon) ? WEAPONS[activeWeapon.id].adsZoom : 75;
+      if (!renderer.xr.isPresenting) {
+        camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 14);
+        camera.updateProjectionMatrix();
+      }
+
+      // Sniper Scope Overlay (Desktop)
+      const isSniperScoped = !renderer.xr.isPresenting && player.aiming && activeWeapon && activeWeapon.id === 'sniper';
+      document.getElementById('scopeOverlay').style.display = isSniperScoped ? 'flex' : 'none';
+      if (currentViewWeaponMesh) currentViewWeaponMesh.visible = !isSniperScoped;
+
+      // Apply Movement relative to player facing direction (or VR headset forward)
+      const moveVec = new THREE.Vector3(moveX, 0, moveZ);
+      if (moveVec.lengthSq() > 1) moveVec.normalize();
+
+      const speed = player.crawling ? 4.2 : (player.aiming ? 6.5 : 10.5);
+      let forwardYaw = player.yaw;
+      if (renderer.xr.isPresenting) {
+        const xrDir = new THREE.Vector3();
+        renderer.xr.getCamera().getWorldDirection(xrDir);
+        forwardYaw = Math.atan2(-xrDir.x, -xrDir.z);
+      }
+
+      const sin = Math.sin(forwardYaw);
+      const cos = Math.cos(forwardYaw);
+      const vx = (moveVec.x * cos + moveVec.z * sin) * speed * dt;
+      const vz = (-moveVec.x * sin + moveVec.z * cos) * speed * dt;
+
+      moveWithCollisions(cameraRig.position, vx, vz, 0.55);
+
+      // Keep inside island boundary
+      const distFromCenter = Math.hypot(cameraRig.position.x, cameraRig.position.z);
+      if (distFromCenter > MAP_RADIUS) {
+        const scale = MAP_RADIUS / distFromCenter;
+        cameraRig.position.x *= scale;
+        cameraRig.position.z *= scale;
+      }
+
+      // Jump & Gravity + Crawl Height Interpolation
+      if (!player.grounded) {
+        player.velY -= 21 * dt;
+        cameraRig.position.y += player.velY * dt;
+        if (cameraRig.position.y <= 0) {
+          cameraRig.position.y = 0;
+          player.velY = 0;
+          player.grounded = true;
+        }
+      }
+
+      const desiredEyeHeight = player.crawling ? 0.58 : 1.75;
+      player.currentEyeHeight += (desiredEyeHeight - player.currentEyeHeight) * Math.min(1, dt * 10);
+
+      if (renderer.xr.isPresenting) {
+        cameraRig.rotation.y = player.yaw;
+        camera.position.y = player.crawling ? -1.05 : 0;
+      } else {
+        cameraRig.rotation.y = player.yaw;
+        camera.position.set(0, player.currentEyeHeight, 0);
+        camera.rotation.set(player.pitch, 0, 0);
+      }
+
+      // Weapon Viewmodel Positioning (Hip vs L2 ADS)
+      if (currentViewWeaponMesh) {
+        const targetPos = player.aiming
+          ? new THREE.Vector3(0, -0.145, -0.34 + player.recoilOffset)
+          : new THREE.Vector3(0.24, -0.22, -0.44 + player.recoilOffset);
+        currentViewWeaponMesh.position.lerp(targetPos, Math.min(1, dt * 18));
+      }
+
+      // Trigger Shooting
+      if (wantShoot) {
+        playerFireWeapon();
+      }
+    }
+
+    function moveWithCollisions(pos, dx, dz, radius) {
+      pos.x += dx;
+      for (const c of colliders) {
+        if (pos.x + radius > c.minX && pos.x - radius < c.maxX &&
+            pos.z + radius > c.minZ && pos.z - radius < c.maxZ) {
+          pos.x -= dx;
+          break;
+        }
+      }
+      pos.z += dz;
+      for (const c of colliders) {
+        if (pos.x + radius > c.minX && pos.x - radius < c.maxX &&
+            pos.z + radius > c.minZ && pos.z - radius < c.maxZ) {
+          pos.z -= dz;
+          break;
+        }
+      }
+    }
+
+    // =========================================================================
+    // 14. AI BOT SIMULATION & SIMULATION LOOP
+    // =========================================================================
+    function updateBots(dt) {
+      for (const bot of bots) {
+        if (!bot.alive) continue;
+
+        bot.fireCooldown = Math.max(0, bot.fireCooldown - dt);
+        bot.changeDirTimer -= dt;
+
+        // Check storm pressure — run toward center if outside safe ring
+        const distCenter = Math.hypot(bot.mesh.position.x - stormState.centerX, bot.mesh.position.z - stormState.centerZ);
+        if (distCenter > stormState.currentRadius - 4) {
+          bot.hp -= stormState.damagePerSec * 0.6 * dt;
+          bot.wanderAngle = Math.atan2(stormState.centerX - bot.mesh.position.x, stormState.centerZ - bot.mesh.position.z);
+          if (bot.hp <= 0) {
+            damageBot(bot, 999, null);
+            continue;
+          }
         }
 
-        function toggleHUD() {
-            SIM.hudVisible = !SIM.hudVisible;
-            document.getElementById('hud-layer').style.opacity = SIM.hudVisible ? '1' : '0';
-            document.getElementById('hud-layer').style.pointerEvents = SIM.hudVisible ? 'none' : 'none';
-            document.getElementById('reticle').style.opacity = SIM.hudVisible ? '1' : '0';
-            document.getElementById('btn-show-hud').classList.toggle('hidden', SIM.hudVisible);
+        // Find nearest target (player or another bot)
+        let nearestTargetPos = null;
+        let nearestTargetObj = null;
+        let minDist = 48;
+
+        if (player.alive) {
+          // Harder to spot player when crawling!
+          const detectRange = player.crawling ? 24 : 48;
+          const dp = Math.hypot(cameraRig.position.x - bot.mesh.position.x, cameraRig.position.z - bot.mesh.position.z);
+          if (dp < detectRange) {
+            minDist = dp;
+            nearestTargetPos = new THREE.Vector3(cameraRig.position.x, player.currentEyeHeight * 0.75, cameraRig.position.z);
+            nearestTargetObj = 'player';
+          }
         }
 
-        // Bind HUD Buttons
-        document.querySelectorAll('.zone-btn').forEach(btn => {
-            btn.addEventListener('click', () => teleportToZone(btn.dataset.zone));
-        });
-        document.getElementById('btn-speed').addEventListener('click', cycleTimeSpeed);
-        document.getElementById('btn-follow-bot').addEventListener('click', () => toggleFollowMode(!SIM.followMode));
-        document.getElementById('btn-next-bot').addEventListener('click', () => selectRobot((SIM.selectedRobotIndex + 1) % robots.length));
-        document.getElementById('btn-toggle-hud').addEventListener('click', toggleHUD);
-        document.getElementById('btn-show-hud').addEventListener('click', toggleHUD);
-
-        // --- WEBXR NATIVE VR & STEREOSCOPIC VR BOX MODES ---
-        const webxrBtn = document.getElementById('btn-webxr');
-        let currentXRSession = null;
-
-        if ('xr' in navigator) {
-            navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
-                if (supported) {
-                    webxrBtn.innerHTML = '<span>🥽 ENTER VR</span>';
-                } else {
-                    webxrBtn.innerHTML = '<span>🥽 VR READY (WEBXR)</span>';
-                }
-            }).catch(() => {});
+        for (const other of bots) {
+          if (other === bot || !other.alive) continue;
+          const db = bot.mesh.position.distanceTo(other.mesh.position);
+          if (db < minDist) {
+            minDist = db;
+            nearestTargetPos = other.mesh.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+            nearestTargetObj = other;
+          }
         }
 
-        webxrBtn.addEventListener('click', async () => {
-            if (!('xr' in navigator)) {
-                showToast('WebXR not detected — Activating Stereoscopic VR Box Mode!');
-                enableVRBoxMode(true);
-                return;
-            }
-            try {
-                const supported = await navigator.xr.isSessionSupported('immersive-vr');
-                if (!supported) {
-                    showToast('Headset not detected — Launching Stereoscopic VR Box Mode!');
-                    enableVRBoxMode(true);
-                    return;
-                }
-                if (!currentXRSession) {
-                    const session = await navigator.xr.requestSession('immersive-vr', {
-                        optionalFeatures: ['local-floor', 'bounded-floor']
-                    });
-                    renderer.xr.setSession(session);
-                    currentXRSession = session;
-                    webxrBtn.textContent = 'EXIT VR';
-                    session.addEventListener('end', () => {
-                        currentXRSession = null;
-                        webxrBtn.textContent = 'ENTER VR';
-                    });
-                } else {
-                    await currentXRSession.end();
-                }
-            } catch (err) {
-                showToast('Switching to Stereoscopic VR Box Mode');
-                enableVRBoxMode(true);
-            }
-        });
+        let moveAngle = bot.wanderAngle;
+        let moveSpeed = 4.6;
 
-        function enableVRBoxMode(active) {
-            SIM.vrBoxMode = active;
-            document.getElementById('vr-box-overlay').classList.toggle('hidden', !active);
-            document.getElementById('hud-layer').classList.toggle('hidden', active);
-            document.getElementById('reticle').classList.toggle('hidden', active);
-            if (!active) {
-                renderer.setScissorTest(false);
-                renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-            } else {
-                showToast('Stereoscopic VR Box Active! Use PS4 Controller or Tilt Phone');
-            }
+        if (nearestTargetPos) {
+          const toTargetX = nearestTargetPos.x - bot.mesh.position.x;
+          const toTargetZ = nearestTargetPos.z - bot.mesh.position.z;
+          const aimAngle = Math.atan2(toTargetX, toTargetZ);
+          bot.mesh.rotation.y = aimAngle;
+
+          // Strafe while engaging
+          moveAngle = aimAngle + (minDist > 18 ? 0.35 : 1.45);
+          moveSpeed = 3.8;
+
+          if (bot.fireCooldown <= 0) {
+            const wDef = WEAPONS[bot.weaponId];
+            bot.fireCooldown = Math.max(0.45, wDef.fireRate * 2.4 + Math.random() * 0.6);
+            const origin = bot.mesh.position.clone().add(new THREE.Vector3(0, 1.35, 0));
+            const dir = nearestTargetPos.clone().sub(origin).normalize();
+            dir.x += (Math.random() - 0.5) * 0.09;
+            dir.y += (Math.random() - 0.5) * 0.06;
+            dir.z += (Math.random() - 0.5) * 0.09;
+            dir.normalize();
+            spawnTracer(origin.addScaledVector(dir, 0.7), dir, wDef.speed * 0.8, wDef.hex, bot, Math.round(wDef.damage * 0.45), false);
+          }
+        } else {
+          if (bot.changeDirTimer <= 0) {
+            bot.changeDirTimer = 1.5 + Math.random() * 2.5;
+            bot.wanderAngle += (Math.random() - 0.5) * 2.4;
+          }
+          bot.mesh.rotation.y = moveAngle;
         }
 
-        document.getElementById('btn-vr-box').addEventListener('click', () => enableVRBoxMode(true));
-        document.getElementById('exit-vr-box-btn').addEventListener('click', () => enableVRBoxMode(false));
+        const bx = Math.sin(moveAngle) * moveSpeed * dt;
+        const bz = Math.cos(moveAngle) * moveSpeed * dt;
+        moveWithCollisions(bot.mesh.position, bx, bz, 0.5);
 
-        // --- DAY/NIGHT CYCLE & CIVILIZATION SCHEDULE ENGINE ---
-        function updateDayNightAndSchedule(dt) {
-            // 1 game hour = ~10 real seconds at 1X speed
-            SIM.timeHours += dt * 0.1 * SIM.timeSpeed;
-            if (SIM.timeHours >= 24) {
-                SIM.timeHours -= 24;
-                SIM.day++;
-                addLog(`Dawn of Day ${SIM.day} in Aetheria.`, 'text-cyan-300');
-            }
+        // Animate voxel legs
+        bot.walkPhase += dt * 10;
+        bot.leftLeg.rotation.x = Math.sin(bot.walkPhase) * 0.55;
+        bot.rightLeg.rotation.x = -Math.sin(bot.walkPhase) * 0.55;
+      }
+    }
 
-            // Determine Civilization Phase from Time of Day
-            let nextPhase = 'WORKING';
-            let phaseBadgeClass = 'bg-amber-500/20 text-amber-300 border-amber-400/40';
-            let phaseLabel = 'WORK & INVENTION';
+    function updateProjectilesAndEffects(dt) {
+      // Bullets & Rockets
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        const p = projectiles[i];
+        p.life -= dt;
+        const step = p.vel.clone().multiplyScalar(dt);
+        p.mesh.position.add(step);
 
-            if (SIM.timeHours >= 6.5 && SIM.timeHours < 8.5) {
-                nextPhase = 'WAKING';
-                phaseLabel = 'MORNING WAKE';
-                phaseBadgeClass = 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40';
-            } else if (SIM.timeHours >= 8.5 && SIM.timeHours < 14.0) {
-                nextPhase = 'WORKING';
-                phaseLabel = 'WORK & INVENTION';
-                phaseBadgeClass = 'bg-amber-500/20 text-amber-300 border-amber-400/40';
-            } else if (SIM.timeHours >= 14.0 && SIM.timeHours < 18.0) {
-                nextPhase = 'LEARNING';
-                phaseLabel = 'NEURAL LEARNING';
-                phaseBadgeClass = 'bg-purple-500/20 text-purple-300 border-purple-400/40';
-            } else if (SIM.timeHours >= 18.0 && SIM.timeHours < 22.0) {
-                nextPhase = 'SPORTS';
-                phaseLabel = 'ZERO-G SPORTS';
-                phaseBadgeClass = 'bg-rose-500/20 text-rose-300 border-rose-400/40';
-            } else {
-                nextPhase = 'SLEEPING';
-                phaseLabel = 'POD RECHARGE SLEEP';
-                phaseBadgeClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40';
-            }
+        let hit = false;
 
-            if (nextPhase !== SIM.phase) {
-                SIM.phase = nextPhase;
-                assignAllRobotsToPhase(nextPhase);
-                const phaseEl = document.getElementById('sim-phase');
-                phaseEl.textContent = phaseLabel;
-                phaseEl.className = `px-2 py-0.5 rounded text-xs font-bold tracking-wider border ${phaseBadgeClass}`;
-                addLog(`Schedule Shift ➔ ${phaseLabel}`, 'text-white font-bold');
-            }
-
-            // Update Clock UI
-            const hrs = Math.floor(SIM.timeHours).toString().padStart(2, '0');
-            const mins = Math.floor((SIM.timeHours % 1) * 60).toString().padStart(2, '0');
-            document.getElementById('sim-clock').textContent = `DAY ${String(SIM.day).padStart(2, '0')} • ${hrs}:${mins}`;
-
-            // Smooth Sky & Lighting Transition (Daylight peak at 12:00, Night at 00:00)
-            const sunAngle = ((SIM.timeHours - 6) / 24) * Math.PI * 2;
-            const daylight = Math.max(0, Math.sin(sunAngle)); // 0 at night, 1 at noon
-
-            sunLight.position.set(Math.cos(sunAngle) * 110, Math.sin(sunAngle) * 110, 35);
-            celestialOrb.position.copy(sunLight.position);
-            celestialOrb.material.color.setHex(daylight > 0.15 ? 0xfef08a : 0x93c5fd);
-
-            sunLight.intensity = 0.25 + daylight * 1.45;
-            ambientLight.intensity = 0.45 + daylight * 0.65;
-
-            const nightColor = new THREE.Color(0x030712);
-            const dayColor = new THREE.Color(0x0c2447);
-            const skyColor = nightColor.clone().lerp(dayColor, daylight);
-            scene.background.copy(skyColor);
-            scene.fog.color.copy(skyColor);
-            starMat.opacity = 1.0 - daylight * 0.85;
+        // Ground collision
+        if (p.mesh.position.y <= 0.05) {
+          hit = true;
         }
 
-        // --- SPORTS ARENA PHYSICS & GOAL DETECTION ---
-        function updateSportsPhysics(dt) {
-            if (!sportsBall) return;
-
-            // Gently attract ball back to arena center during non-sports hours
-            if (SIM.phase !== 'SPORTS') {
-                sportsBall.position.lerp(new THREE.Vector3(ARENA_CENTER.x, 1.8 + Math.sin(performance.now() * 0.004) * 0.4, ARENA_CENTER.z), dt * 2);
-                return;
+        // World obstacle collision
+        if (!hit) {
+          for (const c of colliders) {
+            if (p.mesh.position.x > c.minX && p.mesh.position.x < c.maxX &&
+                p.mesh.position.z > c.minZ && p.mesh.position.z < c.maxZ &&
+                p.mesh.position.y < c.height) {
+              hit = true;
+              break;
             }
-
-            sportsBall.position.addScaledVector(ballVelocity, dt);
-            ballVelocity.y -= 12 * dt; // Low-G bounce
-            ballVelocity.multiplyScalar(0.985); // Air drag
-
-            // Floor bounce
-            if (sportsBall.position.y < 1.35) {
-                sportsBall.position.y = 1.35;
-                ballVelocity.y = Math.abs(ballVelocity.y) * 0.7;
-            }
-
-            // North/South Wall Bounce
-            const minZ = ARENA_CENTER.z - ARENA_D / 2 + 1.0;
-            const maxZ = ARENA_CENTER.z + ARENA_D / 2 - 1.0;
-            if (sportsBall.position.z < minZ) {
-                sportsBall.position.z = minZ;
-                ballVelocity.z = Math.abs(ballVelocity.z);
-            } else if (sportsBall.position.z > maxZ) {
-                sportsBall.position.z = maxZ;
-                ballVelocity.z = -Math.abs(ballVelocity.z);
-            }
-
-            // East/West Goal Check
-            const minX = ARENA_CENTER.x - ARENA_W / 2;
-            const maxX = ARENA_CENTER.x + ARENA_W / 2;
-            if (sportsBall.position.x < minX) {
-                if (Math.abs(sportsBall.position.z - ARENA_CENTER.z) < 3.4) {
-                    SIM.scoreSolar++;
-                    spawnGoalCelebration(sportsBall.position, 0xf43f5e);
-                    addLog(`⚡ GOAL! Team Solar scores! (${SIM.scoreCyan} - ${SIM.scoreSolar})`, 'text-rose-400 font-bold');
-                    sportsBall.position.set(ARENA_CENTER.x, 2.5, ARENA_CENTER.z);
-                    ballVelocity.set((Math.random() - 0.5) * 8, 4, (Math.random() - 0.5) * 8);
-                } else {
-                    sportsBall.position.x = minX + 0.8;
-                    ballVelocity.x = Math.abs(ballVelocity.x);
-                }
-            } else if (sportsBall.position.x > maxX) {
-                if (Math.abs(sportsBall.position.z - ARENA_CENTER.z) < 3.4) {
-                    SIM.scoreCyan++;
-                    spawnGoalCelebration(sportsBall.position, 0x06b6d4);
-                    addLog(`⚡ GOAL! Team Cyan scores! (${SIM.scoreCyan} - ${SIM.scoreSolar})`, 'text-cyan-300 font-bold');
-                    sportsBall.position.set(ARENA_CENTER.x, 2.5, ARENA_CENTER.z);
-                    ballVelocity.set((Math.random() - 0.5) * 8, 4, (Math.random() - 0.5) * 8);
-                } else {
-                    sportsBall.position.x = maxX - 0.8;
-                    ballVelocity.x = -Math.abs(ballVelocity.x);
-                }
-            }
-
-            document.getElementById('arena-score').textContent = `ARENA: CYAN ${SIM.scoreCyan} - ${SIM.scoreSolar} SOLAR`;
+          }
         }
 
-        // --- UPDATE NEURAL LINK INSPECTOR HUD ---
-        function updateInspectorUI() {
-            const bot = robots[SIM.selectedRobotIndex];
-            if (!bot) return;
-
-            document.getElementById('insp-name').textContent = bot.id;
-            const teamEl = document.getElementById('insp-team');
-            teamEl.textContent = `TEAM ${bot.team}`;
-            teamEl.className = bot.team === 'CYAN'
-                ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/40'
-                : 'px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-400/40';
-
-            document.getElementById('insp-state').textContent = bot.displayState || bot.state;
-            const ePct = Math.round(bot.energy);
-            document.getElementById('insp-energy-val').textContent = `${ePct}%`;
-            document.getElementById('insp-energy-bar').style.width = `${ePct}%`;
-
-            const kProgress = Math.round(bot.knowledge % 25) * 4;
-            document.getElementById('insp-know-val').textContent = `LVL ${bot.knowledgeLevel} (${kProgress}%)`;
-            document.getElementById('insp-know-bar').style.width = `${kProgress}%`;
-
-            document.getElementById('insp-tool').textContent = bot.inventedTool || 'None Yet';
+        // Bot hit check
+        if (!hit) {
+          for (const bot of bots) {
+            if (!bot.alive || p.owner === bot) continue;
+            const dx = p.mesh.position.x - bot.mesh.position.x;
+            const dz = p.mesh.position.z - bot.mesh.position.z;
+            if (dx * dx + dz * dz < 0.55 && p.mesh.position.y > 0 && p.mesh.position.y < 2.25) {
+              hit = true;
+              if (!p.explosive) {
+                damageBot(bot, p.damage, p.owner);
+              }
+              break;
+            }
+          }
         }
 
-        // --- RESIZE HANDLER ---
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // --- MAIN ANIMATION LOOP (COMPATIBLE WITH WEBXR & VR BOX) ---
-        const clock = new THREE.Clock();
-
-        function animate() {
-            const dt = Math.min(clock.getDelta(), 0.05);
-            const elapsed = clock.getElapsedTime();
-
-            // 1. Poll PS4 Controller & Keyboard
-            pollPS4Gamepad(dt);
-            updateKeyboardMovement(dt);
-
-            // 2. Observer Camera Rig Positioning & Orientation
-            if (SIM.followMode) {
-                const targetBot = robots[SIM.selectedRobotIndex];
-                const desiredPos = targetBot.mesh.position.clone().add(new THREE.Vector3(0, 4.2, 7.5));
-                observerRig.position.lerp(desiredPos, dt * 4.5);
-                const lookDir = targetBot.mesh.position.clone().add(new THREE.Vector3(0, 1.5, 0)).sub(observerRig.position).normalize();
-                camYaw = Math.atan2(-lookDir.x, -lookDir.z);
-                camPitch = Math.asin(lookDir.y);
-            } else if (isTransitioningCamera) {
-                observerRig.position.lerp(targetRigPos, dt * 3.5);
-                if (observerRig.position.distanceTo(targetRigPos) < 0.25) {
-                    isTransitioningCamera = false;
-                }
+        // Player hit check
+        if (!hit && p.owner !== 'player' && player.alive) {
+          const dx = p.mesh.position.x - cameraRig.position.x;
+          const dz = p.mesh.position.z - cameraRig.position.z;
+          const maxH = player.crawling ? 0.85 : 1.95;
+          if (dx * dx + dz * dz < 0.45 && p.mesh.position.y > 0 && p.mesh.position.y < maxH) {
+            hit = true;
+            if (!p.explosive) {
+              const shooterName = p.owner && p.owner.name ? p.owner.name : 'Rival';
+              damagePlayer(p.damage, shooterName);
             }
-
-            // Apply yaw/pitch to camera when not overridden by WebXR head tracking
-            if (!renderer.xr.isPresenting) {
-                camera.rotation.order = 'YXZ';
-                camera.rotation.y = camYaw;
-                camera.rotation.x = camPitch;
-            }
-
-            // 3. Update Civilization Schedule & Day/Night Cycle
-            updateDayNightAndSchedule(dt);
-
-            // 4. Animate City Landmarks & District Props
-            const crystal = cityGroup.getObjectByName('centralCrystal');
-            if (crystal) {
-                crystal.rotation.y += dt * 0.7;
-                crystal.position.y = 12 + Math.sin(elapsed * 2) * 0.6;
-            }
-            const holoForge = cityGroup.getObjectByName('holoForge');
-            if (holoForge) {
-                holoForge.rotation.x += dt * 0.8;
-                holoForge.rotation.y += dt * 1.1;
-            }
-            floatingPrototypes.forEach((p, idx) => {
-                p.rotation.y += dt * 1.8;
-                p.position.y = 2.75 + Math.sin(elapsed * 3 + idx) * 0.2;
-            });
-            academyRings.forEach((ring, idx) => {
-                ring.rotation.z += dt * (0.5 + idx * 0.25) * (idx % 2 === 0 ? 1 : -1);
-                ring.rotation.y += dt * 0.3;
-            });
-
-            // 5. Update All 22 Autonomous Robots & Sports Physics
-            robots.forEach(bot => bot.update(dt, elapsed));
-            updateSportsPhysics(dt);
-
-            // Update Goal Celebration Particles
-            for (let i = goalParticles.length - 1; i >= 0; i--) {
-                const gp = goalParticles[i];
-                gp.life -= dt;
-                gp.vel.y -= 15 * dt;
-                gp.mesh.position.addScaledVector(gp.vel, dt);
-                gp.mesh.rotation.x += dt * 5;
-                if (gp.life <= 0) {
-                    scene.remove(gp.mesh);
-                    goalParticles.splice(i, 1);
-                }
-            }
-
-            // 6. Update Inspector HUD
-            updateInspectorUI();
-
-            // 7. Render Frame (Standard / Native WebXR / Stereoscopic Side-by-Side VR Box)
-            if (SIM.vrBoxMode && !renderer.xr.isPresenting) {
-                scene.updateMatrixWorld();
-                stereoCamera.update(camera);
-                const w = window.innerWidth;
-                const h = window.innerHeight;
-                const halfW = Math.floor(w / 2);
-
-                renderer.setScissorTest(true);
-                // Left Eye
-                renderer.setScissor(0, 0, halfW, h);
-                renderer.setViewport(0, 0, halfW, h);
-                renderer.render(scene, stereoCamera.cameraL);
-                // Right Eye
-                renderer.setScissor(halfW, 0, halfW, h);
-                renderer.setViewport(halfW, 0, halfW, h);
-                renderer.render(scene, stereoCamera.cameraR);
-            } else {
-                renderer.render(scene, camera);
-            }
+          }
         }
 
-        // Start loop after window load
-        window.onload = function () {
-            renderer.setAnimationLoop(animate);
-        };
-    </script>
+        if (hit || p.life <= 0) {
+          if (hit && p.explosive) {
+            spawnExplosion(p.mesh.position.clone(), 7.5, p.damage, p.owner);
+          } else if (hit) {
+            spawnHitParticles(p.mesh.position, 0xe2e8f0, 4);
+          }
+          scene.remove(p.mesh);
+          projectiles.splice(i, 1);
+        }
+      }
+
+      // Frag Grenades
+      for (let i = grenades.length - 1; i >= 0; i--) {
+        const g = grenades[i];
+        g.timer -= dt;
+        g.vel.y -= 18 * dt;
+        g.mesh.position.addScaledVector(g.vel, dt);
+        g.mesh.rotation.x += 6 * dt;
+        g.mesh.rotation.z += 4 * dt;
+
+        if (g.mesh.position.y <= 0.2) {
+          g.mesh.position.y = 0.2;
+          g.vel.y *= -0.45;
+          g.vel.x *= 0.72;
+          g.vel.z *= 0.72;
+        }
+
+        if (g.timer <= 0) {
+          spawnExplosion(g.mesh.position.clone(), 9.5, 130, 'player');
+          scene.remove(g.mesh);
+          grenades.splice(i, 1);
+        }
+      }
+
+      // Voxel Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.life -= dt;
+        pt.vel.y -= 16 * dt;
+        pt.mesh.position.addScaledVector(pt.vel, dt);
+        pt.mesh.scale.setScalar(Math.max(0.01, pt.life / pt.maxLife));
+        if (pt.life <= 0) {
+          scene.remove(pt.mesh);
+          particles.splice(i, 1);
+        }
+      }
+
+      // Animate Floating Loot
+      const t = performance.now() * 0.003;
+      for (const item of lootItems) {
+        item.mesh.rotation.y = t;
+        item.mesh.position.y = 0.75 + Math.sin(t * 1.4 + item.x) * 0.14;
+      }
+
+      // Ping Marker lifetime
+      if (pingMarker && pingMarker.visible) {
+        pingTimer -= dt;
+        pingMarker.children[1].rotation.y += dt * 3;
+        if (pingTimer <= 0) pingMarker.visible = false;
+      }
+
+      // Tactical Radar Scan lifetime
+      if (player.radarPulseTimer > 0) {
+        player.radarPulseTimer -= dt;
+        if (player.radarPulseTimer <= 0) {
+          bots.forEach(b => { b.beacon.visible = false; });
+          document.getElementById('radarScanBadge').classList.add('hidden');
+        }
+      }
+    }
+
+    // =========================================================================
+    // 15. HUD, MINIMAP RADAR & WEAPON HOTBAR RENDERING
+    // =========================================================================
+    const minimapCanvas = document.getElementById('minimapCanvas');
+    const minimapCtx = minimapCanvas.getContext('2d');
+
+    function renderWeaponSlotsUI() {
+      const container = document.getElementById('weaponSlots');
+      container.innerHTML = '';
+      for (let i = 0; i < 4; i++) {
+        const slot = player.inventory[i];
+        const active = i === player.activeSlot;
+        const div = document.createElement('div');
+        div.className = `w-20 sm:w-24 p-2 rounded-xl border backdrop-blur-md transition-all ${
+          active
+            ? 'bg-slate-800/95 border-sky-400 shadow-lg shadow-sky-500/25 -translate-y-1'
+            : 'bg-slate-900/75 border-slate-700/70 opacity-75'
+        }`;
+
+        if (slot) {
+          const wDef = WEAPONS[slot.id];
+          div.innerHTML = `
+            <div class="flex items-center justify-between text-[10px] font-bold text-slate-400">
+              <span>SLOT ${i + 1}</span>
+              <span style="color:${wDef.color}">${wDef.short}</span>
+            </div>
+            <div class="text-xs font-extrabold text-white truncate mt-0.5">${wDef.name}</div>
+            <div class="text-[11px] font-bold text-amber-300 mt-0.5">${slot.ammo} / ${wDef.magSize}</div>
+          `;
+        } else {
+          div.innerHTML = `
+            <div class="text-[10px] font-bold text-slate-500">SLOT ${i + 1}</div>
+            <div class="text-xs font-semibold text-slate-500 mt-1">Empty</div>
+            <div class="text-[10px] text-slate-600 mt-0.5">--</div>
+          `;
+        }
+        container.appendChild(div);
+      }
+    }
+
+    function updateHUD() {
+      // Bars & Counters
+      document.getElementById('shieldBar').style.width = `${(player.shield / player.maxShield) * 100}%`;
+      document.getElementById('shieldText').textContent = `${Math.ceil(player.shield)} SHIELD`;
+      document.getElementById('healthBar').style.width = `${(player.hp / player.maxHp) * 100}%`;
+      document.getElementById('healthText').textContent = `${Math.ceil(player.hp)} HP`;
+
+      document.getElementById('aliveCount').textContent = getAliveCount();
+      document.getElementById('killCount').textContent = player.kills;
+      document.getElementById('medkitCount').textContent = player.medkits;
+      document.getElementById('grenadeCount').textContent = player.grenades;
+
+      const stanceBadge = document.getElementById('stanceBadge');
+      stanceBadge.textContent = player.crawling ? 'Crawling' : 'Standing';
+      stanceBadge.className = player.crawling
+        ? 'px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase'
+        : 'px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 uppercase';
+
+      // Crosshair tightening when L2 aiming or crawling
+      const ch = document.getElementById('crosshair');
+      const size = player.aiming ? '22px' : (player.crawling ? '30px' : '42px');
+      ch.style.width = size;
+      ch.style.height = size;
+
+      // Nearby Loot Prompt
+      const nearLoot = findNearestLoot();
+      const promptEl = document.getElementById('lootPrompt');
+      if (nearLoot) {
+        promptEl.classList.remove('hidden');
+        const label = nearLoot.type === 'weapon'
+          ? `Pick up ${WEAPONS[nearLoot.weaponId].name}`
+          : (nearLoot.type === 'medkit' ? 'Pick up Medkit' : 'Pick up Shield Potion');
+        document.getElementById('lootPromptText').textContent = label;
+      } else {
+        promptEl.classList.add('hidden');
+      }
+
+      // Minimap Radar
+      const ctx = minimapCtx;
+      const w = minimapCanvas.width;
+      const h = minimapCanvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const scale = (w * 0.45) / MAP_RADIUS;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, w, h);
+
+      // Island square
+      ctx.fillStyle = '#1e3a2f';
+      const islandHalf = MAP_RADIUS * scale;
+      ctx.fillRect(cx - islandHalf, cy - islandHalf, islandHalf * 2, islandHalf * 2);
+
+      // Safe Storm Circle
+      ctx.strokeStyle = '#c084fc';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx + stormState.centerX * scale, cy + stormState.centerZ * scale, stormState.currentRadius * scale, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Bots on radar (always visible during Radar Pulse, or when nearby)
+      for (const b of bots) {
+        if (!b.alive) continue;
+        const dist = Math.hypot(b.mesh.position.x - cameraRig.position.x, b.mesh.position.z - cameraRig.position.z);
+        if (player.radarPulseTimer > 0 || dist < 45) {
+          ctx.fillStyle = player.radarPulseTimer > 0 ? '#22d3ee' : '#f43f5e';
+          ctx.beginPath();
+          ctx.arc(cx + b.mesh.position.x * scale, cy + b.mesh.position.z * scale, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Ping marker on minimap
+      if (pingMarker && pingMarker.visible) {
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(cx + pingMarker.position.x * scale, cy + pingMarker.position.z * scale, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Player triangle
+      const px = cx + cameraRig.position.x * scale;
+      const py = cy + cameraRig.position.z * scale;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(-player.yaw);
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.moveTo(0, -6);
+      ctx.lineTo(4.5, 5);
+      ctx.lineTo(-4.5, 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      updateVRDiegeticHUD();
+    }
+
+    // =========================================================================
+    // 16. MATCH RESET & START FLOW
+    // =========================================================================
+    function startMatch() {
+      sfx.init();
+
+      // Clear previous dynamic entities
+      bots.forEach(b => scene.remove(b.mesh));
+      bots.length = 0;
+
+      lootItems.forEach(l => scene.remove(l.mesh));
+      lootItems.length = 0;
+
+      projectiles.forEach(p => scene.remove(p.mesh));
+      projectiles.length = 0;
+
+      grenades.forEach(g => scene.remove(g.mesh));
+      grenades.length = 0;
+
+      // Reset Storm
+      stormState.currentRadius = MAP_RADIUS * 1.05;
+      stormMesh.scale.set(stormState.currentRadius, 1, stormState.currentRadius);
+
+      // Reset Player at random safe drop point
+      const spawnAngle = Math.random() * Math.PI * 2;
+      const spawnDist = 25 + Math.random() * 45;
+      cameraRig.position.set(Math.cos(spawnAngle) * spawnDist, 0, Math.sin(spawnAngle) * spawnDist);
+      player.yaw = spawnAngle;
+      player.pitch = 0;
+      player.alive = true;
+      player.hp = 100;
+      player.shield = 100;
+      player.crawling = false;
+      player.currentEyeHeight = 1.75;
+      player.medkits = 2;
+      player.grenades = 2;
+      player.kills = 0;
+      player.radarPulseTimer = 0;
+      player.inventory = [
+        { id: 'ar', ammo: 30 },
+        { id: 'shotgun', ammo: 8 },
+        null,
+        null
+      ];
+      equipSlot(0);
+
+      populateInitialLoot();
+      spawnBots();
+
+      matchElapsed = 0;
+      gameRunning = true;
+      document.getElementById('menuOverlay').classList.add('hidden');
+      document.getElementById('matchSummary').classList.add('hidden');
+      document.getElementById('killFeed').innerHTML = '';
+
+      if (!renderer.xr.isPresenting) {
+        renderer.domElement.requestPointerLock?.();
+      }
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startMatch);
+
+    // =========================================================================
+    // 17. MAIN ANIMATION LOOP (COMPATIBLE WITH DESKTOP & WEBXR VR)
+    // =========================================================================
+    let lastTime = performance.now();
+
+    function animate() {
+      const now = performance.now();
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+
+      pollInputs(dt);
+
+      if (gameRunning) {
+        matchElapsed += dt;
+
+        // Weapon cooldowns & reload timers
+        player.fireCooldown = Math.max(0, player.fireCooldown - dt);
+        player.recoilOffset = Math.max(0, player.recoilOffset - dt * 0.35);
+        muzzleFlashLight.intensity = Math.max(0, muzzleFlashLight.intensity - dt * 45);
+
+        if (player.reloading > 0) {
+          player.reloading -= dt;
+          if (player.reloading <= 0) {
+            const slot = player.inventory[player.activeSlot];
+            if (slot) {
+              slot.ammo = WEAPONS[slot.id].magSize;
+              renderWeaponSlotsUI();
+              showToast(`${WEAPONS[slot.id].name} Reloaded`);
+            }
+          }
+        }
+
+        // Shrink Battle Royale Storm Zone
+        if (stormState.currentRadius > stormState.targetRadius) {
+          stormState.currentRadius = Math.max(stormState.targetRadius, stormState.currentRadius - stormState.shrinkSpeed * dt);
+          stormMesh.scale.set(stormState.currentRadius, 1, stormState.currentRadius);
+        }
+
+        // Check if Player is inside Storm
+        const playerDistToZone = Math.hypot(cameraRig.position.x - stormState.centerX, cameraRig.position.z - stormState.centerZ);
+        const stormOverlay = document.getElementById('stormOverlay');
+        const zoneStatusText = document.getElementById('zoneStatusText');
+        if (playerDistToZone > stormState.currentRadius) {
+          stormOverlay.style.opacity = '0.75';
+          zoneStatusText.textContent = `IN STORM! (${Math.round(stormState.currentRadius)}m)`;
+          damagePlayer(stormState.damagePerSec * dt, 'The Storm');
+        } else {
+          stormOverlay.style.opacity = '0';
+          zoneStatusText.textContent = `Safe Zone: ${Math.round(stormState.currentRadius)}m`;
+        }
+
+        updateBots(dt);
+        updateProjectilesAndEffects(dt);
+        updateHUD();
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    window.onload = function () {
+      equipSlot(0);
+      renderer.setAnimationLoop(animate);
+    };
+  </script>
 </body>
 </html>
 ```
