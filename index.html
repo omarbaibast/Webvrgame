@@ -120,7 +120,11 @@
         <!-- PS4 Controller Connection Pill -->
         <div id="gamepadStatus" class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700 text-xs font-medium text-slate-300">
           <span id="gamepadDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
-          <span id="gamepadText">Press any PS4 button to link controller</span>
+          <span id="gamepadText">Press any PS4 button or move stick to link controller</span>
+        </div>
+        <!-- Live PS4 Stick Telemetry Debug Pill -->
+        <div id="gamepadTelemetry" class="px-3 py-1 rounded-full bg-slate-950/85 border border-slate-800 text-[11px] font-mono text-sky-300">
+          L-Stick: (0.00, 0.00) | R-Stick: (0.00, 0.00)
         </div>
       </div>
 
@@ -1397,13 +1401,13 @@
     // =========================================================================
     // 13. PS4 DUALSHOCK 4 CONTROLLER + KEYBOARD/MOUSE INPUT MANAGER
     // =========================================================================
-    const prevGamepadButtons = new Array(18).fill(false);
+    const prevGamepadButtons = new Array(20).fill(false);
     let gamepadConnected = false;
 
     window.addEventListener('gamepadconnected', (e) => {
       gamepadConnected = true;
       document.getElementById('gamepadDot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
-      document.getElementById('gamepadText').textContent = `PS4 Controller Linked: ${e.gamepad.id.slice(0, 26)}`;
+      document.getElementById('gamepadText').textContent = `PS4 Controller Linked: ${e.gamepad.id.slice(0, 28)}`;
       showToast('PS4 DualShock 4 Connected!');
     });
 
@@ -1414,58 +1418,30 @@
     });
 
     // Keyboard & Mouse Fallback State
-    const keys = {};
-    let mouseDownLeft = false;
-    let mouseDownRight = false;
-
-    window.addEventListener('keydown', (e) => {
-      keys[e.code] = true;
-      if (!gameRunning) return;
-      if (e.code === 'Space') playerJump();
-      if (e.code === 'KeyC') playerToggleCrawl();
-      if (e.code === 'KeyE') playerPickupLoot();
-      if (e.code === 'KeyH' || e.code === 'Digit5') playerUseMedkit();
-      if (e.code === 'KeyG') playerThrowGrenade();
-      if (e.code === 'KeyQ') playerPingLocation();
-      if (e.code === 'KeyT') playerRadarScan();
-      if (e.code === 'KeyX') playerDropWeapon();
-      if (e.code === 'Digit1') equipSlot(0);
-      if (e.code === 'Digit2') equipSlot(1);
-      if (e.code === 'Digit3') equipSlot(2);
-      if (e.code === 'Digit4') equipSlot(3);
-      if (e.code === 'KeyR') {
-        const s = player.inventory[player.activeSlot];
-        if (s && s.ammo < WEAPONS[s.id].magSize) player.reloading = WEAPONS[s.id].reloadTime;
-      }
-    });
-    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
-
-    window.addEventListener('mousedown', (e) => {
-      if (!gameRunning) return;
-      sfx.init();
-      if (!renderer.xr.isPresenting && document.pointerLockElement !== renderer.domElement) {
-        renderer.domElement.requestPointerLock?.();
-      }
-      if (e.button === 0) mouseDownLeft = true;
-      if (e.button === 2) mouseDownRight = true;
-    });
-    window.addEventListener('mouseup', (e) => {
-      if (e.button === 0) mouseDownLeft = false;
-      if (e.button === 2) mouseDownRight = false;
-    });
-    window.addEventListener('contextmenu', (e) => e.preventDefault());
-    window.addEventListener('mousemove', (e) => {
-      if (!gameRunning || renderer.xr.isPresenting) return;
-      if (document.pointerLockElement === renderer.domElement) {
-        const sens = player.aiming ? 0.0011 : 0.0022;
-        player.yaw -= e.movementX * sens;
-        player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch - e.movementY * sens));
-      }
-    });
-
-    function applyDeadzone(val, dz = 0.14) {
+// ... existing code ... -->
+    function applyDeadzone(val, dz = 0.12) {
       if (Math.abs(val) < dz) return 0;
       return (val - Math.sign(val) * dz) / (1 - dz);
+    }
+
+    function findActivePS4Gamepad() {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      let fallbackGp = null;
+      for (let i = 0; i < gamepads.length; i++) {
+        const candidate = gamepads[i];
+        if (!candidate || !candidate.connected) continue;
+        // Prefer standard/PS4 controllers with at least 4 axes (Left + Right joysticks)
+        // and ignore virtual/XR-only controllers unless no dual-stick pad is found
+        const idLower = (candidate.id || '').toLowerCase();
+        const isDualShock = idLower.includes('054c') || idLower.includes('dualshock') || idLower.includes('playstation') || idLower.includes('wireless controller') || candidate.mapping === 'standard';
+        if (candidate.axes && candidate.axes.length >= 4 && isDualShock) {
+          return candidate;
+        }
+        if (!fallbackGp && candidate.axes && candidate.axes.length >= 2) {
+          fallbackGp = candidate;
+        }
+      }
+      return fallbackGp;
     }
 
     function pollInputs(dt) {
@@ -1482,56 +1458,61 @@
       if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
       if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
 
-      // Poll Standard Gamepad API (PS4 DualShock 4)
-      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-      let gp = null;
-      for (const candidate of gamepads) {
-        if (candidate && candidate.connected) {
-          gp = candidate;
-          break;
-        }
-      }
+      // Poll Standard Gamepad API across all slots (PS4 DualShock 4)
+      const gp = findActivePS4Gamepad();
+      const telemetryEl = document.getElementById('gamepadTelemetry');
 
       if (gp) {
         if (!gamepadConnected) {
           gamepadConnected = true;
           document.getElementById('gamepadDot').className = 'w-2 h-2 rounded-full bg-emerald-400';
-          document.getElementById('gamepadText').textContent = `PS4 Controller Active`;
+          document.getElementById('gamepadText').textContent = `PS4 Linked: ${(gp.id || 'DualShock 4').slice(0, 26)}`;
         }
 
-        // Left Joystick: Move (Axes 0, 1)
-        const lx = applyDeadzone(gp.axes[0] || 0);
-        const ly = applyDeadzone(gp.axes[1] || 0);
+        // Left Joystick: Move (Axes 0 = Left/Right Strafe, Axes 1 = Forward/Backward)
+        const rawLX = gp.axes[0] || 0;
+        const rawLY = gp.axes[1] || 0;
+        const lx = applyDeadzone(rawLX, 0.12);
+        const ly = applyDeadzone(rawLY, 0.12);
+
+        // Right Joystick: Look (Axes 2 = Yaw, Axes 3 = Pitch)
+        const rawRX = gp.axes.length > 2 ? (gp.axes[2] || 0) : 0;
+        const rawRY = gp.axes.length > 3 ? (gp.axes[3] || 0) : 0;
+        const rx = applyDeadzone(rawRX, 0.12);
+        const ry = applyDeadzone(rawRY, 0.12);
+
+        if (telemetryEl) {
+          telemetryEl.textContent = `L-Stick: (${lx.toFixed(2)}, ${ly.toFixed(2)}) | R-Stick: (${rx.toFixed(2)}, ${ry.toFixed(2)})`;
+        }
+
         if (lx !== 0 || ly !== 0) {
           moveX = lx;
           moveZ = ly;
         }
-
-        // Right Joystick: Look (Axes 2, 3)
-        const rx = applyDeadzone(gp.axes[2] || 0);
-        const ry = applyDeadzone(gp.axes[3] || 0);
         lookX = rx;
         lookY = ry;
 
-        const btnPressed = (idx) => Boolean(gp.buttons[idx] && (gp.buttons[idx].pressed || gp.buttons[idx].value > 0.5));
+        const btnPressed = (idx) => Boolean(gp.buttons[idx] && (gp.buttons[idx].pressed || gp.buttons[idx].value > 0.4));
         const justPressed = (idx) => btnPressed(idx) && !prevGamepadButtons[idx];
 
-        // Allow pressing X (Cross) on start screen to deploy immediately!
+        // Auto-deploy/start match immediately when ANY PS4 button or stick is moved on the menu screen!
         if (!gameRunning) {
-          if (justPressed(0)) {
+          const anyButtonPressed = gp.buttons.some((b) => b && (b.pressed || b.value > 0.5));
+          const anyStickMoved = Math.abs(lx) > 0.25 || Math.abs(ly) > 0.25 || Math.abs(rx) > 0.25 || Math.abs(ry) > 0.25;
+          if (anyButtonPressed || anyStickMoved) {
             startMatch();
           }
-          for (let i = 0; i < 18; i++) prevGamepadButtons[i] = btnPressed(i);
+          for (let i = 0; i < 20; i++) prevGamepadButtons[i] = btnPressed(i);
           return;
         }
 
         // L2 (Button 6) -> Aim
-        if ((gp.buttons[6] && gp.buttons[6].value > 0.25) || btnPressed(6)) {
+        if ((gp.buttons[6] && gp.buttons[6].value > 0.2) || btnPressed(6)) {
           wantAim = true;
         }
 
         // R2 (Button 7) -> Shoot
-        if ((gp.buttons[7] && gp.buttons[7].value > 0.25) || btnPressed(7)) {
+        if ((gp.buttons[7] && gp.buttons[7].value > 0.2) || btnPressed(7)) {
           wantShoot = true;
         }
 
@@ -1563,18 +1544,20 @@
         // D-Pad Right (15) -> Throw Frag Grenade
         if (justPressed(15)) playerThrowGrenade();
 
-        for (let i = 0; i < 18; i++) {
+        for (let i = 0; i < 20; i++) {
           prevGamepadButtons[i] = btnPressed(i);
         }
+      } else if (telemetryEl) {
+        telemetryEl.textContent = `No Gamepad Detected | WASD + Mouse Active`;
       }
 
       if (!gameRunning) return;
 
       // Apply Right Joystick Look
-      const lookSpeed = wantAim ? 1.45 : 2.55;
+      const lookSpeed = wantAim ? 1.55 : 2.65;
       player.yaw -= lookX * lookSpeed * dt;
       if (!renderer.xr.isPresenting) {
-        player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch - lookY * lookSpeed * 0.8 * dt));
+        player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch - lookY * lookSpeed * 0.85 * dt));
       }
 
       // Apply Aim State & FOV Zoom
@@ -1592,21 +1575,34 @@
       if (currentViewWeaponMesh) currentViewWeaponMesh.visible = !isSniperScoped;
 
       // Apply Movement relative to player facing direction (or VR headset forward)
+      // Note: On PS4 Left Stick, moveZ < 0 is pushing stick UP (forward), moveX > 0 is pushing RIGHT (strafe right)
       const moveVec = new THREE.Vector3(moveX, 0, moveZ);
       if (moveVec.lengthSq() > 1) moveVec.normalize();
 
-      const speed = player.crawling ? 4.2 : (player.aiming ? 6.5 : 10.5);
+      const speed = player.crawling ? 4.6 : (player.aiming ? 7.2 : 11.5);
       let forwardYaw = player.yaw;
       if (renderer.xr.isPresenting) {
-        const xrDir = new THREE.Vector3();
-        renderer.xr.getCamera().getWorldDirection(xrDir);
-        forwardYaw = Math.atan2(-xrDir.x, -xrDir.z);
+        const xrCam = renderer.xr.getCamera();
+        const xrDir = new THREE.Vector3(0, 0, -1).applyQuaternion(xrCam.quaternion);
+        xrDir.y = 0;
+        if (xrDir.lengthSq() > 0.0001) {
+          xrDir.normalize();
+          forwardYaw = Math.atan2(-xrDir.x, -xrDir.z);
+        }
       }
 
-      const sin = Math.sin(forwardYaw);
-      const cos = Math.cos(forwardYaw);
-      const vx = (moveVec.x * cos + moveVec.z * sin) * speed * dt;
-      const vz = (-moveVec.x * sin + moveVec.z * cos) * speed * dt;
+      // Forward vector in world XZ plane: (-sin(yaw), -cos(yaw))
+      // Right strafe vector in world XZ plane: (cos(yaw), -sin(yaw))
+      const forwardX = -Math.sin(forwardYaw);
+      const forwardZ = -Math.cos(forwardYaw);
+      const rightX = Math.cos(forwardYaw);
+      const rightZ = -Math.sin(forwardYaw);
+
+      const forwardInput = -moveVec.z; // +1 when stick pushed UP, -1 when pulled DOWN
+      const strafeInput = moveVec.x;   // +1 when stick pushed RIGHT, -1 when pushed LEFT
+
+      const vx = (forwardX * forwardInput + rightX * strafeInput) * speed * dt;
+      const vz = (forwardZ * forwardInput + rightZ * strafeInput) * speed * dt;
 
       moveWithCollisions(cameraRig.position, vx, vz, 0.55);
 
@@ -1633,8 +1629,9 @@
       player.currentEyeHeight += (desiredEyeHeight - player.currentEyeHeight) * Math.min(1, dt * 10);
 
       if (renderer.xr.isPresenting) {
+        // In WebXR, rotate the rig for smooth Right-Stick turning and offset rig Y for crawling without overriding XR headset pose
         cameraRig.rotation.y = player.yaw;
-        camera.position.y = player.crawling ? -1.05 : 0;
+        cameraRig.position.y = (player.grounded ? 0 : cameraRig.position.y) - (player.crawling ? 0.95 : 0);
       } else {
         cameraRig.rotation.y = player.yaw;
         camera.position.set(0, player.currentEyeHeight, 0);
