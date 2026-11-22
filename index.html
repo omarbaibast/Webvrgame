@@ -6,35 +6,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Of Ants and Bees: The Last Bloom</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Quicksand:wght@500;600;700&display=swap');
+
     :root {
       --amber: #f59e0b;
-      --amber-light: #fcd34d;
-      --amber-dark: #92400e;
-      --chitin: #1c140d;
-      --chitin-panel: rgba(26, 18, 11, 0.86);
-      --emerald: #10b981;
-      --emerald-dark: #065f46;
+      --honey: #fbbf24;
+      --chitin-dark: rgba(24, 18, 12, 0.86);
+      --chitin-panel: rgba(34, 24, 15, 0.92);
+      --chitin-border: rgba(245, 158, 11, 0.45);
+      --leaf: #34d399;
       --cream: #fef3c7;
-      --text-muted: #d6c5a9;
-      --danger: #ef4444;
+      --danger: #f87171;
     }
 
     * {
       box-sizing: border-box;
-      margin: 0;
-      padding: 0;
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
-      font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
     }
 
     html, body {
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #0d160c;
+      background: #0f1710;
+      font-family: 'Quicksand', sans-serif;
       color: var(--cream);
+      touch-action: none;
     }
 
     #game-canvas {
@@ -44,11 +45,10 @@
       height: 100%;
       display: block;
       z-index: 1;
-      touch-action: none;
     }
 
-    /* Title Screen Overlay */
-    #title-screen {
+    /* Title Screen & Overlays */
+    .overlay-screen {
       position: fixed;
       inset: 0;
       z-index: 50;
@@ -56,123 +56,139 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at 50% 35%, rgba(45, 74, 34, 0.85), rgba(16, 12, 8, 0.96));
+      padding: 20px;
+      background: radial-gradient(circle at center, rgba(28, 38, 22, 0.78) 0%, rgba(12, 10, 7, 0.96) 100%);
       backdrop-filter: blur(6px);
-      padding: 24px;
-      text-align: center;
-      transition: opacity 0.6s ease;
+      transition: opacity 0.4s ease;
     }
 
-    .title-badge {
-      background: rgba(245, 158, 11, 0.18);
-      border: 1px solid var(--amber);
-      color: var(--amber-light);
-      padding: 6px 16px;
-      border-radius: 999px;
-      font-size: 0.78rem;
-      letter-spacing: 2px;
+    .overlay-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .title-card {
+      max-width: 640px;
+      width: 100%;
+      background: var(--chitin-panel);
+      border: 2px solid var(--chitin-border);
+      border-radius: 24px;
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.75), inset 0 0 30px rgba(245, 158, 11, 0.12);
+    }
+
+    .subtitle-tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 2.5px;
       text-transform: uppercase;
-      margin-bottom: 14px;
+      color: var(--leaf);
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 12px;
     }
 
     h1.game-title {
-      font-size: clamp(2rem, 6vw, 3.6rem);
+      font-family: 'Cinzel', serif;
+      font-size: clamp(1.75rem, 5vw, 2.75rem);
       font-weight: 800;
-      line-height: 1.1;
-      background: linear-gradient(135deg, #fef3c7 0%, #f59e0b 55%, #34d399 100%);
+      line-height: 1.15;
+      background: linear-gradient(135deg, #fef3c7 15%, #fbbf24 55%, #d97706 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      text-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
       margin-bottom: 10px;
     }
 
-    .game-subtitle {
-      max-width: 540px;
-      color: var(--text-muted);
-      font-size: clamp(0.92rem, 2.3vw, 1.08rem);
-      line-height: 1.5;
-      margin-bottom: 28px;
-    }
-
-    .menu-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      justify-content: center;
+    .game-desc {
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: #e7dcc6;
       margin-bottom: 20px;
     }
 
-    .btn-organic {
-      background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
-      color: #1c1004;
-      border: 2px solid #fde68a;
-      padding: 14px 30px;
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 13px 26px;
       border-radius: 16px;
-      font-size: 1.05rem;
-      font-weight: 800;
-      letter-spacing: 0.5px;
+      border: 1px solid var(--chitin-border);
       cursor: pointer;
-      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35), inset 0 2px 2px rgba(255, 255, 255, 0.4);
-      transition: transform 0.15s ease, filter 0.15s ease;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
-    .btn-organic:active {
-      transform: scale(0.95);
-    }
-
-    .btn-secondary {
-      background: rgba(28, 20, 13, 0.85);
-      color: var(--cream);
-      border: 1.5px solid rgba(245, 158, 11, 0.55);
-      padding: 12px 22px;
-      border-radius: 14px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.15s;
-    }
-
-    .btn-secondary:active {
+    .btn:active {
       transform: scale(0.96);
     }
 
-    .controls-hint {
-      font-size: 0.8rem;
-      color: #a89984;
-      max-width: 480px;
-      line-height: 1.4;
+    .btn-primary {
+      background: linear-gradient(135deg, #f59e0b, #b45309);
+      color: #fffbeb;
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+      border-color: #fde68a;
     }
 
-    /* Three.js VRButton styling override */
-    #VRButton {
-      position: fixed !important;
-      bottom: 18px !important;
-      left: 50% !important;
-      transform: translateX(-50%) !important;
-      z-index: 60 !important;
-      background: linear-gradient(135deg, #059669, #047857) !important;
-      border: 2px solid #6ee7b7 !important;
-      border-radius: 14px !important;
-      color: #ecfdf5 !important;
-      font-weight: 700 !important;
-      font-family: inherit !important;
-      padding: 10px 18px !important;
-      width: auto !important;
-      opacity: 0.95 !important;
-      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4) !important;
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--cream);
+    }
+
+    .quality-selector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #d6c7b2;
+    }
+
+    .q-pill {
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.3);
+      color: #d6c7b2;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .q-pill.active {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: var(--amber);
+      color: #fde68a;
     }
 
     /* HUD Layer */
     #hud {
       position: fixed;
       inset: 0;
-      z-index: 15;
+      z-index: 20;
       pointer-events: none;
       display: none;
     }
 
-    /* Top Bar */
-    .hud-top {
+    #hud.active {
+      display: block;
+    }
+
+    .top-bar {
       position: absolute;
       top: 12px;
       left: 12px;
@@ -183,393 +199,360 @@
       gap: 10px;
     }
 
-    .stats-card {
-      background: var(--chitin-panel);
-      border: 1.5px solid rgba(245, 158, 11, 0.45);
+    .quest-tracker {
+      background: var(--chitin-dark);
+      border: 1px solid var(--chitin-border);
       border-radius: 16px;
       padding: 10px 14px;
-      backdrop-filter: blur(6px);
-      min-width: 175px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
-    }
-
-    .player-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--amber-light);
-      margin-bottom: 5px;
-    }
-
-    .zone-label {
-      font-size: 0.72rem;
-      color: #6ee7b7;
-      font-weight: 600;
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .xp-bar-bg {
-      width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.12);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .xp-bar-fill {
-      height: 100%;
-      width: 15%;
-      background: linear-gradient(90deg, var(--emerald), var(--amber));
-      transition: width 0.35s ease;
-    }
-
-    .quest-mini {
-      background: var(--chitin-panel);
-      border: 1.5px solid rgba(16, 185, 129, 0.45);
-      border-radius: 16px;
-      padding: 10px 14px;
-      max-width: 260px;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+      max-width: 310px;
+      backdrop-filter: blur(4px);
       pointer-events: auto;
       cursor: pointer;
     }
 
-    .quest-mini-title {
-      font-size: 0.72rem;
+    .qt-label {
+      font-size: 0.68rem;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #6ee7b7;
+      letter-spacing: 1.5px;
+      color: var(--amber);
       font-weight: 700;
-      margin-bottom: 3px;
     }
 
-    .quest-mini-text {
-      font-size: 0.82rem;
-      color: var(--cream);
+    .qt-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #fffbeb;
+      margin: 2px 0;
+    }
+
+    .qt-obj {
+      font-size: 0.8rem;
+      color: #d6c7b2;
       line-height: 1.3;
+    }
+
+    .hud-stats {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--chitin-dark);
+      border: 1px solid var(--chitin-border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
     }
 
     .top-actions {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       pointer-events: auto;
     }
 
-    .hud-icon-btn {
-      width: 44px;
-      height: 44px;
+    .icon-btn {
+      width: 42px;
+      height: 42px;
       border-radius: 14px;
-      background: var(--chitin-panel);
-      border: 1.5px solid rgba(245, 158, 11, 0.5);
-      color: var(--amber-light);
+      background: var(--chitin-dark);
+      border: 1px solid var(--chitin-border);
+      color: var(--cream);
+      font-size: 1.1rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.15rem;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-      position: relative;
+      backdrop-filter: blur(4px);
     }
 
-    .hud-icon-btn:active {
-      transform: scale(0.92);
-    }
-
-    .badge-count {
-      position: absolute;
-      top: -5px;
-      right: -5px;
-      background: var(--emerald);
-      color: #042f2e;
-      font-size: 0.68rem;
-      font-weight: 800;
-      padding: 1px 6px;
-      border-radius: 999px;
-      border: 1px solid #a7f3d0;
-    }
-
-    /* Center Crosshair & Interaction Prompt */
-    #crosshair {
+    /* Crosshair / Reticle */
+    #reticle {
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 10px;
-      height: 10px;
+      width: 14px;
+      height: 14px;
       transform: translate(-50%, -50%);
       border-radius: 50%;
       border: 2px solid rgba(254, 243, 199, 0.75);
-      box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 0 8px rgba(0,0,0,0.6);
       transition: transform 0.15s ease, border-color 0.15s ease;
     }
 
-    #crosshair.active {
+    #reticle.interactive {
       transform: translate(-50%, -50%) scale(1.65);
-      border-color: var(--amber);
-      background: rgba(245, 158, 11, 0.35);
+      border-color: var(--honey);
+      background: rgba(251, 191, 36, 0.25);
     }
 
+    /* Interaction Prompt */
     #interact-prompt {
       position: absolute;
-      top: 56%;
+      top: 57%;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(20, 14, 8, 0.9);
-      border: 1.5px solid var(--amber);
-      color: var(--amber-light);
-      padding: 8px 18px;
+      background: var(--chitin-panel);
+      border: 1px solid var(--honey);
+      color: #fffbeb;
+      padding: 8px 16px;
       border-radius: 999px;
       font-size: 0.88rem;
       font-weight: 700;
       display: none;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
       pointer-events: auto;
       cursor: pointer;
+      white-space: nowrap;
+    }
+
+    #interact-prompt.visible {
+      display: flex;
     }
 
     /* Discovery Banner */
     #discovery-banner {
       position: absolute;
-      top: 84px;
+      top: 18%;
       left: 50%;
-      transform: translateX(-50%) translateY(-20px);
-      background: linear-gradient(90deg, rgba(16, 185, 129, 0.15), rgba(26, 18, 11, 0.92), rgba(245, 158, 11, 0.15));
-      border-top: 1.5px solid var(--amber);
-      border-bottom: 1.5px solid var(--amber);
-      padding: 10px 28px;
+      transform: translate(-50%, -15px);
+      background: linear-gradient(90deg, rgba(24,18,12,0.1), rgba(34,24,15,0.92) 20%, rgba(34,24,15,0.92) 80%, rgba(24,18,12,0.1));
+      border-top: 1px solid var(--amber);
+      border-bottom: 1px solid var(--amber);
+      padding: 10px 36px;
       text-align: center;
       opacity: 0;
-      pointer-events: none;
       transition: opacity 0.45s ease, transform 0.45s ease;
+      pointer-events: none;
     }
 
     #discovery-banner.show {
       opacity: 1;
-      transform: translateX(-50%) translateY(0);
+      transform: translate(-50%, 0);
     }
 
-    .discovery-sub {
-      font-size: 0.68rem;
-      text-transform: uppercase;
+    #discovery-sub {
+      font-size: 0.7rem;
       letter-spacing: 2px;
-      color: #6ee7b7;
+      text-transform: uppercase;
+      color: var(--leaf);
     }
 
-    .discovery-main {
-      font-size: 1.1rem;
-      font-weight: 800;
-      color: var(--amber-light);
+    #discovery-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fde68a;
     }
 
-    /* Toast Notification */
-    #toast-msg {
+    /* Touch Controls */
+    #touch-controls {
       position: absolute;
-      bottom: 155px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(16, 185, 129, 0.92);
-      color: #022c22;
-      font-weight: 800;
-      font-size: 0.85rem;
-      padding: 7px 16px;
-      border-radius: 999px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
+      inset: 0;
       pointer-events: none;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
     }
 
-    /* Mobile Touch Controls */
     #joystick-zone {
       position: absolute;
-      bottom: 24px;
-      left: 24px;
+      bottom: 22px;
+      left: 22px;
       width: 126px;
       height: 126px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(245, 158, 11, 0.12), rgba(20, 14, 8, 0.45));
-      border: 2px solid rgba(245, 158, 11, 0.4);
+      background: rgba(255, 255, 255, 0.06);
+      border: 2px solid rgba(251, 191, 36, 0.35);
       pointer-events: auto;
-      touch-action: none;
-    }
-
-    #joystick-knob {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 50px;
-      height: 50px;
-      margin-top: -25px;
-      margin-left: -25px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #fcd34d, #b45309);
-      border: 2px solid #fef3c7;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-      pointer-events: none;
-    }
-
-    .mobile-action-btns {
-      position: absolute;
-      bottom: 26px;
-      right: 24px;
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #joystick-nub {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fbbf24, #b45309);
+      border: 2px solid #fef3c7;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      transform: translate(0px, 0px);
+    }
+
+    #look-zone {
+      position: absolute;
+      top: 70px;
+      right: 0;
+      bottom: 145px;
+      width: 55%;
+      pointer-events: auto;
+    }
+
+    .action-cluster {
+      position: absolute;
+      bottom: 24px;
+      right: 22px;
+      display: flex;
       gap: 14px;
       align-items: flex-end;
       pointer-events: auto;
     }
 
-    .action-circle {
+    .touch-btn {
       width: 62px;
       height: 62px;
       border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, rgba(245, 158, 11, 0.85), rgba(146, 64, 14, 0.92));
-      border: 2px solid #fde68a;
-      color: #1c1004;
-      font-weight: 800;
-      font-size: 0.78rem;
+      background: var(--chitin-panel);
+      border: 2px solid var(--chitin-border);
+      color: var(--cream);
+      font-weight: 700;
+      font-size: 0.8rem;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
       cursor: pointer;
     }
 
-    .action-circle.emerald {
-      background: radial-gradient(circle at 30% 30%, rgba(52, 211, 153, 0.9), rgba(6, 95, 70, 0.95));
-      border-color: #a7f3d0;
-      color: #ecfdf5;
+    .touch-btn:active {
+      transform: scale(0.92);
+      border-color: var(--honey);
     }
 
-    .action-circle:active {
-      transform: scale(0.9);
+    .touch-btn.primary-action {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.85), rgba(180, 83, 9, 0.9));
+      border-color: #fde68a;
     }
 
-    /* Modal Panels (Dialogue, Inventory, Quests, Pause, Ending) */
-    .modal-overlay {
+    /* Runtime Error Banner */
+    #error-banner {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 90;
+      background: rgba(127, 29, 29, 0.95);
+      border: 1px solid #fca5a5;
+      color: #fef2f2;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      max-width: 90vw;
+      display: none;
+    }
+
+    /* Dialogue & Modals */
+    .modal-box {
       position: fixed;
       inset: 0;
       z-index: 40;
-      background: rgba(10, 7, 4, 0.72);
-      backdrop-filter: blur(5px);
+      background: rgba(10, 8, 5, 0.72);
       display: none;
       align-items: center;
       justify-content: center;
       padding: 18px;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-box.open {
+      display: flex;
     }
 
     .modal-card {
-      background: linear-gradient(180deg, #24180e 0%, #140d07 100%);
-      border: 2px solid var(--amber);
+      background: var(--chitin-panel);
+      border: 2px solid var(--chitin-border);
       border-radius: 22px;
-      width: 100%;
       max-width: 520px;
-      max-height: 84vh;
-      overflow-y: auto;
+      width: 100%;
       padding: 22px;
-      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75);
-      position: relative;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.8);
+      max-height: 85vh;
+      overflow-y: auto;
     }
 
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid rgba(245, 158, 11, 0.3);
-      padding-bottom: 12px;
-      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
     }
 
     .modal-title {
+      font-family: 'Cinzel', serif;
       font-size: 1.25rem;
-      font-weight: 800;
-      color: var(--amber-light);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .close-btn {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      color: var(--cream);
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
+      color: var(--honey);
       font-weight: 700;
-      cursor: pointer;
     }
 
-    /* Dialogue Specific */
-    #dialogue-modal {
-      align-items: flex-end;
-      background: rgba(10, 7, 4, 0.45);
+    .dialogue-speaker {
+      font-family: 'Cinzel', serif;
+      font-size: 1.15rem;
+      color: var(--honey);
+      margin-bottom: 4px;
     }
 
-    .dialogue-box {
-      max-width: 640px;
+    .dialogue-role {
+      font-size: 0.75rem;
+      color: var(--leaf);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
       margin-bottom: 12px;
     }
 
-    .speaker-tag {
-      display: inline-block;
-      background: var(--amber);
-      color: #1c1004;
-      font-weight: 800;
-      font-size: 0.82rem;
-      padding: 4px 12px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-
     .dialogue-text {
-      font-size: 1rem;
+      font-size: 0.96rem;
       line-height: 1.55;
-      color: var(--cream);
-      margin-bottom: 16px;
+      color: #f5ebd6;
+      background: rgba(0,0,0,0.28);
+      padding: 14px;
+      border-radius: 14px;
+      border-left: 3px solid var(--amber);
+      margin-bottom: 14px;
     }
 
     .dialogue-choices {
       display: flex;
       flex-direction: column;
-      gap: 9px;
+      gap: 8px;
     }
 
     .choice-btn {
-      background: rgba(245, 158, 11, 0.14);
-      border: 1.5px solid rgba(245, 158, 11, 0.55);
-      color: var(--amber-light);
-      padding: 11px 15px;
-      border-radius: 12px;
       text-align: left;
-      font-size: 0.92rem;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(245, 158, 11, 0.14);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fffbeb;
+      font-family: 'Quicksand', sans-serif;
       font-weight: 600;
+      font-size: 0.9rem;
       cursor: pointer;
-      transition: background 0.15s;
     }
 
     .choice-btn:hover, .choice-btn:active {
       background: rgba(245, 158, 11, 0.32);
     }
 
-    /* Inventory & Quest Lists */
     .inv-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
       gap: 10px;
     }
 
     .inv-item {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(245, 158, 11, 0.35);
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.12);
       border-radius: 14px;
       padding: 12px;
       text-align: center;
@@ -577,428 +560,245 @@
 
     .inv-icon {
       font-size: 1.7rem;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .inv-name {
-      font-size: 0.85rem;
       font-weight: 700;
-      color: var(--amber-light);
+      font-size: 0.85rem;
+      color: #fde68a;
     }
 
-    .inv-qty {
+    .inv-count {
       font-size: 0.78rem;
-      color: #6ee7b7;
-      margin-top: 2px;
+      color: var(--leaf);
+      font-weight: 700;
     }
 
-    .quest-entry {
-      background: rgba(255, 255, 255, 0.04);
-      border-left: 4px solid var(--emerald);
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 10px;
+    /* Style Three.js VRButton override */
+    #VRButton {
+      position: fixed !important;
+      bottom: 20px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      z-index: 60 !important;
+      background: linear-gradient(135deg, #059669, #065f46) !important;
+      border: 2px solid #6ee7b7 !important;
+      border-radius: 16px !important;
+      font-family: 'Quicksand', sans-serif !important;
+      font-weight: 700 !important;
+      padding: 12px 22px !important;
+      color: #ecfdf5 !important;
+      box-shadow: 0 8px 25px rgba(5, 150, 105, 0.45) !important;
+      opacity: 1 !important;
+      width: auto !important;
     }
 
-    .quest-entry.completed {
-      border-left-color: var(--amber);
-      opacity: 0.75;
-    }
-
-    .setting-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .quality-btns {
-      display: flex;
-      gap: 6px;
-    }
-
-    .q-btn {
-      padding: 6px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--amber);
-      background: transparent;
-      color: var(--cream);
-      font-size: 0.8rem;
-      cursor: pointer;
-    }
-
-    .q-btn.active {
-      background: var(--amber);
-      color: #1c1004;
-      font-weight: 800;
-    }
-
-    /* PlayStation DualShock 4 Button Badges */
-    .ps-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 24px;
-      height: 24px;
-      padding: 0 6px;
-      border-radius: 999px;
-      font-size: 0.76rem;
-      font-weight: 900;
-      background: #18181b;
-      border: 1.5px solid #a1a1aa;
-      color: #f4f4f5;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.55);
-      vertical-align: middle;
-    }
-    .ps-btn.cross { color: #60a5fa; border-color: #3b82f6; }
-    .ps-btn.circle { color: #f87171; border-color: #ef4444; }
-    .ps-btn.square { color: #f472b6; border-color: #ec4899; }
-    .ps-btn.triangle { color: #34d399; border-color: #10b981; }
-    .ps-btn.shoulder { border-radius: 7px; font-size: 0.7rem; background: #27272a; }
-
-    /* Controller Focus Highlight for Menu/Dialogue Navigation */
-    .gamepad-focus {
-      outline: 3px solid #60a5fa !important;
-      box-shadow: 0 0 18px rgba(96, 165, 250, 0.75) !important;
-      transform: scale(1.02);
-    }
-
-    /* Controller Diagnostic & Remapping Styles */
-    .diag-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-    .stick-box {
-      background: rgba(0, 0, 0, 0.45);
-      border: 1px solid rgba(245, 158, 11, 0.35);
-      border-radius: 14px;
-      padding: 10px;
-      text-align: center;
-    }
-    .stick-pad {
-      width: 84px;
-      height: 84px;
-      margin: 6px auto;
-      border-radius: 50%;
-      border: 1.5px dashed rgba(254, 243, 199, 0.35);
-      position: relative;
-      background: radial-gradient(circle, rgba(96, 165, 250, 0.12), transparent);
-    }
-    .stick-dot {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #60a5fa;
-      border: 2px solid #fff;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      margin: -7px 0 0 -7px;
-    }
-    .trigger-bar-bg {
-      width: 100%;
-      height: 10px;
-      background: rgba(255, 255, 255, 0.12);
-      border-radius: 999px;
-      overflow: hidden;
-      margin-top: 6px;
-    }
-    .trigger-bar-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #3b82f6, #f59e0b);
-    }
-    .btn-state-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
-      gap: 6px;
-      margin-top: 8px;
-    }
-    .btn-pill {
-      padding: 6px 4px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      font-size: 0.72rem;
-      text-align: center;
-      color: #d6c5a9;
-    }
-    .btn-pill.pressed {
-      background: #3b82f6;
-      border-color: #93c5fd;
-      color: #fff;
-      font-weight: 800;
-      box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
-    }
-    .remap-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 7px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      font-size: 0.84rem;
-    }
-
-    /* Quick-Select Item Bar & Aim Reticle */
-    #quick-item-bar {
-      position: absolute;
-      bottom: 22px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--chitin-panel);
-      border: 1.5px solid rgba(245, 158, 11, 0.45);
-      border-radius: 999px;
-      padding: 6px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.8rem;
-      pointer-events: auto;
-    }
-    #crosshair.aiming {
-      transform: translate(-50%, -50%) scale(2.1);
-      border-color: #60a5fa;
-      background: rgba(59, 130, 246, 0.25);
-    }
-    .ds4-active-touch {
-      opacity: 0.35 !important;
-      transition: opacity 0.3s ease;
-    }
-
-    @media (max-width: 600px) {
-      .quest-mini { max-width: 175px; padding: 8px 10px; }
-      .stats-card { min-width: 145px; padding: 8px 10px; }
-      #joystick-zone { width: 112px; height: 112px; left: 16px; bottom: 20px; }
-      .mobile-action-btns { right: 16px; bottom: 20px; }
-      #quick-item-bar { bottom: 86px; font-size: 0.74rem; padding: 5px 10px; }
+    @media (min-width: 900px) {
+      .desktop-hint {
+        display: inline-block;
+      }
     }
   </style>
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
 
-  <!-- Title Screen -->
-  <div id="title-screen">
-    <div class="title-badge">WebXR &bull; DualShock 4 &bull; Open World Adventure</div>
-    <h1 class="game-title">Of Ants and Bees:<br>The Last Bloom</h1>
-    <p class="game-subtitle">
-      Step into the chitinous boots of <strong>Nara</strong>, a young scout ant. Towering blades of grass, skyscraper wildflowers, an underground ant empire, and a sky-high bee hive await as you uncover the mystery of the withering meadow.
-    </p>
-    <div class="menu-buttons">
-      <button id="btn-start" class="btn-organic">Enter the Meadow</button>
-      <button id="btn-title-settings" class="btn-secondary">Graphics: Medium</button>
-      <button id="btn-title-diag" class="btn-secondary">&#127918; PS4 Controller Test</button>
+  <!-- TITLE SCREEN -->
+  <div id="title-screen" class="overlay-screen">
+    <div class="title-card">
+      <div class="subtitle-tag">WebXR &amp; Mobile Open-World Adventure</div>
+      <h1 class="game-title">Of Ants and Bees:<br>The Last Bloom</h1>
+      <p class="game-desc">
+        Step into the chitin armor of <strong>Nara</strong>, a young worker ant in a towering miniature world.
+        The meadow's giant flowers are withering and the bees have vanished. Explore the Underground Ant Kingdom,
+        cross the river, climb the Great Hollow Tree, and uncover the source of the Silver Blight.
+      </p>
+      <div class="btn-row">
+        <button id="btn-start" class="btn btn-primary">▶ Begin Expedition</button>
+        <button id="btn-controls-info" class="btn btn-secondary">🧭 Controls &amp; VR Guide</button>
+      </div>
+      <div class="quality-selector">
+        <span>Graphics (Mobile Opt):</span>
+        <button class="q-pill" data-quality="low">Low</button>
+        <button class="q-pill active" data-quality="medium">Medium</button>
+        <button class="q-pill" data-quality="high">High</button>
+      </div>
+      <p style="font-size:0.75rem; color:#a89b84; margin-top:12px;">
+        Tip: Tap <strong>ENTER VR</strong> below on a WebXR headset/phone, or play seamlessly on touch &amp; desktop!
+      </p>
     </div>
-    <p class="controls-hint" id="title-controls-hint">
-      <strong>PS4 DualShock 4 (Bluetooth):</strong> Left Stick Move &bull; Right Stick Look &bull; <span class="ps-btn cross">&#10005;</span> Jump &bull; <span class="ps-btn shoulder">R2</span> Interact &bull; <span class="ps-btn triangle">&#9651;</span> Satchel.<br>
-      <strong>Touch / Desktop / VR:</strong> On-screen sticks, WASD + Mouse, or WebXR Gaze &amp; DualShock 4 inside VR.
-    </p>
   </div>
 
-  <!-- Heads-Up Display -->
+  <!-- CONTROLS GUIDE MODAL -->
+  <div id="guide-modal" class="modal-box">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Explorer's Field Guide</div>
+        <button class="icon-btn" id="btn-close-guide">✕</button>
+      </div>
+      <div style="font-size:0.88rem; line-height:1.6; color:#e7dcc6; display:flex; flex-direction:column; gap:10px;">
+        <p><strong>📱 Mobile Touch:</strong> Drag the <em>left thumbstick</em> to walk/climb. Drag anywhere on the <em>right side</em> to look around. Tap <strong>Interact</strong> to talk or collect, and <strong>Jump</strong> to leap onto stones &amp; roots.</p>
+        <p><strong>🥽 Mobile VR / WebXR:</strong> Tap the green <em>ENTER VR</em> button. Look directly at any glowing item or insect for 1.5 seconds (Gaze-Lock) to interact automatically, or use VR controller thumbsticks &amp; triggers.</p>
+        <p><strong>💻 Desktop PC:</strong> Use <em>W A S D</em> to move, <em>Space</em> to jump, <em>Click</em> canvas to lock mouse look, and <em>E</em> to interact.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- IN-GAME HUD -->
   <div id="hud">
-    <div class="hud-top">
-      <div class="stats-card">
-        <div class="player-header">
-          <span>Nara &bull; Lv.<span id="hud-level">1</span> <span id="hud-sprint-tag" style="display:none;color:#60a5fa;font-size:0.7rem;">[SPRINT]</span></span>
-          <span id="hud-time" style="font-size:0.75rem;color:#fcd34d;">Morning</span>
-        </div>
-        <div class="zone-label" id="hud-zone">&#127793; Sunlit Meadow</div>
-        <div style="font-size:0.68rem;color:#93c5fd;margin-bottom:4px;" id="hud-input-mode">&#128241; Input: Touchscreen</div>
-        <div class="xp-bar-bg">
-          <div class="xp-bar-fill" id="hud-xp-fill"></div>
-        </div>
+    <div class="top-bar">
+      <div class="quest-tracker" id="hud-quest-box">
+        <div class="qt-label">Active Quest</div>
+        <div class="qt-title" id="hud-quest-title">The Withering Meadow</div>
+        <div class="qt-obj" id="hud-quest-obj">Speak with Queen Aurelia inside the Ant Mound.</div>
       </div>
 
-      <div class="quest-mini" id="btn-open-quests">
-        <div class="quest-mini-title" id="quest-tracker-header">Active Objective</div>
-        <div class="quest-mini-text" id="hud-quest-text">Enter the Ant Colony Hill and speak with Queen Formica.</div>
-      </div>
-
-      <div class="top-actions">
-        <button class="hud-icon-btn" id="btn-open-inv" title="Inventory">
-          &#127855;<span class="badge-count" id="inv-badge">0</span>
-        </button>
-        <button class="hud-icon-btn" id="btn-open-pause" title="Menu & Settings">&#9881;</button>
+      <div class="hud-stats">
+        <div class="stat-row">
+          <span id="hud-rank">🐜 Scout Lv.1</span>
+          <span style="opacity:0.4">|</span>
+          <span id="hud-xp">0 XP</span>
+          <span style="opacity:0.4">|</span>
+          <span id="hud-time">☀️ Day</span>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" id="btn-quests" title="Quest Journal">📜</button>
+          <button class="icon-btn" id="btn-inv" title="Satchel Inventory">🎒</button>
+          <button class="icon-btn" id="btn-audio" title="Toggle Sound">🔊</button>
+          <button class="icon-btn" id="btn-pause" title="Settings & Menu">⚙️</button>
+        </div>
       </div>
     </div>
 
-    <div id="crosshair"></div>
-    <button id="interact-prompt">&#10024; <span id="interact-label">Interact</span></button>
+    <div id="reticle"></div>
 
-    <!-- Active Quick-Select Item Bar (L1 / R1 cycling) -->
-    <div id="quick-item-bar">
-      <span class="ps-btn shoulder" id="badge-l1">L1</span>
-      <span id="quick-item-display">&#127804; Golden Pollen (0)</span>
-      <span class="ps-btn shoulder" id="badge-r1">R1</span>
+    <div id="interact-prompt">
+      <span id="prompt-icon">✨</span>
+      <span id="prompt-text">Interact</span>
     </div>
 
     <div id="discovery-banner">
-      <div class="discovery-sub">New Landmark Discovered</div>
-      <div class="discovery-main" id="discovery-name">The Great Oak Hive</div>
+      <div id="discovery-sub">New Biome Discovered</div>
+      <div id="discovery-title">Sunlit Meadow</div>
     </div>
-
-    <div id="toast-msg">+1 Golden Pollen</div>
 
     <!-- Mobile Touch Controls -->
-    <div id="joystick-zone">
-      <div id="joystick-knob"></div>
-    </div>
-
-    <div class="mobile-action-btns">
-      <button class="action-circle emerald" id="btn-touch-interact">ACT<br><span style="font-size:0.65rem;" id="touch-act-sub">[E]</span></button>
-      <button class="action-circle" id="btn-touch-jump">JUMP<br><span style="font-size:0.65rem;" id="touch-jump-sub">[Space]</span></button>
+    <div id="touch-controls">
+      <div id="joystick-zone">
+        <div id="joystick-nub"></div>
+      </div>
+      <div id="look-zone"></div>
+      <div class="action-cluster">
+        <button class="touch-btn" id="btn-jump">
+          <span style="font-size:1.2rem;">⬆️</span>
+          <span>JUMP</span>
+        </button>
+        <button class="touch-btn primary-action" id="btn-interact">
+          <span style="font-size:1.3rem;">🌿</span>
+          <span>ACT</span>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Dialogue Modal -->
-  <div class="modal-overlay" id="dialogue-modal">
-    <div class="modal-card dialogue-box">
-      <div class="speaker-tag" id="dlg-speaker">Queen Formica</div>
-      <div class="dialogue-text" id="dlg-text">Welcome, young Nara.</div>
+  <!-- DIALOGUE MODAL -->
+  <div id="dialogue-modal" class="modal-box">
+    <div class="modal-card">
+      <div class="dialogue-speaker" id="dlg-name">Queen Aurelia</div>
+      <div class="dialogue-role" id="dlg-role">Matriarch of the Deep Mound</div>
+      <div class="dialogue-text" id="dlg-text">...</div>
       <div class="dialogue-choices" id="dlg-choices"></div>
     </div>
   </div>
 
-  <!-- Inventory Modal -->
-  <div class="modal-overlay" id="inventory-modal">
+  <!-- INVENTORY MODAL -->
+  <div id="inv-modal" class="modal-box">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">&#127855; Nara's Satchel</div>
-        <button class="close-btn" data-close="inventory-modal">&#10005;</button>
+        <div class="modal-title">Nara's Foraging Satchel</div>
+        <button class="icon-btn" id="btn-close-inv">✕</button>
       </div>
-      <div class="inv-grid" id="inventory-grid"></div>
+      <div class="inv-grid" id="inv-grid"></div>
     </div>
   </div>
 
-  <!-- Quest Log Modal -->
-  <div class="modal-overlay" id="quest-modal">
+  <!-- QUEST JOURNAL MODAL -->
+  <div id="quest-modal" class="modal-box">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">&#128220; Colony &amp; Hive Chronicles</div>
-        <button class="close-btn" data-close="quest-modal">&#10005;</button>
+        <div class="modal-title">Chronicle of the Last Bloom</div>
+        <button class="icon-btn" id="btn-close-quest">✕</button>
       </div>
-      <div id="quest-list"></div>
+      <div id="quest-list" style="display:flex; flex-direction:column; gap:12px;"></div>
     </div>
   </div>
 
-  <!-- Pause & Graphics Modal -->
-  <div class="modal-overlay" id="pause-modal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">&#9881; Meadow Settings</div>
-        <button class="close-btn" data-close="pause-modal">&#10005;</button>
-      </div>
-      <div class="setting-row">
-        <span>Graphics Quality (Mobile Opt.)</span>
-        <div class="quality-btns">
-          <button class="q-btn" data-quality="low">Low</button>
-          <button class="q-btn active" data-quality="medium">Med</button>
-          <button class="q-btn" data-quality="high">High</button>
-        </div>
-      </div>
-      <div class="setting-row">
-        <span>Camera View (<span class="ps-btn">R3</span>)</span>
-        <button class="q-btn active" id="btn-toggle-cam">1st Person</button>
-      </div>
-      <div class="setting-row">
-        <span>PS4 DualShock 4 Diagnostics &amp; Remap</span>
-        <button class="q-btn active" id="btn-open-diag">&#127918; Open</button>
-      </div>
-      <div class="setting-row">
-        <span>Sound Effects &amp; Ambience</span>
-        <button class="q-btn active" id="btn-toggle-audio">On</button>
-      </div>
-      <div class="setting-row">
-        <span>Stuck Underground / Terrain?</span>
-        <button class="q-btn" id="btn-unstuck">Return to Colony</button>
-      </div>
-      <div style="margin-top:18px;text-align:center;">
-        <button class="btn-organic" style="width:100%;" data-close="pause-modal">Resume Adventure</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- PS4 DualShock 4 Diagnostic & Button Remapping Modal -->
-  <div class="modal-overlay" id="diagnostic-modal">
-    <div class="modal-card" style="max-width:560px;">
-      <div class="modal-header">
-        <div class="modal-title">&#127918; DualShock 4 Diagnostic &amp; Remap</div>
-        <button class="close-btn" data-close="diagnostic-modal">&#10005;</button>
-      </div>
-
-      <div style="background:rgba(0,0,0,0.4);padding:10px 12px;border-radius:12px;margin-bottom:12px;font-size:0.84rem;">
-        <div><strong>Status:</strong> <span id="diag-status" style="color:#f87171;">Disconnected (Press any PS4 button)</span></div>
-        <div style="font-size:0.75rem;color:#a89984;margin-top:3px;" id="diag-id">Device: None</div>
-        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
-          <span style="font-size:0.78rem;">Android Mapping Profile:</span>
-          <button class="q-btn active" id="btn-profile-auto">Auto</button>
-          <button class="q-btn" id="btn-profile-std">Standard</button>
-          <button class="q-btn" id="btn-profile-android">Legacy Android</button>
-        </div>
-      </div>
-
-      <div class="diag-grid">
-        <div class="stick-box">
-          <div style="font-size:0.78rem;font-weight:700;color:#fcd34d;">Left Stick (Move)</div>
-          <div class="stick-pad"><div class="stick-dot" id="diag-lstick-dot"></div></div>
-          <div style="font-size:0.75rem;font-family:monospace;" id="diag-lstick-val">X: 0.00 | Y: 0.00</div>
-        </div>
-        <div class="stick-box">
-          <div style="font-size:0.78rem;font-weight:700;color:#fcd34d;">Right Stick (Look)</div>
-          <div class="stick-pad"><div class="stick-dot" id="diag-rstick-dot"></div></div>
-          <div style="font-size:0.75rem;font-family:monospace;" id="diag-rstick-val">X: 0.00 | Y: 0.00</div>
-        </div>
-      </div>
-
-      <div class="diag-grid">
-        <div class="stick-box">
-          <div style="font-size:0.78rem;font-weight:700;">L2 Analog (Aim): <span id="diag-l2-val">0%</span></div>
-          <div class="trigger-bar-bg"><div class="trigger-bar-fill" id="diag-l2-bar"></div></div>
-        </div>
-        <div class="stick-box">
-          <div style="font-size:0.78rem;font-weight:700;">R2 Analog (Act): <span id="diag-r2-val">0%</span></div>
-          <div class="trigger-bar-bg"><div class="trigger-bar-fill" id="diag-r2-bar"></div></div>
-        </div>
-      </div>
-
-      <div style="font-size:0.8rem;font-weight:700;color:#fcd34d;margin-bottom:4px;">Live Button States (18 Inputs):</div>
-      <div class="btn-state-grid" id="diag-btn-grid"></div>
-
-      <div style="margin-top:16px;border-top:1px solid rgba(245,158,11,0.3);padding-top:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-size:0.84rem;font-weight:700;color:#6ee7b7;">Custom Action Remapping</span>
-          <button class="q-btn" id="btn-reset-remap">Reset Defaults</button>
-        </div>
-        <div id="remap-status-hint" style="font-size:0.75rem;color:#fcd34d;margin-bottom:6px;">Tap "Change" next to an action, then press any PS4 button.</div>
-        <div id="remap-list"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Ending Modal -->
-  <div class="modal-overlay" id="ending-modal">
+  <!-- PAUSE / SETTINGS MODAL -->
+  <div id="pause-modal" class="modal-box">
     <div class="modal-card" style="text-align:center;">
-      <div class="title-badge" id="ending-badge">Ending Unlocked</div>
-      <h2 class="modal-title" id="ending-title" style="justify-content:center;font-size:1.5rem;margin-bottom:12px;">The Symbiotic Bloom</h2>
-      <p class="dialogue-text" id="ending-desc">
-        Through courage and empathy, Nara united the subterranean strength of the Ants with the skyward grace of the Bees.
+      <div class="modal-header">
+        <div class="modal-title">Expedition Paused</div>
+        <button class="icon-btn" id="btn-close-pause">✕</button>
+      </div>
+      <p style="font-size:0.88rem; color:#d6c7b2; margin-bottom:14px;">
+        Adjust performance settings for mobile devices or teleport back to the Ant Mound if stuck.
       </p>
-      <div style="margin-bottom:16px;font-size:0.88rem;color:#6ee7b7;" id="ending-stats"></div>
-      <button class="btn-organic" id="btn-continue-explore">Continue Free Roam</button>
+      <div class="quality-selector" style="margin-bottom:18px;">
+        <span>Render Quality:</span>
+        <button class="q-pill" data-quality="low">Low</button>
+        <button class="q-pill active" data-quality="medium">Medium</button>
+        <button class="q-pill" data-quality="high">High</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-resume">Resume</button>
+        <button class="btn btn-secondary" id="btn-unstuck">🏠 Return to Ant Mound</button>
+      </div>
     </div>
   </div>
+
+  <!-- ENDING MODAL -->
+  <div id="ending-modal" class="modal-box">
+    <div class="modal-card" style="text-align:center;">
+      <div class="subtitle-tag" id="ending-tag">Ending Unlocked</div>
+      <h2 class="modal-title" id="ending-title" style="font-size:1.5rem; margin:10px 0;">The Eternal Bloom</h2>
+      <p class="dialogue-text" id="ending-desc" style="text-align:left;"></p>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-continue-freeplay">Continue Exploring World</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
 
   <script type="module">
-    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-    import { VRButton } from 'https://unpkg.com/three@0.160.0/examples/jsm/webxr/VRButton.js';
+    import * as THREE from 'three';
+    import { VRButton } from 'three/addons/webxr/VRButton.js';
 
-    /* =========================================================================
-       1. PROCEDURAL WEB AUDIO ENGINE (Zero external audio files required)
-       ========================================================================= */
+    function showRuntimeError(err) {
+      const el = document.getElementById('error-banner');
+      if (el) {
+        el.style.display = 'block';
+        el.textContent = 'Runtime Notice: ' + (err && err.message ? err.message : String(err));
+      }
+      console.error(err);
+    }
+
+    window.addEventListener('error', e => showRuntimeError(e.error || e.message));
+    window.addEventListener('unhandledrejection', e => showRuntimeError(e.reason));
+
+    try {
+
+    // =========================================================================
+    // 1. PROCEDURAL WEB AUDIO ENGINE (Zero external audio files)
+    // =========================================================================
     class SoundEngine {
       constructor() {
         this.ctx = null;
@@ -1006,7 +806,7 @@
         this.stepTimer = 0;
       }
 
-      unlock() {
+      init() {
         if (!this.ctx) {
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
           if (AudioCtx) this.ctx = new AudioCtx();
@@ -1016,7 +816,7 @@
         }
       }
 
-      playTone(freq, type = 'sine', duration = 0.15, vol = 0.12, slideTo = null) {
+      playTone(freq, type = 'sine', duration = 0.2, gainVal = 0.12, slideTo = null) {
         if (!this.enabled || !this.ctx) return;
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
@@ -1026,7 +826,7 @@
         if (slideTo) {
           osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
         }
-        gain.gain.setValueAtTime(vol, now);
+        gain.gain.setValueAtTime(gainVal, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
@@ -1035,854 +835,278 @@
       }
 
       playStep() {
-        this.playTone(130 + Math.random() * 40, 'triangle', 0.045, 0.04, 70);
+        this.playTone(140 + Math.random() * 40, 'triangle', 0.045, 0.035, 90);
       }
 
       playJump() {
-        this.playTone(210, 'sine', 0.18, 0.12, 460);
+        this.playTone(190, 'sine', 0.18, 0.09, 410);
       }
 
       playCollect() {
-        this.playTone(523.25, 'sine', 0.12, 0.14);
-        setTimeout(() => this.playTone(659.25, 'sine', 0.14, 0.14), 70);
-        setTimeout(() => this.playTone(783.99, 'triangle', 0.22, 0.14), 140);
+        this.playTone(523.25, 'sine', 0.14, 0.12);
+        setTimeout(() => this.playTone(659.25, 'sine', 0.14, 0.12), 70);
+        setTimeout(() => this.playTone(783.99, 'sine', 0.22, 0.14), 140);
       }
 
-      playDestroy() {
-        this.playTone(160, 'sawtooth', 0.16, 0.14, 55);
+      playInsectVoice(species) {
+        if (species === 'bee') {
+          this.playTone(230, 'sawtooth', 0.18, 0.06, 290);
+          setTimeout(() => this.playTone(260, 'sawtooth', 0.15, 0.05, 210), 110);
+        } else {
+          this.playTone(680, 'triangle', 0.06, 0.06, 520);
+          setTimeout(() => this.playTone(740, 'triangle', 0.06, 0.06, 610), 75);
+        }
       }
 
-      playDialogue() {
-        this.playTone(340 + Math.random() * 90, 'triangle', 0.07, 0.08);
-      }
-
-      playDiscovery() {
-        [392, 493.88, 587.33, 783.99].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'sine', 0.35, 0.12), i * 110);
+      playQuestComplete() {
+        const notes = [440, 554.37, 659.25, 880];
+        notes.forEach((n, i) => {
+          setTimeout(() => this.playTone(n, 'triangle', 0.28, 0.13), i * 110);
         });
       }
     }
 
-    const sound = new SoundEngine();
+    const sfx = new SoundEngine();
 
-    /* =========================================================================
-       2. GAME STATE, QUESTS, INVENTORY & DIALOGUE DATA
-       ========================================================================= */
+    // =========================================================================
+    // 2. GAME STATE, INVENTORY & QUEST SYSTEM
+    // =========================================================================
+    const ITEMS_META = {
+      nectar: { name: 'Sun Nectar Dew', icon: '💧', desc: 'Sweet glowing dewdrop prized by both ants and bees.' },
+      pollen: { name: 'Golden Pollen', icon: '🌼', desc: 'Concentrated floral energy from giant blossoms.' },
+      resin: { name: 'Amber Tree Resin', icon: '🟠', desc: 'Sticky golden sap from the Great Hollow Tree.' },
+      beeswax: { name: 'Royal Beeswax', icon: '🍯', desc: 'Malleable golden wax gifted by the Bee Citadel.' },
+      spore: { name: 'Luminous Spore', icon: '🍄', desc: 'Bioluminescent fungus dust from the Mushroom Grove.' },
+      amberShard: { name: 'Ancient Amber', icon: '💎', desc: 'Prehistoric fossilized sap holding old memories.' }
+    };
+
     const state = {
       started: false,
       paused: false,
-      inVR: false,
       quality: 'medium',
-      inputMode: 'touch', // 'ds4' | 'touch' | 'vr' | 'kbm'
-      cameraMode: 'first', // 'first' | 'third'
-      sprinting: false,
-      aiming: false,
-      questTrackerVisible: true,
-      selectedItemIndex: 0,
       xp: 0,
       level: 1,
-      timeOfDay: 0.22,
-      currentZone: 'Sunlit Meadow',
-      discoveredZones: new Set(['Sunlit Meadow']),
+      timeOfDay: 0.22, // 0..1 cycle (0.25 = bright noon)
       inventory: {
-        pollen: { name: 'Golden Pollen', icon: '🌼', count: 0, desc: 'Fragrant energy dust from giant meadow blossoms.' },
-        nectar: { name: 'Sweet Dewdrop', icon: '💧', count: 0, desc: 'Pure crystal water condensed on clover leaves.' },
-        amber: { name: 'Ancient Amber', icon: '🔶', count: 0, desc: 'Fossilized tree resin humming with memory.' },
-        silk: { name: 'Spider Silk', icon: '🕸️', count: 0, desc: 'Strong gossamer thread useful for bridges.' },
-        pureSeed: { name: 'The Last Pure Seed', icon: '🌱', count: 0, desc: 'A radiant seed capable of restoring life to the meadow.' }
+        nectar: 0,
+        pollen: 0,
+        resin: 0,
+        beeswax: 0,
+        spore: 0,
+        amberShard: 0
       },
       flags: {
-        metFormica: false,
-        gatheredForColony: false,
-        metApis: false,
-        metMellifera: false,
-        foundBlightRoot: false,
-        hasPureSeed: false,
+        talkedAurelia: false,
+        talkedVespia: false,
+        talkedMelisande: false,
+        foundBlight: false,
+        savedLarva: false,
+        blightSealed: false,
         endingChosen: null
       },
-      quests: [
-        {
-          id: 'q1',
-          title: 'Whispers Beneath the Soil',
-          desc: 'Enter the Ant Colony Hill (North-West mound) and speak to Queen Formica.',
-          active: true,
-          completed: false
+      discoveredBiomes: new Set(),
+      quests: {
+        main: {
+          title: 'The Wilting Meadow',
+          step: 0,
+          completed: false,
+          objectives: [
+            'Speak with Scout Antlyra near the Ant Colony Mound (ahead/right) to begin.',
+            'Gather 3 Golden Pollen Orbs & Nectar Dewdrops in the Sunlit Meadow (0/3).',
+            'Meet Apia the Meadow Bee near the Giant Flowers (-6, -8) & Great Hollow Tree (0, -38).',
+            'Speak with Bramble the Beetle (16, -16) and gather Ancient Seeds / Resin to heal the bloom.',
+            'Choose your kingdom’s fate with Antlyra, Apia, or Bramble!'
+          ]
         },
-        {
-          id: 'q2',
-          title: 'Sweetness of the Giants',
-          desc: 'Collect 3 Golden Pollen and 2 Sweet Dewdrops from the giant meadow flowers.',
+        sideLarva: {
+          title: 'Echoes Below & The Hollow Tree',
           active: false,
-          completed: false
-        },
-        {
-          id: 'q3',
-          title: 'Wings in the Great Oak',
-          desc: 'Travel to the Giant Hollow Tree in the East and speak to Scout Apis and Queen Mellifera.',
-          active: false,
-          completed: false
-        },
-        {
-          id: 'q4',
-          title: 'The Last Bloom',
-          desc: 'Investigate the Wilted Ancient Garden in the South, claim the Pure Seed, and decide the meadow’s fate.',
-          active: false,
-          completed: false
+          completed: false,
+          objective: 'Find Bramble the Beetle near the Ancient Garden & Cave path (16, -16).'
         }
-      ]
+      }
     };
-
-    const inventoryKeys = Object.keys(state.inventory);
-
-    function cycleInventoryItem(dir) {
-      state.selectedItemIndex = (state.selectedItemIndex + dir + inventoryKeys.length) % inventoryKeys.length;
-      const key = inventoryKeys[state.selectedItemIndex];
-      const item = state.inventory[key];
-      document.getElementById('quick-item-display').textContent = `${item.icon} ${item.name} (${item.count})`;
-      sound.playTone(440 + dir * 60, 'sine', 0.06, 0.07);
-    }
-
-    function useSelectedInventoryItem() {
-      const key = inventoryKeys[state.selectedItemIndex];
-      const item = state.inventory[key];
-      if (item.count <= 0) {
-        showToast(`No ${item.name} in satchel`);
-        return;
-      }
-      if (key === 'nectar') {
-        item.count--;
-        addXP(15);
-        showToast('Drank Sweet Dewdrop! Speed boosted briefly.');
-        sound.playCollect();
-      } else if (key === 'pollen') {
-        item.count--;
-        addXP(20);
-        showToast('Scattered Golden Pollen! +20 XP');
-        sound.playCollect();
-      } else {
-        showToast(`${item.name}: ${item.desc}`);
-      }
-      updateHUD();
-    }
 
     function addXP(amount) {
       state.xp += amount;
-      const needed = state.level * 100;
-      if (state.xp >= needed) {
-        state.xp -= needed;
-        state.level++;
-        showToast(`Level Up! Nara is now Level ${state.level}`);
-        sound.playDiscovery();
+      const newLevel = Math.floor(state.xp / 100) + 1;
+      if (newLevel > state.level) {
+        state.level = newLevel;
+        showDiscovery('Forager Rank Up!', `Nara is now Rank ${state.level} Pathfinder`);
       }
       updateHUD();
     }
 
-    function addItem(key, qty = 1) {
-      if (!state.inventory[key]) return;
-      state.inventory[key].count += qty;
-      state.selectedItemIndex = inventoryKeys.indexOf(key);
-      sound.playCollect();
-      showToast(`+${qty} ${state.inventory[key].name}`);
+    function addItem(key, count = 1) {
+      state.inventory[key] = (state.inventory[key] || 0) + count;
+      sfx.playCollect();
+      addXP(20 * count);
       checkQuestProgress();
       updateHUD();
     }
 
-    function showToast(text) {
-      const el = document.getElementById('toast-msg');
-      el.textContent = text;
-      el.style.opacity = '1';
-      clearTimeout(el._timer);
-      el._timer = setTimeout(() => { el.style.opacity = '0'; }, 2400);
-    }
-
-    function triggerDiscovery(zoneName) {
-      if (state.discoveredZones.has(zoneName)) return;
-      state.discoveredZones.add(zoneName);
-      sound.playDiscovery();
-      addXP(40);
-      const banner = document.getElementById('discovery-banner');
-      document.getElementById('discovery-name').textContent = zoneName;
-      banner.classList.add('show');
-      clearTimeout(banner._timer);
-      banner._timer = setTimeout(() => banner.classList.remove('show'), 3600);
-    }
-
     function checkQuestProgress() {
-      const q1 = state.quests[0];
-      const q2 = state.quests[1];
-      const q3 = state.quests[2];
-      const q4 = state.quests[3];
-
-      if (state.flags.metFormica && !q1.completed) {
-        q1.completed = true;
-        q1.active = false;
-        q2.active = true;
-        addXP(50);
+      const mq = state.quests.main;
+      const totalForage = state.inventory.nectar + state.inventory.pollen;
+      if (mq.step === 1) {
+        const n = Math.min(3, totalForage);
+        mq.objectives[1] = `Gather 3 Golden Pollen Orbs & Nectar Dewdrops in the Meadow (${n}/3).`;
+        if (n >= 3) {
+          mq.step = 2;
+          sfx.playQuestComplete();
+          showDiscovery('Objective Complete', 'Seek Apia the Bee near the Giant Flowers & Bee Tree');
+        }
       }
-
-      if (q2.active && state.inventory.pollen.count >= 3 && state.inventory.nectar.count >= 2) {
-        state.flags.gatheredForColony = true;
-        q2.completed = true;
-        q2.active = false;
-        q3.active = true;
-        addXP(75);
-        showToast('Objective Complete! Seek the Great Hollow Tree.');
-      }
-
-      if (state.flags.metMellifera && !q3.completed) {
-        q3.completed = true;
-        q3.active = false;
-        q4.active = true;
-        addXP(80);
-      }
-
-      if (state.flags.endingChosen && !q4.completed) {
-        q4.completed = true;
-        q4.active = false;
-        addXP(150);
+      if (mq.step >= 3 && (state.inventory.resin >= 1 || state.inventory.amberShard >= 1) && state.inventory.beeswax >= 1) {
+        mq.step = 4;
+        mq.objectives[4] = 'All relics gathered! Speak with Antlyra, Apia, or Bramble to decide the ending.';
       }
       updateHUD();
     }
 
-    function setInputMode(mode) {
-      if (state.inputMode === mode) return;
-      state.inputMode = mode;
-      const modeEl = document.getElementById('hud-input-mode');
-      const joyEl = document.getElementById('joystick-zone');
-      const actBtns = document.querySelector('.mobile-action-btns');
-
-      if (mode === 'ds4') {
-        modeEl.innerHTML = '&#127918; Input: PS4 DualShock 4';
-        joyEl.classList.add('ds4-active-touch');
-        actBtns.classList.add('ds4-active-touch');
-        document.getElementById('touch-act-sub').textContent = '[R2]';
-        document.getElementById('touch-jump-sub').textContent = '[✕]';
-      } else if (mode === 'vr') {
-        modeEl.innerHTML = '&#129405; Input: WebXR VR';
-      } else if (mode === 'kbm') {
-        modeEl.innerHTML = '&#9000; Input: Keyboard/Mouse';
-        joyEl.classList.remove('ds4-active-touch');
-        actBtns.classList.remove('ds4-active-touch');
-        document.getElementById('touch-act-sub').textContent = '[E]';
-        document.getElementById('touch-jump-sub').textContent = '[Space]';
-      } else {
-        modeEl.innerHTML = '&#128241; Input: Touchscreen';
-        joyEl.classList.remove('ds4-active-touch');
-        actBtns.classList.remove('ds4-active-touch');
-        document.getElementById('touch-act-sub').textContent = '[E]';
-        document.getElementById('touch-jump-sub').textContent = '[Space]';
-      }
-      updateHUD();
-    }
-
-    function updateHUD() {
-      document.getElementById('hud-level').textContent = state.level;
-      document.getElementById('hud-zone').innerHTML = `&#127793; ${state.currentZone}`;
-      document.getElementById('hud-sprint-tag').style.display = state.sprinting ? 'inline' : 'none';
-      const pct = Math.min(100, (state.xp / (state.level * 100)) * 100);
-      document.getElementById('hud-xp-fill').style.width = `${pct}%`;
-
-      const activeQ = state.quests.find(q => q.active) || state.quests[state.quests.length - 1];
-      document.getElementById('hud-quest-text').textContent = activeQ.completed
-        ? 'All main quests complete! Explore the living meadow.'
-        : activeQ.desc;
-
-      let totalItems = 0;
-      Object.values(state.inventory).forEach(it => totalItems += it.count);
-      document.getElementById('inv-badge').textContent = totalItems;
-
-      const curItem = state.inventory[inventoryKeys[state.selectedItemIndex]];
-      document.getElementById('quick-item-display').textContent = `${curItem.icon} ${curItem.name} (${curItem.count})`;
-    }
-
-    /* =========================================================================
-       3. NATIVE PS4 DUALSHOCK 4 GAMEPAD MANAGER (Android Bluetooth + VR Ready)
-       ========================================================================= */
-    const DS4_BUTTON_LABELS = [
-      { idx: 0, name: '✕ Cross', short: '✕', cls: 'cross' },
-      { idx: 1, name: '○ Circle', short: '○', cls: 'circle' },
-      { idx: 2, name: '□ Square', short: '□', cls: 'square' },
-      { idx: 3, name: '△ Triangle', short: '△', cls: 'triangle' },
-      { idx: 4, name: 'L1', short: 'L1', cls: 'shoulder' },
-      { idx: 5, name: 'R1', short: 'R1', cls: 'shoulder' },
-      { idx: 6, name: 'L2', short: 'L2', cls: 'shoulder' },
-      { idx: 7, name: 'R2', short: 'R2', cls: 'shoulder' },
-      { idx: 8, name: 'Share', short: 'SHARE', cls: 'shoulder' },
-      { idx: 9, name: 'Options', short: 'OPT', cls: 'shoulder' },
-      { idx: 10, name: 'L3', short: 'L3', cls: 'shoulder' },
-      { idx: 11, name: 'R3', short: 'R3', cls: 'shoulder' },
-      { idx: 12, name: 'D-Up', short: '↑', cls: '' },
-      { idx: 13, name: 'D-Down', short: '↓', cls: '' },
-      { idx: 14, name: 'D-Left', short: '←', cls: '' },
-      { idx: 15, name: 'D-Right', short: '→', cls: '' },
-      { idx: 16, name: 'PS', short: 'PS', cls: '' },
-      { idx: 17, name: 'Touchpad', short: 'PAD', cls: 'shoulder' }
-    ];
-
-    const DEFAULT_REMAP = {
-      jump: 0,         // Cross
-      destroy: 1,      // Circle
-      examine: 2,      // Square
-      inventory: 3,    // Triangle
-      prevItem: 4,     // L1
-      nextItem: 5,     // R1
-      aim: 6,          // L2
-      interact: 7,     // R2
-      quests: 8,       // Share
-      pause: 9,        // Options
-      sprint: 10,      // L3
-      cameraToggle: 11,// R3
-      trackerToggle: 12,// D-Up
-      invShortcut: 13, // D-Down
-      prevTarget: 14,  // D-Left
-      nextTarget: 15   // D-Right
-    };
-
-    const ACTION_NAMES = {
-      jump: 'Jump',
-      destroy: 'Destroy Obstacle / Back',
-      examine: 'Pick Up / Examine',
-      inventory: 'Open Inventory',
-      prevItem: 'Previous Item',
-      nextItem: 'Next Item',
-      aim: 'Aim / Highlight Target',
-      interact: 'Interact / Collect / Use',
-      quests: 'Open Quest Journal',
-      pause: 'Pause Menu',
-      sprint: 'Toggle Sprint',
-      cameraToggle: 'Toggle 1st/3rd Camera',
-      trackerToggle: 'Toggle Quest Tracker',
-      invShortcut: 'Inventory Shortcut',
-      prevTarget: 'Previous Target',
-      nextTarget: 'Next Target'
-    };
-
-    class DualShock4Controller {
-      constructor() {
-        this.connected = false;
-        this.gamepadIndex = null;
-        this.id = '';
-        this.profile = 'auto'; // 'auto' | 'standard' | 'android'
-        this.deadzone = 0.16;
-
-        this.leftStick = { x: 0, y: 0 };
-        this.rightStick = { x: 0, y: 0 };
-        this.l2Value = 0;
-        this.r2Value = 0;
-
-        this.currButtons = new Array(18).fill(false);
-        this.prevButtons = new Array(18).fill(false);
-        this.remap = { ...DEFAULT_REMAP };
-        this.listeningForRemap = null;
-
-        this.menuFocusIndex = 0;
-        this.navCooldown = 0;
-
-        window.addEventListener('gamepadconnected', (e) => this.onConnect(e.gamepad));
-        window.addEventListener('gamepaddisconnected', (e) => this.onDisconnect(e.gamepad));
-      }
-
-      onConnect(gp) {
-        if (!gp) return;
-        this.connected = true;
-        this.gamepadIndex = gp.index;
-        this.id = gp.id || 'Wireless Controller';
-        setInputMode('ds4');
-        showToast('🎮 PS4 DualShock 4 Connected!');
-        sound.playDiscovery();
-        this.updateDiagnosticHeader();
-      }
-
-      onDisconnect(gp) {
-        if (gp && gp.index === this.gamepadIndex) {
-          this.connected = false;
-          this.gamepadIndex = null;
-          this.currButtons.fill(false);
-          this.leftStick = { x: 0, y: 0 };
-          this.rightStick = { x: 0, y: 0 };
-          this.l2Value = 0;
-          this.r2Value = 0;
-          setInputMode(state.inVR ? 'vr' : 'touch');
-          showToast('⚠️ PS4 Controller Disconnected');
-          this.updateDiagnosticHeader();
-        }
-      }
-
-      updateDiagnosticHeader() {
-        const statusEl = document.getElementById('diag-status');
-        const idEl = document.getElementById('diag-id');
-        if (!statusEl) return;
-        if (this.connected) {
-          statusEl.textContent = 'Connected via Bluetooth';
-          statusEl.style.color = '#34d399';
-          idEl.textContent = `Device: ${this.id}`;
-        } else {
-          statusEl.textContent = 'Disconnected (Press PS or any button to pair)';
-          statusEl.style.color = '#f87171';
-          idEl.textContent = 'Device: None';
-        }
-      }
-
-      applyRadialDeadzone(rawX, rawY) {
-        const mag = Math.hypot(rawX, rawY);
-        if (mag < this.deadzone) return { x: 0, y: 0 };
-        const scaled = Math.min(1, (mag - this.deadzone) / (1 - this.deadzone));
-        return {
-          x: (rawX / mag) * scaled,
-          y: (rawY / mag) * scaled
-        };
-      }
-
-      isLegacyAndroidLayout(gp) {
-        if (this.profile === 'standard') return false;
-        if (this.profile === 'android') return true;
-        // Older Android WebView / Chrome builds expose DS4 with mapping !== 'standard' and 6+ axes
-        return gp.mapping !== 'standard' && gp.axes.length >= 6;
-      }
-
-      poll(dt) {
-        if (this.navCooldown > 0) this.navCooldown -= dt;
-
-        // Browser Gamepad API requires polling navigator.getGamepads() every frame
-        // Works both in standard mode AND inside active WebXR VR sessions!
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-        let gp = null;
-
-        if (this.gamepadIndex !== null && gamepads[this.gamepadIndex]) {
-          gp = gamepads[this.gamepadIndex];
-        } else {
-          for (let i = 0; i < gamepads.length; i++) {
-            if (gamepads[i] && gamepads[i].connected) {
-              gp = gamepads[i];
-              if (!this.connected) this.onConnect(gp);
-              break;
-            }
-          }
-        }
-
-        if (!gp) {
-          if (this.connected) this.onDisconnect({ index: this.gamepadIndex });
-          return;
-        }
-
-        this.prevButtons = [...this.currButtons];
-        const legacyAndroid = this.isLegacyAndroidLayout(gp);
-
-        // 1. Read Analog Sticks & Triggers (handling Standard vs Legacy Android DS4 layouts)
-        const rawLX = gp.axes[0] || 0;
-        const rawLY = gp.axes[1] || 0;
-        let rawRX = 0, rawRY = 0, l2 = 0, r2 = 0;
-
-        if (legacyAndroid) {
-          // Legacy Android HID mapping: Right stick on axes[2], axes[5]; L2/R2 on axes[3], axes[4] (-1..1)
-          rawRX = gp.axes[2] || 0;
-          rawRY = gp.axes[5] !== undefined ? gp.axes[5] : (gp.axes[3] || 0);
-          l2 = gp.axes[3] !== undefined ? (gp.axes[3] + 1) * 0.5 : (gp.buttons[6]?.value || 0);
-          r2 = gp.axes[4] !== undefined ? (gp.axes[4] + 1) * 0.5 : (gp.buttons[7]?.value || 0);
-        } else {
-          // Standard W3C Gamepad mapping (Android 10+ & Chrome)
-          rawRX = gp.axes[2] || 0;
-          rawRY = gp.axes[3] || 0;
-          l2 = gp.buttons[6] ? gp.buttons[6].value : 0;
-          r2 = gp.buttons[7] ? gp.buttons[7].value : 0;
-        }
-
-        this.leftStick = this.applyRadialDeadzone(rawLX, rawLY);
-        this.rightStick = this.applyRadialDeadzone(rawRX, rawRY);
-        this.l2Value = THREE.MathUtils.clamp(l2, 0, 1);
-        this.r2Value = THREE.MathUtils.clamp(r2, 0, 1);
-
-        // 2. Read Digital + Analog Button States (0..17)
-        for (let i = 0; i < 18; i++) {
-          let pressed = false;
-          if (i === 6) {
-            pressed = this.l2Value > 0.35 || !!(gp.buttons[6] && gp.buttons[6].pressed);
-          } else if (i === 7) {
-            pressed = this.r2Value > 0.35 || !!(gp.buttons[7] && gp.buttons[7].pressed);
-          } else if (legacyAndroid && i >= 12 && i <= 15 && gp.axes.length >= 10) {
-            // D-pad Hat Switch on axes[9] in some Android HID drivers
-            const hat = gp.axes[9];
-            if (i === 12) pressed = hat < -0.5;
-            if (i === 13) pressed = hat > 0.5 && hat < 1.2;
-            if (i === 14) pressed = Math.abs(hat - 0.714) < 0.15 || (gp.buttons[14]?.pressed);
-            if (i === 15) pressed = Math.abs(hat + 0.428) < 0.15 || (gp.buttons[15]?.pressed);
-          } else if (gp.buttons[i]) {
-            pressed = gp.buttons[i].pressed || gp.buttons[i].value > 0.5;
-          }
-          this.currButtons[i] = pressed;
-        }
-
-        // Switch active UI prompt style to DualShock 4 upon any physical input
-        if (
-          Math.abs(this.leftStick.x) > 0 || Math.abs(this.leftStick.y) > 0 ||
-          Math.abs(this.rightStick.x) > 0 || Math.abs(this.rightStick.y) > 0 ||
-          this.currButtons.some(Boolean)
-        ) {
-          if (!state.inVR && state.inputMode !== 'ds4') setInputMode('ds4');
-        }
-
-        // Handle interactive button remapping capture if listening
-        if (this.listeningForRemap) {
-          for (let i = 0; i < 16; i++) {
-            if (this.justPressedRaw(i)) {
-              this.remap[this.listeningForRemap] = i;
-              const actionName = ACTION_NAMES[this.listeningForRemap];
-              this.listeningForRemap = null;
-              document.getElementById('remap-status-hint').textContent = `Mapped "${actionName}" to ${DS4_BUTTON_LABELS[i].name}!`;
-              renderRemapList();
-              sound.playCollect();
-              return;
-            }
-          }
-          return;
-        }
-
-        this.updateDiagnosticsUI();
-        this.processGameplayAndMenuInputs();
-      }
-
-      justPressedRaw(btnIdx) {
-        return this.currButtons[btnIdx] && !this.prevButtons[btnIdx];
-      }
-
-      isActionPressed(actionKey) {
-        const idx = this.remap[actionKey];
-        return idx !== undefined ? this.currButtons[idx] : false;
-      }
-
-      justPressedAction(actionKey) {
-        const idx = this.remap[actionKey];
-        return idx !== undefined ? (this.currButtons[idx] && !this.prevButtons[idx]) : false;
-      }
-
-      getActionBadgeHTML(actionKey) {
-        const idx = this.remap[actionKey] ?? 0;
-        const info = DS4_BUTTON_LABELS[idx] || DS4_BUTTON_LABELS[0];
-        return `<span class="ps-btn ${info.cls}">${info.short}</span>`;
-      }
-
-      processGameplayAndMenuInputs() {
-        // Check if any modal or title screen is currently open
-        const openModal = getActiveModal();
-
-        if (!state.started) {
-          this.navigateModalElements(document.getElementById('title-screen'));
-          if (this.justPressedRaw(0) || this.justPressedRaw(9)) {
-            const focused = document.querySelector('#title-screen .gamepad-focus') || document.getElementById('btn-start');
-            focused.click();
-          }
-          return;
-        }
-
-        if (openModal) {
-          this.navigateModalElements(openModal);
-          // Cross (0) clicks focused button/choice
-          if (this.justPressedRaw(0)) {
-            const focused = openModal.querySelector('.gamepad-focus');
-            if (focused) focused.click();
-          }
-          // Circle (1) or Options (9) closes/cancels modal
-          if (this.justPressedRaw(1) || (openModal.id === 'pause-modal' && this.justPressedAction('pause'))) {
-            if (openModal.id !== 'dialogue-modal') {
-              closeModal(openModal.id);
-              sound.playTone(260, 'sine', 0.08, 0.08);
-            } else {
-              // In dialogue, Circle picks the last exit/back choice if available
-              const choices = openModal.querySelectorAll('.choice-btn');
-              if (choices.length > 0) choices[choices.length - 1].click();
-            }
-          }
-          return;
-        }
-
-        // --- ACTIVE GAMEPLAY CONTROLS ---
-        // L2: Aim / Highlight Targets
-        state.aiming = this.isActionPressed('aim') || this.l2Value > 0.25;
-        document.getElementById('crosshair').classList.toggle('aiming', state.aiming);
-
-        // R2: Interact / Collect / Use Selected Item
-        if (this.justPressedAction('interact')) {
-          if (currentTarget) {
-            triggerCurrentInteraction();
-          } else {
-            useSelectedInventoryItem();
-          }
-        }
-
-        // X (Cross): Jump
-        if (this.justPressedAction('jump')) {
-          tryJump();
-        }
-
-        // Square: Pick up / Examine Object
-        if (this.justPressedAction('examine')) {
-          if (currentTarget) {
-            if (currentTarget.type === 'item') {
-              triggerCurrentInteraction();
-            } else {
-              showToast(`Examining: ${currentTarget.name}`);
-              triggerCurrentInteraction();
-            }
-          } else {
-            showToast('Nothing close to examine. Hold L2 to highlight nearby targets.');
-          }
-        }
-
-        // Circle: Destroy / Clear Breakable Obstacles (Twigs & Cobwebs)
-        if (this.justPressedAction('destroy')) {
-          tryDestroyObstacle();
-        }
-
-        // Triangle or D-Pad Down: Open Inventory
-        if (this.justPressedAction('inventory') || this.justPressedAction('invShortcut')) {
-          document.getElementById('btn-open-inv').click();
-        }
-
-        // Share: Open Quest Journal
-        if (this.justPressedAction('quests')) {
-          document.getElementById('btn-open-quests').click();
-        }
-
-        // Options: Open Pause Menu
-        if (this.justPressedAction('pause')) {
-          document.getElementById('btn-open-pause').click();
-        }
-
-        // L1 / R1: Cycle Quick-Select Inventory Items
-        if (this.justPressedAction('prevItem')) cycleInventoryItem(-1);
-        if (this.justPressedAction('nextItem')) cycleInventoryItem(1);
-
-        // L3: Toggle Sprint
-        if (this.justPressedAction('sprint')) {
-          state.sprinting = !state.sprinting;
-          showToast(state.sprinting ? '⚡ Sprint Enabled' : 'Walking Pace');
-          updateHUD();
-        }
-
-        // R3: Toggle First-Person / Third-Person Camera
-        if (this.justPressedAction('cameraToggle')) {
-          toggleCameraMode();
-        }
-
-        // D-Pad Up: Toggle Quest Tracker HUD visibility
-        if (this.justPressedAction('trackerToggle')) {
-          state.questTrackerVisible = !state.questTrackerVisible;
-          document.getElementById('btn-open-quests').style.display = state.questTrackerVisible ? 'block' : 'none';
-          showToast(state.questTrackerVisible ? 'Quest Tracker Shown' : 'Quest Tracker Hidden');
-        }
-
-        // D-Pad Left / Right: Cycle Nearby Interaction Targets
-        if (this.justPressedAction('prevTarget')) cycleNearbyTarget(-1);
-        if (this.justPressedAction('nextTarget')) cycleNearbyTarget(1);
-      }
-
-      navigateModalElements(container) {
-        if (!container) return;
-        const focusables = Array.from(container.querySelectorAll('button:not([disabled])')).filter(el => el.offsetParent !== null);
-        if (focusables.length === 0) return;
-
-        let dir = 0;
-        if (this.navCooldown <= 0) {
-          if (this.currButtons[13] || this.currButtons[15] || this.leftStick.y > 0.55 || this.leftStick.x > 0.55) dir = 1;
-          else if (this.currButtons[12] || this.currButtons[14] || this.leftStick.y < -0.55 || this.leftStick.x < -0.55) dir = -1;
-        }
-
-        if (dir !== 0) {
-          this.menuFocusIndex = (this.menuFocusIndex + dir + focusables.length) % focusables.length;
-          this.navCooldown = 0.2;
-          sound.playTone(380, 'sine', 0.04, 0.05);
-        }
-
-        if (this.menuFocusIndex >= focusables.length) this.menuFocusIndex = 0;
-        focusables.forEach((el, i) => {
-          el.classList.toggle('gamepad-focus', i === this.menuFocusIndex);
-        });
-      }
-
-      updateDiagnosticsUI() {
-        const modal = document.getElementById('diagnostic-modal');
-        if (modal.style.display !== 'flex') return;
-
-        // Left & Right Stick Dots and Values
-        document.getElementById('diag-lstick-dot').style.transform = `translate(${this.leftStick.x * 32}px, ${this.leftStick.y * 32}px)`;
-        document.getElementById('diag-lstick-val').textContent = `X: ${this.leftStick.x.toFixed(2)} | Y: ${this.leftStick.y.toFixed(2)}`;
-
-        document.getElementById('diag-rstick-dot').style.transform = `translate(${this.rightStick.x * 32}px, ${this.rightStick.y * 32}px)`;
-        document.getElementById('diag-rstick-val').textContent = `X: ${this.rightStick.x.toFixed(2)} | Y: ${this.rightStick.y.toFixed(2)}`;
-
-        // L2 & R2 Analog Triggers
-        const l2Pct = Math.round(this.l2Value * 100);
-        const r2Pct = Math.round(this.r2Value * 100);
-        document.getElementById('diag-l2-val').textContent = `${l2Pct}%`;
-        document.getElementById('diag-l2-bar').style.width = `${l2Pct}%`;
-        document.getElementById('diag-r2-val').textContent = `${r2Pct}%`;
-        document.getElementById('diag-r2-bar').style.width = `${r2Pct}%`;
-
-        // 18 Button Pills
-        const pills = document.querySelectorAll('#diag-btn-grid .btn-pill');
-        pills.forEach((pill, i) => {
-          pill.classList.toggle('pressed', !!this.currButtons[i]);
-        });
-      }
-    }
-
-    const ds4 = new DualShock4Controller();
-
-    function getActiveModal() {
-      const ids = ['diagnostic-modal', 'dialogue-modal', 'inventory-modal', 'quest-modal', 'pause-modal', 'ending-modal'];
-      for (const id of ids) {
-        const el = document.getElementById(id);
-        if (el && el.style.display === 'flex') return el;
-      }
-      return null;
-    }
-
-    /* =========================================================================
-       4. THREE.JS & WEBXR SCENE INITIALIZATION
-       ========================================================================= */
+    // =========================================================================
+    // 3. THREE.JS RENDERER, SCENE, CAMERA & WEBXR SETUP
+    // =========================================================================
     const canvas = document.getElementById('game-canvas');
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      alpha: false,
+      antialias: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setClearColor(0x8fd3e8, 1);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = false;
     renderer.xr.enabled = true;
+    try {
+      renderer.xr.setReferenceSpaceType('local-floor');
+    } catch (_) {
+      renderer.xr.setReferenceSpaceType('local');
+    }
+    renderer.shadowMap.enabled = false;
+
+    const vrButton = VRButton.createButton(renderer);
+    document.body.appendChild(vrButton);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.FogExp2(0x9ed8b8, 0.0085);
+    scene.background = new THREE.Color(0x8fd3e8);
+    scene.fog = new THREE.FogExp2(0xa6ddf0, 0.0065);
 
+    const EYE_HEIGHT = 1.45;
+
+    // Player Rig: WebXR drives `camera` inside `playerRig`, while we move/yaw `playerRig`.
     const playerRig = new THREE.Group();
-    playerRig.position.set(0, 0, 18);
     scene.add(playerRig);
 
-    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 260);
-    camera.position.set(0, 1.15, 0);
+    const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 280);
+    camera.position.set(0, EYE_HEIGHT, 0);
     playerRig.add(camera);
 
-    // VR Gaze Reticle
-    const gazeGroup = new THREE.Group();
-    gazeGroup.position.set(0, 0, -2.2);
-    gazeGroup.visible = false;
-    camera.add(gazeGroup);
-
-    const gazeBg = new THREE.Mesh(
-      new THREE.RingGeometry(0.035, 0.05, 24),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+    // 3D Gaze Reticle in front of camera for VR & spatial aiming
+    const vrReticle = new THREE.Mesh(
+      new THREE.RingGeometry(0.015, 0.025, 24),
+      new THREE.MeshBasicMaterial({ color: 0xfbbf24, side: THREE.DoubleSide, depthTest: false })
     );
-    const gazeFill = new THREE.Mesh(
-      new THREE.RingGeometry(0.035, 0.055, 24),
-      new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide })
-    );
-    gazeFill.scale.set(0.01, 0.01, 1);
-    gazeGroup.add(gazeBg, gazeFill);
+    vrReticle.position.set(0, 0, -1.4);
+    vrReticle.visible = false;
+    camera.add(vrReticle);
 
-    // Add WebXR VRButton
-    const vrBtn = VRButton.createButton(renderer);
-    document.body.appendChild(vrBtn);
+    // VR Controllers
+    const controller0 = renderer.xr.getController(0);
+    const controller1 = renderer.xr.getController(1);
+    playerRig.add(controller0);
+    playerRig.add(controller1);
+
+    controller0.addEventListener('selectstart', () => triggerInteraction());
+    controller1.addEventListener('selectstart', () => triggerInteraction());
 
     renderer.xr.addEventListener('sessionstart', () => {
-      state.inVR = true;
-      gazeGroup.visible = true;
-      document.getElementById('hud').style.display = 'none';
-      document.getElementById('title-screen').style.display = 'none';
+      // Zero local camera offset when WebXR manages headset pose
+      camera.position.set(0, 0, 0);
+      camera.rotation.set(0, 0, 0);
+      vrReticle.visible = true;
+      document.getElementById('hud').classList.remove('active');
+      document.getElementById('title-screen').classList.add('hidden');
       state.started = true;
-      setInputMode(ds4.connected ? 'ds4' : 'vr');
-      sound.unlock();
+      state.paused = false;
+      sfx.init();
     });
 
     renderer.xr.addEventListener('sessionend', () => {
-      state.inVR = false;
-      gazeGroup.visible = false;
-      if (state.started) {
-        document.getElementById('hud').style.display = 'block';
-        setInputMode(ds4.connected ? 'ds4' : 'touch');
-      }
+      vrReticle.visible = false;
+      camera.position.set(0, EYE_HEIGHT, 0);
+      camera.rotation.set(input.pitch, 0, 0);
+      if (state.started) document.getElementById('hud').classList.add('active');
     });
 
-    const controller1 = renderer.xr.getController(0);
-    const controller2 = renderer.xr.getController(1);
-    playerRig.add(controller1, controller2);
-
-    const rayLineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -4)]);
-    const rayLineMat = new THREE.LineBasicMaterial({ color: 0xfcd34d });
-    controller1.add(new THREE.Line(rayLineGeo, rayLineMat));
-    controller2.add(new THREE.Line(rayLineGeo, rayLineMat));
-
-    controller1.addEventListener('selectstart', () => triggerCurrentInteraction());
-    controller2.addEventListener('selectstart', () => triggerCurrentInteraction());
-
-    /* =========================================================================
-       5. LIGHTING & DAY/NIGHT ATMOSPHERE
-       ========================================================================= */
-    const hemiLight = new THREE.HemisphereLight(0xfffbeb, 0x2d4c1e, 1.05);
+    // Lighting (Bright, clear visibility in both meadow and underground)
+    const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x4d7c0f, 1.15);
     scene.add(hemiLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfff3c4, 1.45);
-    sunLight.position.set(45, 80, 35);
-    sunLight.shadow.mapSize.set(1024, 1024);
-    sunLight.shadow.camera.near = 5;
-    sunLight.shadow.camera.far = 180;
-    const dShadow = 65;
-    sunLight.shadow.camera.left = -dShadow;
-    sunLight.shadow.camera.right = dShadow;
-    sunLight.shadow.camera.top = dShadow;
-    sunLight.shadow.camera.bottom = -dShadow;
+    const sunLight = new THREE.DirectionalLight(0xfffbeb, 1.45);
+    sunLight.position.set(35, 75, 45);
     scene.add(sunLight);
 
-    const colonyLight = new THREE.PointLight(0xf59e0b, 2.2, 26);
-    colonyLight.position.set(-28, -3.5, -24);
-    scene.add(colonyLight);
+    const playerGlow = new THREE.PointLight(0xfbbf24, 1.1, 18);
+    playerGlow.position.set(0, 1.6, 0);
+    playerRig.add(playerGlow);
 
-    const hiveLight = new THREE.PointLight(0xfbbf24, 2.5, 32);
-    hiveLight.position.set(34, 8, -12);
-    scene.add(hiveLight);
+    // =========================================================================
+    // 4. TERRAIN HEIGHT & COLLISION SYSTEM
+    // =========================================================================
+    const colliders = [];
 
-    const blightLight = new THREE.PointLight(0xa855f7, 2.4, 28);
-    blightLight.position.set(4, 3, -46);
-    scene.add(blightLight);
-
-    /* =========================================================================
-       6. TERRAIN HEIGHT FUNCTION & WORLD ARCHITECTURE
-       ========================================================================= */
     function getTerrainHeight(x, z) {
-      const distSpawn = Math.hypot(x, z - 18);
-      if (distSpawn < 8) return 0;
-
-      const dxCol = x - (-28);
-      const dzCol = z - (-24);
-      const distCol = Math.hypot(dxCol, dzCol);
-      if (distCol < 11) {
-        return -5.5;
-      }
-      if (x < -12 && x > -30 && z < -8 && z > -26) {
-        const t = THREE.MathUtils.clamp(((-x - 12) + (-z - 8)) / 24, 0, 1);
-        return -5.5 * t;
+      // Underground Ant Chamber floor if inside mound tunnel zone
+      if (z < 2 && z > -26 && Math.abs(x) < 13) {
+        if (z > -6) {
+          const t = (2 - z) / 8;
+          return -4.5 * Math.min(1, Math.max(0, t));
+        }
+        return -4.5;
       }
 
-      let h = Math.sin(x * 0.045) * Math.cos(z * 0.045) * 1.4;
-      h += Math.sin(x * 0.11 + z * 0.09) * 0.45;
+      let h = Math.sin(x * 0.045) * Math.cos(z * 0.045) * 1.2 + Math.sin(x * 0.11 + z * 0.09) * 0.35;
 
-      const riverDist = Math.abs(x - (14 + Math.sin(z * 0.06) * 4));
-      if (riverDist < 4.5) {
-        h -= (1 - riverDist / 4.5) * 1.35;
+      // Flatten spawn clearing around (0, 26)
+      const spawnDist = Math.hypot(x, z - 26);
+      if (spawnDist < 12) h *= (spawnDist / 12);
+
+      // River channel carving around z = -24
+      const riverCurveZ = -24 + Math.sin(x * 0.07) * 3.5;
+      const distRiver = Math.abs(z - riverCurveZ);
+      if (distRiver < 4.5) {
+        const riverDepth = (1 - distRiver / 4.5) * 1.6;
+        h -= riverDepth;
       }
 
-      const distTree = Math.hypot(x - 34, z - (-12));
-      if (distTree < 14) {
-        h += (1 - distTree / 14) * 2.2;
+      // Great Hollow Tree hill at (0, -38)
+      const treeDist = Math.hypot(x, z - (-38));
+      if (treeDist < 20) {
+        h += (1 - treeDist / 20) * 2.8;
+      }
+
+      // Climbable spiral root ramp up the Great Hollow Tree
+      if (treeDist >= 6.2 && treeDist <= 12.2) {
+        const angle = Math.atan2(z - (-38), x);
+        const normAngle = (angle + Math.PI) / (Math.PI * 2);
+        const rampHeight = 2.2 + normAngle * 8.5;
+        if (Math.abs(rampHeight - h) < 4.5) {
+          h = Math.max(h, rampHeight);
+        }
       }
 
       return h;
     }
 
-    const groundGeo = new THREE.PlaneGeometry(180, 180, 96, 96);
-    groundGeo.rotateX(-Math.PI / 2);
-    const posAttr = groundGeo.attributes.position;
+    // Spawn player in front of the sunlit Meadow facing -Z toward Giant Flowers & Bee Tree
+    playerRig.position.set(0, getTerrainHeight(0, 26), 26);
+    playerRig.rotation.y = 0; // Facing -Z in Three.js
+    const posAttr = terrainGeo.attributes.position;
     const colors = [];
-    const cGrass = new THREE.Color(0x3a6b28);
-    const cSoil = new THREE.Color(0x5c3d24);
-    const cRiver = new THREE.Color(0x3b4d3b);
-    const cBlight = new THREE.Color(0x3b2847);
+    const cMeadow = new THREE.Color(0x4d7c0f);
+    const cDirt = new THREE.Color(0x6b4423);
+    const cSand = new THREE.Color(0xb49a67);
 
     for (let i = 0; i < posAttr.count; i++) {
       const vx = posAttr.getX(i);
@@ -1890,778 +1114,896 @@
       const vy = getTerrainHeight(vx, vz);
       posAttr.setY(i, vy);
 
-      const c = cGrass.clone();
-      if (vy < -1.5) c.lerp(cSoil, 0.9);
-      else if (vy < -0.5) c.lerp(cRiver, 0.7);
-      if (vz < -34) c.lerp(cBlight, THREE.MathUtils.clamp((-vz - 34) / 22, 0, 0.85));
-      colors.push(c.r, c.g, c.b);
+      // Vertex color blending by biome
+      if (vz < 2 && vz > -26 && Math.abs(vx) < 13) {
+        colors.push(cDirt.r, cDirt.g, cDirt.b);
+      } else if (vy < -0.5) {
+        colors.push(cSand.r, cSand.g, cSand.b);
+      } else {
+        colors.push(cMeadow.r, cMeadow.g, cMeadow.b);
+      }
     }
-    groundGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    groundGeo.computeVertexNormals();
+    terrainGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    terrainGeo.computeVertexNormals();
+    const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 });
+    const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+    worldGroup.add(terrainMesh);
 
-    const groundMat = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.9,
-      metalness: 0.02
-    });
-    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.receiveShadow = true;
-    scene.add(groundMesh);
-
-    const waterGeo = new THREE.PlaneGeometry(14, 170, 12, 48);
+    // 5B. Animated River Water Plane
+    const waterGeo = new THREE.PlaneGeometry(220, 12, 32, 4);
     waterGeo.rotateX(-Math.PI / 2);
     const waterMat = new THREE.MeshStandardMaterial({
-      color: 0x38bdf8,
+      color: 0x0ea5e9,
       emissive: 0x0369a1,
-      emissiveIntensity: 0.35,
+      emissiveIntensity: 0.25,
       roughness: 0.15,
-      metalness: 0.6,
+      metalness: 0.3,
       transparent: true,
-      opacity: 0.78
+      opacity: 0.82
     });
     const waterMesh = new THREE.Mesh(waterGeo, waterMat);
-    waterMesh.position.set(14, -0.55, 0);
-    scene.add(waterMesh);
+    waterMesh.position.set(0, -0.55, -24);
+    worldGroup.add(waterMesh);
 
-    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.85 });
-    const colliders = [];
-    for (let i = 0; i < 6; i++) {
-      const sx = 9.5 + i * 2.1;
-      const sz = 4 + Math.sin(i * 1.3) * 1.4;
-      const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(1.15, 1), stoneMat);
-      stone.scale.set(1.2, 0.55, 1.1);
-      stone.position.set(sx, -0.25, sz);
-      scene.add(stone);
+    // Stepping Stone Pebbles across River
+    const steppingPebbles = [
+      [-2.5, -21.5], [-1.2, -24.0], [-2.2, -26.5],
+      [14, -21.5], [15.5, -24.0], [14.2, -26.5]
+    ];
+    steppingPebbles.forEach(([px, pz]) => {
+      const pebble = new THREE.Mesh(new THREE.DodecahedronGeometry(1.75, 1), matStone);
+      pebble.scale.set(1.3, 0.55, 1.3);
+      pebble.position.set(px, -0.2, pz);
+      worldGroup.add(pebble);
+    });
+
+    // 5C. Underground Ant Kingdom (Mound Dome + Royal Tunnel Chamber)
+    function buildAntKingdom() {
+      // Exterior Ant Hill Dome with tunnel opening
+      const moundGroup = new THREE.Group();
+      const outerMound = new THREE.Mesh(
+        new THREE.CylinderGeometry(7.5, 16, 8, 18, 1, true, 0.45, Math.PI * 2 - 0.9),
+        matDirt
+      );
+      outerMound.position.set(0, 3.5, -5);
+      outerMound.rotation.y = Math.PI; // Opening faces +Z (towards spawn)
+      moundGroup.add(outerMound);
+
+      // Tunnel Roof Enclosure so going underground feels genuinely cavernous
+      const tunnelRoof = new THREE.Mesh(
+        new THREE.CylinderGeometry(11.5, 12.5, 24, 16, 1, true, 0, Math.PI),
+        matDirt
+      );
+      tunnelRoof.rotation.z = Math.PI / 2;
+      tunnelRoof.rotation.y = Math.PI / 2;
+      tunnelRoof.position.set(0, -4.5, -13);
+      moundGroup.add(tunnelRoof);
+
+      // Back wall of Royal Chamber
+      const backWall = new THREE.Mesh(new THREE.SphereGeometry(12.2, 16, 12), matDirt);
+      backWall.position.set(0, -3.5, -23);
+      moundGroup.add(backWall);
+    // 5E. Giant Skyscraper Flowers (Healthy & Withering — clearly visible ahead)
+    const flowerLocations = [
+      { x: -9, z: 12, color: 0xfacc15, healthy: true, scale: 1.05 },
+      { x: 10, z: 10, color: 0xf472b6, healthy: true, scale: 1.0 },
+      { x: -6, z: -8, color: 0x60a5fa, healthy: false, scale: 0.95 },
+      { x: 12, z: -12, color: 0xfbbf24, healthy: true, scale: 1.15 },
+      { x: -16, z: -34, color: 0xc084fc, healthy: false, scale: 1.0 },
+      { x: 18, z: -36, color: 0xfb923c, healthy: false, scale: 0.95 }
+    ];
+      crystalPositions.forEach(([cx, cy, cz]) => {
+        const crys = new THREE.Mesh(new THREE.OctahedronGeometry(0.65, 0), matCrystal);
+        crys.scale.set(0.7, 1.8, 0.7);
+        crys.position.set(cx, cy, cz);
+        moundGroup.add(crys);
+      });
+
+      const chamberLight = new THREE.PointLight(0x34d399, 1.4, 24);
+      chamberLight.position.set(0, -1.5, -14);
+      moundGroup.add(chamberLight);
+
+      worldGroup.add(moundGroup);
     }
+    buildAntKingdom();
 
-    /* =========================================================================
-       7. LANDMARKS: ANT COLONY MOUND, GIANT BEE TREE, ANCIENT GARDEN
-       ========================================================================= */
-    const dirtMat = new THREE.MeshStandardMaterial({ color: 0x4a2e16, roughness: 0.95, side: THREE.DoubleSide });
-    const colonyDome = new THREE.Mesh(
-      new THREE.SphereGeometry(12.5, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.55),
-      dirtMat
-    );
-    colonyDome.position.set(-28, -5.8, -24);
-    scene.add(colonyDome);
+    // 5D. Instanced Giant Grass Blades (High FPS on Galaxy A21s)
+    const grassCount = 750;
+    const bladeGeo = new THREE.ConeGeometry(0.18, 5.5, 4);
+    bladeGeo.translate(0, 2.75, 0);
+    const bladeMat = new THREE.MeshStandardMaterial({ color: 0x65a30d, roughness: 0.75 });
+    const grassInstanced = new THREE.InstancedMesh(bladeGeo, bladeMat, grassCount);
+    const dummy = new THREE.Object3D();
 
-    const fungusMat = new THREE.MeshStandardMaterial({
-      color: 0x34d399,
-      emissive: 0x10b981,
-      emissiveIntensity: 0.9
-    });
-    [[-16, -12], [-21, -17], [-25, -21], [-32, -23], [-27, -29]].forEach(([fx, fz]) => {
-      const fy = getTerrainHeight(fx, fz);
-      const mush = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.7, 8), fungusMat);
-      mush.position.set(fx, fy + 0.4, fz);
-      scene.add(mush);
-    });
+    let gIdx = 0;
+    for (let i = 0; i < grassCount * 2 && gIdx < grassCount; i++) {
+      const gx = (Math.random() - 0.5) * 190;
+      const gz = (Math.random() - 0.5) * 190;
+      // Keep clear of ant tunnel, river bed, and spawn center
+      if (gz < 4 && gz > -26 && Math.abs(gx) < 15) continue;
+      if (Math.abs(gz - (-38 + Math.sin(gx * 0.07) * 4.5)) < 6) continue;
+      if (Math.hypot(gx, gz - 14) < 6) continue;
 
-    const barkMat = new THREE.MeshStandardMaterial({ color: 0x3e2715, roughness: 0.92 });
-    const treeTrunk = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 8.2, 34, 16, 1, true), barkMat);
-    treeTrunk.material.side = THREE.DoubleSide;
-    treeTrunk.position.set(34, 16, -12);
-    scene.add(treeTrunk);
-
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2d6a22, roughness: 0.8 });
-    const canopy = new THREE.Mesh(new THREE.DodecahedronGeometry(22, 1), leafMat);
-    canopy.position.set(34, 36, -12);
-    scene.add(canopy);
-
-    const waxMat = new THREE.MeshStandardMaterial({
-      color: 0xf59e0b,
-      emissive: 0xb45309,
-      emissiveIntensity: 0.35,
-      roughness: 0.35
-    });
-    const hexGeo = new THREE.CylinderGeometry(1.3, 1.3, 0.8, 6);
-    for (let ring = 0; ring < 14; ring++) {
-      const angle = (ring / 14) * Math.PI * 2;
-      const hx = 34 + Math.cos(angle) * 4.2;
-      const hz = -12 + Math.sin(angle) * 4.2;
-      const hy = 3.5 + (ring % 3) * 1.4;
-      const cell = new THREE.Mesh(hexGeo, waxMat);
-      cell.rotation.x = Math.PI / 2;
-      cell.rotation.z = angle;
-      cell.position.set(hx, hy, hz);
-      scene.add(cell);
+      const gy = getTerrainHeight(gx, gz);
+      dummy.position.set(gx, gy - 0.2, gz);
+      dummy.rotation.set((Math.random() - 0.5) * 0.25, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.25);
+      const s = 0.7 + Math.random() * 1.1;
+      dummy.scale.set(s, s * (0.8 + Math.random() * 0.6), s);
+      dummy.updateMatrix();
+      grassInstanced.setMatrixAt(gIdx++, dummy.matrix);
     }
+    grassInstanced.count = gIdx;
+    worldGroup.add(grassInstanced);
 
-    const rootBridge = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.7, 13), barkMat);
-    rootBridge.position.set(27.5, 2.2, -12);
-    rootBridge.rotation.z = 0.24;
-    rootBridge.rotation.y = Math.PI / 2;
-    scene.add(rootBridge);
+    // 5E. Giant Skyscraper Flowers (Healthy & Withering)
+    const flowerLocations = [
+      { x: -12, z: 22, color: 0xfacc15, healthy: true, scale: 1.1 },
+      { x: 16, z: 20, color: 0xf472b6, healthy: true, scale: 1.0 },
+      { x: -18, z: -12, color: 0x60a5fa, healthy: false, scale: 0.95 },
+      { x: 22, z: -16, color: 0xfbbf24, healthy: true, scale: 1.2 },
+      { x: 10, z: -52, color: 0xc084fc, healthy: false, scale: 1.05 },
+      { x: -24, z: -55, color: 0xfb923c, healthy: false, scale: 0.9 },
+      { x: 54, z: -45, color: 0xfacc15, healthy: true, scale: 1.15 }
+    ];
 
-    const ruinStoneMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.8 });
-    const potMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(5.5, 3.8, 7.5, 16, 1, true),
-      new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.85, side: THREE.DoubleSide })
-    );
-    potMesh.position.set(-7, 2.2, -45);
-    potMesh.rotation.z = 1.15;
-    scene.add(potMesh);
+    const flowerHeads = [];
+    flowerLocations.forEach(f => {
+      const fg = new THREE.Group();
+      const fy = getTerrainHeight(f.x, f.z);
+      fg.position.set(f.x, fy, f.z);
 
-    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.0, 9, 12), ruinStoneMat);
-    pillar.position.set(13, 4.2, -44);
-    scene.add(pillar);
-    colliders.push({ x: 13, z: -44, r: 2.1, topY: 9 });
+      const stemMat = new THREE.MeshStandardMaterial({ color: f.healthy ? 0x15803d : 0x713f12, roughness: 0.8 });
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.45, 11 * f.scale, 8), stemMat);
+      stem.position.y = 5.5 * f.scale;
+      if (!f.healthy) stem.rotation.z = 0.24;
+      fg.add(stem);
 
-    const blightMat = new THREE.MeshStandardMaterial({
-      color: 0x7e22ce,
-      emissive: 0x581c87,
-      emissiveIntensity: 0.8,
-      roughness: 0.25
-    });
-    const blightCrystal = new THREE.Mesh(new THREE.OctahedronGeometry(2.4, 0), blightMat);
-    blightCrystal.position.set(4, 2.5, -48);
-    scene.add(blightCrystal);
+      const headGroup = new THREE.Group();
+      headGroup.position.set(f.healthy ? 0 : -1.3, 11 * f.scale, 0);
+      if (!f.healthy) headGroup.rotation.z = 0.55;
 
-    /* =========================================================================
-       8. INSTANCED GIANT GRASS, TOWERING FLOWERS & DESTRUCTIBLE OBSTACLES
-       ========================================================================= */
-    let grassInstanced = null;
-    let flowerInstanced = null;
+      const centerDisk = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.6, 1.6, 0.5, 14),
+        new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 })
+      );
+      centerDisk.rotation.x = Math.PI / 2.4;
+      headGroup.add(centerDisk);
 
-    function buildFoliage(quality) {
-      if (grassInstanced) scene.remove(grassInstanced);
-      if (flowerInstanced) scene.remove(flowerInstanced);
+      const petalMat = new THREE.MeshStandardMaterial({
+        color: f.healthy ? f.color : 0x9ca3af,
+        emissive: f.healthy ? f.color : 0x000000,
+        emissiveIntensity: 0.15,
+        roughness: 0.5
+      });
 
-      const grassCount = quality === 'low' ? 650 : quality === 'medium' ? 1300 : 2200;
-      const flowerCount = quality === 'low' ? 24 : quality === 'medium' ? 45 : 70;
-
-      const bladeGeo = new THREE.ConeGeometry(0.28, 7.5, 4);
-      bladeGeo.translate(0, 3.75, 0);
-      const bladeMat = new THREE.MeshStandardMaterial({ color: 0x4d8b31, roughness: 0.75 });
-      grassInstanced = new THREE.InstancedMesh(bladeGeo, bladeMat, grassCount);
-
-      const dummy = new THREE.Object3D();
-      const col = new THREE.Color();
-      let gIdx = 0;
-
-      for (let i = 0; i < grassCount; i++) {
-        const gx = (Math.random() - 0.5) * 155;
-        const gz = (Math.random() - 0.5) * 155;
-        const gy = getTerrainHeight(gx, gz);
-        if (gy < -0.4 || Math.hypot(gx, gz - 18) < 5) continue;
-
-        dummy.position.set(gx, gy - 0.2, gz);
-        const s = 0.7 + Math.random() * 0.95;
-        dummy.scale.set(s, s * (0.85 + Math.random() * 0.6), s);
-        dummy.rotation.set((Math.random() - 0.5) * 0.22, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.22);
-        dummy.updateMatrix();
-        grassInstanced.setMatrixAt(gIdx, dummy.matrix);
-
-        col.setHSL(0.25 + (Math.random() - 0.5) * 0.05, 0.55, 0.34 + Math.random() * 0.12);
-        if (gz < -36) col.setHex(0x6b5b45);
-        grassInstanced.setColorAt(gIdx, col);
-        gIdx++;
+      for (let p = 0; p < 10; p++) {
+        const ang = (p / 10) * Math.PI * 2;
+        const petal = new THREE.Mesh(new THREE.SphereGeometry(0.85, 8, 6), petalMat);
+        petal.scale.set(0.65, 1.8, 0.25);
+        petal.position.set(Math.cos(ang) * 2.1, Math.sin(ang) * 0.7, Math.sin(ang) * 2.1);
+        petal.lookAt(0, 0, 0);
+        headGroup.add(petal);
       }
-      grassInstanced.count = gIdx;
-      grassInstanced.instanceMatrix.needsUpdate = true;
-      if (grassInstanced.instanceColor) grassInstanced.instanceColor.needsUpdate = true;
-      scene.add(grassInstanced);
 
-      const flowerGroup = new THREE.Group();
-      const stemMat = new THREE.MeshStandardMaterial({ color: 0x2f6f23, roughness: 0.8 });
-      const petalColors = [0xf43f5e, 0xfbbf24, 0xc084fc, 0x38bdf8, 0xfb923c];
-
-      for (let i = 0; i < flowerCount; i++) {
-        const fx = (Math.random() - 0.5) * 130;
-        const fz = -25 + Math.random() * 90;
-        const fy = getTerrainHeight(fx, fz);
-        if (fy < -0.3 || Math.hypot(fx, fz - 18) < 7) continue;
-
-        const height = 8 + Math.random() * 7;
-        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, height, 6), stemMat);
-        stem.position.set(fx, fy + height / 2, fz);
-        flowerGroup.add(stem);
-
-        const pCol = petalColors[i % petalColors.length];
-        const blossom = new THREE.Mesh(
-          new THREE.ConeGeometry(2.4, 1.4, 7, 1, true),
-          new THREE.MeshStandardMaterial({ color: pCol, side: THREE.DoubleSide, roughness: 0.5 })
-        );
-        blossom.rotation.x = Math.PI;
-        blossom.position.set(fx, fy + height, fz);
-        flowerGroup.add(blossom);
-
-        const stamen = new THREE.Mesh(
-          new THREE.SphereGeometry(0.75, 8, 8),
-          new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xd97706, emissiveIntensity: 0.4 })
-        );
-        stamen.position.set(fx, fy + height + 0.1, fz);
-        flowerGroup.add(stamen);
-
-        colliders.push({ x: fx, z: fz, r: 0.45, topY: fy + height });
-      }
-      flowerInstanced = flowerGroup;
-      scene.add(flowerInstanced);
-    }
-
-    for (let i = 0; i < 18; i++) {
-      const rx = (Math.random() - 0.5) * 135;
-      const rz = (Math.random() - 0.5) * 135;
-      const ry = getTerrainHeight(rx, rz);
-      if (ry < -0.5 || Math.hypot(rx, rz - 18) < 9) continue;
-
-      const rad = 1.6 + Math.random() * 2.4;
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rad, 1), stoneMat);
-      rock.scale.set(1.2, 0.85, 1.1);
-      rock.position.set(rx, ry + rad * 0.45, rz);
-      scene.add(rock);
-      colliders.push({ x: rx, z: rz, r: rad * 0.95, topY: ry + rad * 1.1 });
-    }
-
-    const capMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.6 });
-    const stalkMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.8 });
-    [[-12, 8], [-22, 16], [24, 18], [-8, -28], [22, -32]].forEach(([mx, mz]) => {
-      const my = getTerrainHeight(mx, mz);
-      const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 1.0, 4.2, 10), stalkMat);
-      stalk.position.set(mx, my + 2.1, mz);
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(2.8, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), capMat);
-      cap.position.set(mx, my + 4.0, mz);
-      scene.add(stalk, cap);
-      colliders.push({ x: mx, z: mz, r: 1.1, topY: my + 4.5 });
+      fg.add(headGroup);
+      worldGroup.add(fg);
+      flowerHeads.push(new THREE.Vector3(f.x, fy + 11 * f.scale, f.z));
+      colliders.push({ x: f.x, z: f.z, r: 0.7 });
     });
 
-    // Destructible Brittle Twigs & Spider Webs (Cleared with Circle button!)
-    const destructibles = [];
-    const twigMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 });
-    [[2, 6], [-8, 2], [19, -8], [2, -32], [-18, 10]].forEach(([tx, tz], idx) => {
+    // 5F. Great Hollow Tree & Honeycomb Bee Citadel (North-East-ish: x=38, z=-68)
+    function buildGreatHollowTree() {
+      const tx = 38, tz = -68;
       const ty = getTerrainHeight(tx, tz);
-      const twig = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 3.6, 6), twigMat);
-      twig.position.set(tx, ty + 0.5, tz);
-      twig.rotation.set(0.3, idx * 1.1, Math.PI / 2.3);
-      scene.add(twig);
-      destructibles.push({ mesh: twig, name: 'Brittle Twig', reward: 'amber' });
+      const treeGroup = new THREE.Group();
+    // 5F. Great Hollow Tree & Honeycomb Bee Citadel at (0, -38)
+    function buildGreatHollowTree() {
+      const tx = 0, tz = -38;
+      const ty = getTerrainHeight(tx, tz);
+      const treeGroup = new THREE.Group();
+      treeGroup.position.set(tx, ty, tz);
+
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(5.8, 7.8, 30, 16), matBark);
+      trunk.position.y = 14;
+      treeGroup.add(trunk);
+      colliders.push({ x: tx, z: tz, r: 6.0 });
+
+      for (let i = 0; i < 24; i++) {
+        const t = i / 24;
+        const ang = t * Math.PI * 2 - Math.PI;
+        const rx = Math.cos(ang) * 8.8;
+        const rz = Math.sin(ang) * 8.8;
+        const ry = 1.2 + t * 8.5;
+        const step = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.85, 2.4), matBark);
+        step.position.set(rx, ry, rz);
+        step.rotation.y = -ang;
+        treeGroup.add(step);
+      }
+
+      const hivePlatform = new THREE.Mesh(new THREE.CylinderGeometry(10.5, 9.5, 1.2, 6), matHoneycomb);
+      hivePlatform.position.set(0, 9.8, 0);
+      treeGroup.add(hivePlatform);
+
+      for (let c = 0; c < 8; c++) {
+        const ang = (c / 8) * Math.PI * 2;
+        const cell = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 3.4, 6), matHoneycomb);
+        cell.position.set(Math.cos(ang) * 7.8, 11.8, Math.sin(ang) * 7.8);
+        treeGroup.add(cell);
+      }
+
+      const canopy = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(20, 1),
+        new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.85 })
+      );
+      canopy.position.y = 31;
+      treeGroup.add(canopy);
+
+      const hiveLight = new THREE.PointLight(0xfbbf24, 1.6, 28);
+      hiveLight.position.set(0, 13, 0);
+      treeGroup.add(hiveLight);
+
+      worldGroup.add(treeGroup);
+    }
+    buildGreatHollowTree();
+
+    // 5G. Bioluminescent Mushroom Grove (West: x=-48, z=-25)
+    function buildMushroomGrove() {
+      const mushrooms = [
+        [-45, -20, 4.5], [-52, -28, 6.2], [-42, -33, 3.8], [-56, -18, 5.0], [-49, -12, 3.2]
+      ];
+      const capMat = new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        emissive: 0x0284c7,
+        emissiveIntensity: 0.55,
+        roughness: 0.35
+      });
+      const stalkMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.8 });
+
+      mushrooms.forEach(([mx, mz, scale]) => {
+        const my = getTerrainHeight(mx, mz);
+        const mg = new THREE.Group();
+        mg.position.set(mx, my, mz);
+
+        const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.45 * scale * 0.3, 0.65 * scale * 0.3, scale, 10), stalkMat);
+        stalk.position.y = scale * 0.5;
+        mg.add(stalk);
+
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(scale * 0.55, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), capMat);
+        cap.position.y = scale * 0.92;
+        mg.add(cap);
+
+        worldGroup.add(mg);
+        colliders.push({ x: mx, z: mz, r: 0.55 });
+      });
+
+      const groveLight = new THREE.PointLight(0x38bdf8, 1.4, 26);
+      groveLight.position.set(-48, 4, -24);
+      worldGroup.add(groveLight);
+    }
+    buildMushroomGrove();
+
+    // 5H. Abandoned Ancient Garden & The Silver Blight Canister (North-West: x=-36, z=-72)
+    let blightMistParticles = null;
+    function buildAncientGarden() {
+      const gx = -36, gz = -72;
+      const gy = getTerrainHeight(gx, gz);
+      const garden = new THREE.Group();
+      garden.position.set(gx, gy, gz);
+
+      // Broken Giant Terracotta Flowerpot Ruins
+      const pot = new THREE.Mesh(
+        new THREE.CylinderGeometry(9, 7, 6.5, 16, 1, true, 0.3, Math.PI * 1.65),
+        new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.9, side: THREE.DoubleSide })
+      );
+      pot.position.set(-4, 3, -4);
+      garden.add(pot);
+
+      // Mossy Stone Sundial Pedestal
+      const sundial = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.8, 2.2, 12), matStone);
+      sundial.position.set(6, 1.1, 3);
+      garden.add(sundial);
+
+      // Leaking Rusty Garden Chemical Canister ("The Silver Blight")
+      const canister = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.4, 1.4, 4.4, 14),
+        new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.65, roughness: 0.4 })
+      );
+      canister.rotation.z = Math.PI / 2.3;
+      canister.position.set(0, 1.3, 0);
+      garden.add(canister);
+
+      // Toxic Silver-Violet Blight Puddle
+      const puddle = new THREE.Mesh(
+        new THREE.CircleGeometry(4.5, 18),
+        new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0x7e22ce, emissiveIntensity: 0.6, roughness: 0.2 })
+      );
+      puddle.rotation.x = -Math.PI / 2;
+      puddle.position.set(2.2, 0.08, 0.5);
+      garden.add(puddle);
+
+      // Rising Blight Spore Particles
+      const pCount = 45;
+      const pGeo = new THREE.BufferGeometry();
+      const pPos = new Float32Array(pCount * 3);
+      for (let i = 0; i < pCount; i++) {
+        pPos[i * 3] = gx + 2 + (Math.random() - 0.5) * 5;
+        pPos[i * 3 + 1] = gy + Math.random() * 5;
+        pPos[i * 3 + 2] = gz + (Math.random() - 0.5) * 5;
+      }
+      pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+      blightMistParticles = new THREE.Points(
+        pGeo,
+        new THREE.PointsMaterial({ color: 0xd8b4fe, size: 0.35, transparent: true, opacity: 0.85 })
+      );
+      scene.add(blightMistParticles);
+
+      worldGroup.add(garden);
+    }
+    buildAncientGarden();
+
+    // Giant Mountain Pebbles scattered across the meadow
+    const boulderCoords = [
+      [-14, 6, 2.4], [14, -4, 3.1], [-22, -48, 2.8], [26, -54, 3.4], [8, 28, 2.2]
+    ];
+    boulderCoords.forEach(([bx, bz, br]) => {
+      const by = getTerrainHeight(bx, bz);
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(br, 1), matStone);
+      rock.position.set(bx, by + br * 0.55, bz);
+      worldGroup.add(rock);
+      colliders.push({ x: bx, z: bz, r: br * 0.85 });
     });
 
-    function tryDestroyObstacle() {
-      const pPos = playerRig.position;
-      for (let i = destructibles.length - 1; i >= 0; i--) {
-        const d = destructibles[i];
-        if (pPos.distanceTo(d.mesh.position) < 4.5) {
-          scene.remove(d.mesh);
-          destructibles.splice(i, 1);
-          sound.playDestroy();
-          addXP(15);
-          showToast(`Cleared ${d.name}! +15 XP`);
-          if (Math.random() > 0.45) addItem('silk', 1);
-          return;
-        }
-      }
-      showToast('No brittle twig or web nearby to clear.');
-    }
+    // =========================================================================
+    // 6. PROCEDURAL 3D INSECT MODELS (Ants, Bees, Butterflies, Spider)
+    // =========================================================================
+    function createAntModel(bodyColor = 0x7c2d12, isQueen = false) {
+      const ant = new THREE.Group();
+      const scale = isQueen ? 1.65 : 1.0;
+      const mat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.35, metalness: 0.15 });
 
-    /* =========================================================================
-       9. PROCEDURAL INSECT BUILDERS & NARA THIRD-PERSON MODEL
-       ========================================================================= */
-    function createAntModel(colorHex = 0x291509, isQueen = false) {
-      const group = new THREE.Group();
-      const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.35, metalness: 0.15 });
-      const scale = isQueen ? 1.85 : 1.0;
+      // Abdomen (Gaster), Thorax, Head
+      const gaster = new THREE.Mesh(new THREE.SphereGeometry(0.48, 12, 10), mat);
+      gaster.scale.set(0.9, 0.85, 1.35);
+      gaster.position.set(0, 0.52, -0.65);
+      ant.add(gaster);
 
-      const gaster = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 10), mat);
-      gaster.scale.set(1, 0.9, 1.35);
-      gaster.position.set(0, 0.45, -0.55);
+      const thorax = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), mat);
+      thorax.scale.set(0.8, 0.85, 1.25);
+      thorax.position.set(0, 0.5, 0);
+      ant.add(thorax);
 
-      const thorax = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 10), mat);
-      thorax.scale.set(0.85, 0.85, 1.3);
-      thorax.position.set(0, 0.45, 0.05);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 10), mat);
+      head.position.set(0, 0.58, 0.52);
+      ant.add(head);
 
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), mat);
-      head.position.set(0, 0.55, 0.52);
+      // Eyes
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0x090d16 });
+      [-0.2, 0.2].forEach(ex => {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), eyeMat);
+        eye.position.set(ex, 0.65, 0.72);
+        ant.add(eye);
+      });
 
-      const antGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.45, 5);
-      const antL = new THREE.Mesh(antGeo, mat);
-      antL.position.set(-0.14, 0.82, 0.72);
-      antL.rotation.set(0.5, 0, 0.3);
-      const antR = antL.clone();
-      antR.position.x = 0.14;
-      antR.rotation.z = -0.3;
+      // Antennae
+      [-0.12, 0.12].forEach(ax => {
+        const antSeg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.45, 5), mat);
+        antSeg.position.set(ax, 0.85, 0.78);
+        antSeg.rotation.x = 0.55;
+        ant.add(antSeg);
+      });
 
-      const legGeo = new THREE.CylinderGeometry(0.025, 0.02, 0.65, 5);
-      for (let side of [-1, 1]) {
-        for (let row of [-0.2, 0.05, 0.3]) {
-          const leg = new THREE.Mesh(legGeo, mat);
-          leg.position.set(side * 0.35, 0.25, row);
+      // 6 Articulated Legs
+      const legs = [];
+      [-0.25, 0, 0.25].forEach(lz => {
+        [-1, 1].forEach(side => {
+          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.02, 0.75, 5), mat);
+          leg.position.set(side * 0.36, 0.32, lz);
           leg.rotation.z = side * 0.75;
-          group.add(leg);
-        }
-      }
+          ant.add(leg);
+          legs.push(leg);
+        });
+      });
 
       if (isQueen) {
         const crown = new THREE.Mesh(
-          new THREE.TorusGeometry(0.2, 0.04, 6, 12),
-          new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xd97706, emissiveIntensity: 0.6 })
+          new THREE.TorusGeometry(0.24, 0.04, 6, 12),
+          new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xd97706, emissiveIntensity: 0.5 })
         );
         crown.rotation.x = Math.PI / 2;
-        crown.position.set(0, 0.86, 0.52);
-        group.add(crown);
+        crown.position.set(0, 0.92, 0.52);
+        ant.add(crown);
       }
 
-      group.add(gaster, thorax, head, antL, antR);
-      group.scale.setScalar(scale);
-      return group;
-    }
-
-    // Player Avatar Mesh (Visible when toggling R3 to Third-Person Camera!)
-    const naraAvatar = createAntModel(0x9a3412, false);
-    naraAvatar.rotation.y = Math.PI; // Face forward (-Z)
-    naraAvatar.visible = false;
-    playerRig.add(naraAvatar);
-
-    function toggleCameraMode() {
-      if (state.inVR) {
-        showToast('First-person locked in VR for comfort');
-        return;
-      }
-      state.cameraMode = state.cameraMode === 'first' ? 'third' : 'first';
-      const isThird = state.cameraMode === 'third';
-      naraAvatar.visible = isThird;
-      camera.position.set(0, isThird ? 2.6 : 1.15, isThird ? 3.8 : 0);
-      document.getElementById('btn-toggle-cam').textContent = isThird ? '3rd Person' : '1st Person';
-      showToast(isThird ? 'Camera: Third-Person Ant View' : 'Camera: First-Person View');
+      ant.scale.setScalar(scale);
+      ant.userData.legs = legs;
+      return ant;
     }
 
     function createBeeModel(isQueen = false) {
-      const group = new THREE.Group();
-      const yellowMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4 });
-      const darkMat = new THREE.MeshStandardMaterial({ color: 0x1c140d, roughness: 0.5 });
+      const bee = new THREE.Group();
+      const scale = isQueen ? 1.55 : 1.05;
+      const furMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.65 });
+      const stripeMat = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.7 });
       const wingMat = new THREE.MeshStandardMaterial({
         color: 0xe0f2fe,
         transparent: true,
-        opacity: 0.65,
+        opacity: 0.58,
         side: THREE.DoubleSide
       });
 
-      const body = new THREE.Mesh(new THREE.SphereGeometry(0.48, 12, 12), yellowMat);
-      body.scale.set(0.95, 0.95, 1.45);
-      body.position.y = 0.5;
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), furMat);
+      body.scale.set(0.95, 0.9, 1.45);
+      body.position.set(0, 0.7, -0.15);
+      bee.add(body);
 
-      const stripe1 = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.16, 12), darkMat);
-      stripe1.rotation.x = Math.PI / 2;
-      stripe1.position.set(0, 0.5, -0.15);
-      const stripe2 = stripe1.clone();
-      stripe2.position.z = 0.18;
+      const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.43, 0.41, 0.26, 12), stripeMat);
+      stripe.rotation.x = Math.PI / 2;
+      stripe.position.set(0, 0.7, -0.22);
+      bee.add(stripe);
 
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), darkMat);
-      head.position.set(0, 0.55, 0.68);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), stripeMat);
+      head.position.set(0, 0.76, 0.55);
+      bee.add(head);
 
-      const wingGeo = new THREE.PlaneGeometry(0.95, 0.45);
-      const wingL = new THREE.Mesh(wingGeo, wingMat);
-      wingL.position.set(-0.58, 0.92, 0.05);
-      wingL.rotation.set(Math.PI / 2, 0.2, 0.25);
+      const leftWing = new THREE.Mesh(new THREE.CircleGeometry(0.55, 10), wingMat);
+      leftWing.rotation.x = -Math.PI / 2;
+      leftWing.position.set(-0.48, 1.05, 0.05);
+      bee.add(leftWing);
 
-      const wingR = wingL.clone();
-      wingR.position.x = 0.58;
-      wingR.rotation.z = -0.25;
+      const rightWing = new THREE.Mesh(new THREE.CircleGeometry(0.55, 10), wingMat);
+      rightWing.rotation.x = -Math.PI / 2;
+      rightWing.position.set(0.48, 1.05, 0.05);
+      bee.add(rightWing);
 
-      group.add(body, stripe1, stripe2, head, wingL, wingR);
-      group.userData.wingL = wingL;
-      group.userData.wingR = wingR;
-      if (isQueen) group.scale.setScalar(1.75);
-      return group;
+      bee.scale.setScalar(scale);
+      bee.userData.wings = [leftWing, rightWing];
+      return bee;
     }
 
-    /* =========================================================================
-       10. INTERACTIVE ENTITIES & TARGET CYCLING (D-pad Left/Right)
-       ========================================================================= */
-    const interactables = [];
-    let manualTargetIndex = -1;
+    // =========================================================================
+    // 7. INTERACTABLES, COLLECTIBLES & NAMED STORY NPCs
+    // =========================================================================
+    const interactables = []; // { mesh, type, id, name, prompt, radius, collected, onInteract }
 
-    function registerInteractable(mesh, data) {
-      mesh.userData.interactable = data;
-      interactables.push({ mesh, ...data });
+    function spawnCollectible(itemKey, x, yOffset, z) {
+      const meta = ITEMS_META[itemKey];
+      const y = getTerrainHeight(x, z) + yOffset;
+      const colorMap = {
+        nectar: 0x38bdf8,
+    // Place visible collectibles right around the meadow and landmarks
+    spawnCollectible('nectar', -4.5, 0.65, 18);
+    spawnCollectible('pollen', 4.5, 0.65, 16);
+    spawnCollectible('nectar', -8, 0.65, 8);
+    spawnCollectible('pollen', 9, 0.65, 6);
+    spawnCollectible('amberShard', -12, 0.65, -14);
+    spawnCollectible('spore', -46, 0.65, -22);
+    spawnCollectible('spore', -51, 0.65, -27);
+    spawnCollectible('resin', 8, 0.65, -34);
+
+    // Named Story NPCs
+    const npcs = [];
+
+    function registerNPC(opts) {
+      const y = opts.y !== undefined ? opts.y : getTerrainHeight(opts.x, opts.z);
+      opts.mesh.position.set(opts.x, y, opts.z);
+      if (opts.rotY) opts.mesh.rotation.y = opts.rotY;
+      worldGroup.add(opts.mesh);
+      npcs.push(opts);
+      interactables.push({
+        mesh: opts.mesh,
+        type: 'npc',
+        npcId: opts.id,
+        name: opts.name,
+        prompt: `Speak to ${opts.name}`,
+        radius: 5.0,
+        collected: false
+      });
     }
 
-    const queenFormica = createAntModel(0x7c2d12, true);
-    queenFormica.position.set(-28, -5.5, -26);
-    scene.add(queenFormica);
-    registerInteractable(queenFormica, {
-      type: 'npc',
-      name: 'Queen Formica',
-      prompt: 'Speak to Queen Formica',
-      onInteract: () => openDialogue('formica')
+    // 1. Scout Antlyra (Right near the starting Meadow & Ant Mound)
+    registerNPC({
+      id: 'antlyra',
+      name: 'Scout Antlyra',
+      role: 'Vanguard of the Ant Mound',
+      species: 'ant',
+      mesh: createAntModel(0x9a3412, true),
+      x: 5.5,
+      z: 21,
+      rotY: 0.4
     });
 
-    const antPip = createAntModel(0x451a03, false);
-    antPip.position.set(-13, getTerrainHeight(-13, -8), -8);
-    antPip.rotation.y = 0.6;
-    scene.add(antPip);
-    registerInteractable(antPip, {
-      type: 'npc',
+    // 2. Queen Aurelia (Inside Underground Royal Chamber)
+    registerNPC({
+      id: 'aurelia',
+      name: 'Queen Aurelia',
+      role: 'Matriarch of the Ant Kingdom',
+      species: 'ant',
+      mesh: createAntModel(0x7c2d12, true),
+      x: 0,
+      y: -4.5,
+      z: -16.5,
+      rotY: 0
+    });
+
+    // 3. Apia the Meadow Bee (Near Giant Flowers & Bee Tree path)
+    registerNPC({
+      id: 'apia',
+      name: 'Apia the Meadow Bee',
+      role: 'Scout of the Great Hollow Tree',
+      species: 'bee',
+      mesh: createBeeModel(false),
+      x: -6,
+      z: -6,
+      rotY: 0.6
+    });
+
+    // 4. Bramble the Beetle (Near Ancient Garden & Cave entrance)
+    registerNPC({
+      id: 'bramble',
+      name: 'Bramble the Beetle',
+      role: 'Guardian of the Ancient Garden',
+      species: 'ant',
+      mesh: createAntModel(0x365314, true),
+      x: 16,
+      z: -16,
+      rotY: -0.7
+    });
+
+    // 5. Bee Queen Melisande (Atop the Honeycomb Citadel)
+    registerNPC({
+      id: 'melisande',
+      name: 'Queen Melisande',
+      role: 'Sovereign of the Golden Hive',
+      species: 'bee',
+      mesh: createBeeModel(true),
+      x: 0,
+      y: getTerrainHeight(0, -38) + 10.5,
+      z: -33,
+      rotY: 0
+    });
+
+    // 2. Worker Orin (Mound Entrance Guide)
+    registerNPC({
+      id: 'orin',
+      name: 'Forager Orin',
+      role: 'Mound Sentry',
+      species: 'ant',
+      mesh: createAntModel(0x7c2d12, false),
+      x: 3.8,
+      z: 5.5,
+      rotY: -0.5
+    });
+
+    // 3. Scout Pip (Lost in Mushroom Grove)
+    registerNPC({
+      id: 'pip',
       name: 'Scout Pip',
-      prompt: 'Talk to Scout Pip',
-      onInteract: () => openDialogue('pip')
+      role: 'Lost Mycologist Ant',
+      species: 'ant',
+      mesh: createAntModel(0xb45309, false),
+      x: -50,
+      z: -25,
+      rotY: 1.1
     });
 
-    const scoutApis = createBeeModel(false);
-    scoutApis.position.set(24, getTerrainHeight(24, -12) + 0.8, -12);
-    scoutApis.rotation.y = -Math.PI / 2;
-    scene.add(scoutApis);
-    registerInteractable(scoutApis, {
-      type: 'npc',
-      name: 'Scout Apis',
-      prompt: 'Speak to Scout Apis',
-      onInteract: () => openDialogue('apis')
+    // 4. Bee Guard Vespia (At the base/ramp of Great Hollow Tree)
+    registerNPC({
+      id: 'vespia',
+      name: 'Sentinel Vespia',
+      role: 'Royal Bee Guard',
+      species: 'bee',
+      mesh: createBeeModel(false),
+      x: 30,
+      z: -60,
+      rotY: -0.7
     });
 
-    const queenMellifera = createBeeModel(true);
-    queenMellifera.position.set(34, getTerrainHeight(34, -12) + 1.2, -12);
-    queenMellifera.rotation.y = -Math.PI / 2;
-    scene.add(queenMellifera);
-    registerInteractable(queenMellifera, {
-      type: 'npc',
-      name: 'Queen Mellifera',
-      prompt: 'Speak to Queen Mellifera',
-      onInteract: () => openDialogue('mellifera')
+    // 5. Bee Queen Melisande (Atop the Honeycomb Citadel)
+    registerNPC({
+      id: 'melisande',
+      name: 'Queen Melisande',
+      role: 'Sovereign of the Golden Hive',
+      species: 'bee',
+      mesh: createBeeModel(true),
+      x: 38,
+      y: getTerrainHeight(38, -68) + 11.2,
+      z: -63,
+      rotY: 0
     });
 
-    registerInteractable(blightCrystal, {
-      type: 'puzzle',
-      name: 'Blighted Root & Pure Seed',
-      prompt: 'Examine the Blighted Crystal',
-      onInteract: () => openDialogue('blight')
+    // 6. Silver Blight Canister Interactable in Ancient Garden
+    const blightTrigger = new THREE.Object3D();
+    blightTrigger.position.set(-36, getTerrainHeight(-36, -72) + 1.2, -72);
+    worldGroup.add(blightTrigger);
+    interactables.push({
+      mesh: blightTrigger,
+      type: 'blight',
+      name: 'Leaking Silver Blight Canister',
+      prompt: 'Inspect Leaking Canister',
+      radius: 5.2,
+      collected: false
     });
 
-    function spawnCollectible(itemKey, x, z, colorHex, emissiveHex) {
-      const y = getTerrainHeight(x, z) + 0.65;
-      const geo = itemKey === 'nectar'
-        ? new THREE.SphereGeometry(0.42, 12, 12)
-        : new THREE.OctahedronGeometry(0.48, 0);
-      const mat = new THREE.MeshStandardMaterial({
-        color: colorHex,
-        emissive: emissiveHex,
-        emissiveIntensity: 0.55,
-        roughness: 0.2
+    // =========================================================================
+    // 8. LIVING WORLD AUTONOMOUS AI AGENTS (Worker Ants, Honeybees, Butterflies)
+    // =========================================================================
+    const aiAgents = [];
+
+    // Autonomous Foraging Ants (clearly visible around starting meadow)
+    for (let i = 0; i < 8; i++) {
+      const ant = createAntModel(0x78350f, false);
+      const startX = -8 + i * 2.3;
+      const startZ = 12 + (i % 3) * 4;
+      ant.position.set(startX, getTerrainHeight(startX, startZ), startZ);
+      worldGroup.add(ant);
+      aiAgents.push({
+        type: 'ant',
+        mesh: ant,
+        state: 'WANDER',
+        target: new THREE.Vector3((Math.random() - 0.5) * 26, 0, 2 + Math.random() * 24),
+        speed: 2.2 + Math.random() * 0.8,
+        phase: Math.random() * 10
       });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x, y, z);
-      scene.add(mesh);
-
-      const entry = {
-        mesh,
-        type: 'item',
-        collected: false,
-        name: state.inventory[itemKey].name,
-        prompt: `Collect ${state.inventory[itemKey].name}`,
-        onInteract: () => {
-          if (entry.collected) return;
-          entry.collected = true;
-          scene.remove(mesh);
-          const idx = interactables.indexOf(entry);
-          if (idx > -1) interactables.splice(idx, 1);
-          addItem(itemKey, 1);
-          addXP(20);
-        }
-      };
-      interactables.push(entry);
     }
 
-    [[-4, 8], [6, 12], [-16, 4], [18, 6], [2, -16], [-10, -2], [22, -22]].forEach(([x, z]) => {
-      spawnCollectible('pollen', x, z, 0xfbbf24, 0xd97706);
-    });
-    [[11, 10], [16, -4], [12, -18], [-6, 15], [26, 2]].forEach(([x, z]) => {
-      spawnCollectible('nectar', x, z, 0x38bdf8, 0x0284c7);
-    });
-    [[-30, 12], [28, -28], [-12, -42]].forEach(([x, z]) => {
-      spawnCollectible('amber', x, z, 0xf97316, 0x9a3412);
-    });
-
-    function cycleNearbyTarget(dir) {
-      const pPos = playerRig.position;
-      const nearby = interactables.filter(it => pPos.distanceTo(it.mesh.position) < 12);
-      if (nearby.length === 0) {
-        showToast('No nearby objects to target');
-        return;
-      }
-      manualTargetIndex = (manualTargetIndex + dir + nearby.length) % nearby.length;
-      const chosen = nearby[manualTargetIndex];
-      currentTarget = chosen;
-      // Smoothly orient yaw toward target
-      const dx = chosen.mesh.position.x - pPos.x;
-      const dz = chosen.mesh.position.z - pPos.z;
-      input.yaw = Math.atan2(-dx, -dz);
-      showToast(`Target: ${chosen.name}`);
-    }
-
-    /* =========================================================================
-       11. AUTONOMOUS LIVING WORLD AI
-       ========================================================================= */
-    const autonomousInsects = [];
-
-    function initLivingWorld() {
-      for (let i = 0; i < 8; i++) {
-        const ant = createAntModel(0x2d1608, false);
-        const angle = (i / 8) * Math.PI * 2;
-        const rad = 10 + Math.random() * 20;
-        const x = -15 + Math.cos(angle) * rad;
-        const z = -10 + Math.sin(angle) * rad;
-        ant.position.set(x, getTerrainHeight(x, z), z);
-        scene.add(ant);
-        autonomousInsects.push({
-          mesh: ant,
-          kind: 'ant',
-          target: new THREE.Vector3(x + 8, 0, z + 6),
-          speed: 2.2 + Math.random() * 0.8,
-          phase: Math.random() * 10
-        });
-      }
-
-      for (let i = 0; i < 8; i++) {
-        const bee = createBeeModel(false);
-        const x = 15 + (Math.random() - 0.5) * 32;
-        const z = -10 + (Math.random() - 0.5) * 32;
-        bee.position.set(x, getTerrainHeight(x, z) + 3.5 + Math.random() * 4, z);
-        scene.add(bee);
-        autonomousInsects.push({
-          mesh: bee,
-          kind: 'bee',
-          target: new THREE.Vector3(x - 12, 5, z + 10),
-          speed: 3.6 + Math.random() * 1.2,
-          phase: Math.random() * 10
-        });
-      }
-
-      const bWingMat = new THREE.MeshStandardMaterial({
-        color: 0xf472b6,
-        emissive: 0x9d174d,
-        emissiveIntensity: 0.25,
-        side: THREE.DoubleSide
+    // Autonomous Flying Honeybees (around meadow flowers & giant hollow tree)
+    for (let i = 0; i < 8; i++) {
+      const bee = createBeeModel(false);
+      const fTarget = flowerHeads[i % flowerHeads.length];
+      bee.position.set((Math.random() - 0.5) * 16, 4.5 + i * 0.6, -10 - (i % 4) * 6);
+      worldGroup.add(bee);
+      aiAgents.push({
+        type: 'bee',
+        mesh: bee,
+        state: 'COLLECT',
+        target: fTarget.clone(),
+        home: new THREE.Vector3(0, 12, -38),
+        speed: 4.2 + Math.random() * 1.2,
+        phase: Math.random() * 10
       });
-      for (let i = 0; i < 5; i++) {
-        const bf = new THREE.Group();
-        const wL = new THREE.Mesh(new THREE.CircleGeometry(1.1, 7), bWingMat);
-        wL.position.x = -0.9;
-        wL.rotation.x = Math.PI / 2;
-        const wR = wL.clone();
-        wR.position.x = 0.9;
-        bf.add(wL, wR);
-        bf.userData.wingL = wL;
-        bf.userData.wingR = wR;
-        bf.position.set((Math.random() - 0.5) * 40, 5 + Math.random() * 4, (Math.random() - 0.5) * 40);
-        scene.add(bf);
-        autonomousInsects.push({
-          mesh: bf,
-          kind: 'butterfly',
-          target: new THREE.Vector3(0, 6, 0),
-          speed: 2.4,
-          phase: i * 1.7
-        });
-      }
     }
-    initLivingWorld();
 
-    /* =========================================================================
-       12. BRANCHING DIALOGUE & MULTIPLE ENDINGS ENGINE
-       ========================================================================= */
-    const dialogues = {
-      pip: {
-        speaker: 'Scout Pip (Worker Ant)',
-        text: 'Careful out here, Nara! Beyond our hill, the grass towers like redwoods. Queen Formica is waiting deep inside the subterranean tunnel behind me. Follow the glowing green mushrooms!',
-        choices: [
-          { label: 'Thank you, Pip. I will head underground at once.', next: null }
-        ]
-      },
-      formica: {
-        speaker: 'Queen Formica of the Deep Colony',
-        getText: () => {
-          if (state.flags.endingChosen) {
-            return 'Our tunnels hum with newfound hope, brave Nara. The meadow will remember your name for a thousand seasons.';
-          }
-          if (!state.flags.metFormica) {
-            return 'Nara, my swift scout. The roots are drying and our winter larders sit half-empty. Even the Golden Bees of the Great Oak have vanished from the blossoms. Gather 3 Golden Pollen and 2 Sweet Dewdrops, then seek out the Bee Kingdom to the East!';
-          }
-          if (!state.flags.gatheredForColony) {
-            return `We still need sustenance to keep our tunnel workers strong. Gather 3 Golden Pollen (${state.inventory.pollen.count}/3) and 2 Sweet Dewdrops (${state.inventory.nectar.count}/2) from the giant flowers.`;
-          }
-          return 'You have brought sweet sustenance to our larder! Now cross the stream to the East and climb the roots of the Giant Hollow Tree. Discover why the Bees abandoned the meadow.';
-        },
-        choices: [
-          {
-            label: 'For the Colony! I accept this mission, Your Majesty.',
-            action: () => {
-              state.flags.metFormica = true;
-              checkQuestProgress();
-            },
-            next: null
-          }
-        ]
-      },
-      apis: {
-        speaker: 'Scout Apis (Royal Bee Guard)',
-        getText: () => {
-          if (!state.flags.gatheredForColony) {
-            return 'Halt, ground-crawler! No ant sets foot inside the Great Oak Hive unless they prove they respect the blossoms. Return once you have gathered 3 Golden Pollen and 2 Sweet Dewdrops!';
-          }
-          state.flags.metApis = true;
-          return 'By the Golden Comb—you carry pure meadow pollen without harming a single petal! Enter the hollow trunk behind me. Queen Mellifera awaits.';
-        },
-        choices: [
-          { label: 'Thank you, Scout Apis. I come in peace.', next: null }
-        ]
-      },
-      mellifera: {
-        speaker: 'Queen Mellifera of the Great Oak',
-        getText: () => {
-          if (!state.flags.gatheredForColony) {
-            return 'Speak with Scout Apis outside our hive entrance first, little ant.';
-          }
-          state.flags.metMellifera = true;
-          checkQuestProgress();
-          if (state.flags.hasPureSeed && !state.flags.endingChosen) {
-            return 'You hold The Last Pure Seed from the Abandoned Garden! How will you use its ancient life-force, Nara?';
-          }
-          return 'Welcome, child of the soil. We did not abandon the meadow out of cruelty—a purple Blight Crystal erupted in the Abandoned Garden to the South, poisoning the nectar. Deep within that Blight lies The Last Pure Seed. Retrieve it, and choose our shared future!';
-        },
-        getChoices: () => {
-          if (state.flags.hasPureSeed && !state.flags.endingChosen) {
-            return [
-              {
-                label: '🌱 [Alliance Ending] Plant the Seed between Ant Hill & Bee Tree to unite both kingdoms.',
-                action: () => triggerEnding('symbiotic')
-              },
-              {
-                label: '👑 [Colony First Ending] Keep the Seed exclusively for the Ant Colony’s survival.',
-                action: () => triggerEnding('colony')
-              },
-              {
-                label: '✨ [Purification Ending] Release the Seed’s energy directly into the Ancient Garden.',
-                action: () => triggerEnding('garden')
-              }
-            ];
-          }
-          return [
-            { label: 'I will brave the Southern Garden and recover The Last Pure Seed!', next: null }
-          ];
-        }
-      },
-      blight: {
-        speaker: 'The Blighted Crystal Root',
-        getText: () => {
-          if (!state.flags.metMellifera) {
-            return 'A pulsing violet crystal chokes the soil of this ancient garden. Perhaps the Queen of the Bees in the Eastern Hollow Tree knows how to break its hold.';
-          }
-          if (!state.flags.hasPureSeed) {
-            return 'Using the pollen and dewdrop resonance you gathered, the violet crystal cracks open! Nestled inside its heart glows The Last Pure Seed.';
-          }
-          return 'The crystal is dormant now. You carry The Last Pure Seed—decide how to awaken it!';
-        },
-        getChoices: () => {
-          if (!state.flags.metMellifera) {
-            return [{ label: 'Step back from the violet hum.', next: null }];
-          }
-          if (!state.flags.hasPureSeed) {
-            return [
-              {
-                label: 'Claim The Last Pure Seed',
-                action: () => {
-                  state.flags.hasPureSeed = true;
-                  addItem('pureSeed', 1);
-                  blightCrystal.material.color.setHex(0x10b981);
-                  blightCrystal.material.emissive.setHex(0x059669);
-                  blightLight.color.setHex(0x34d399);
-                },
-                next: 'blight'
-              }
-            ];
-          }
-          if (!state.flags.endingChosen) {
-            return [
-              {
-                label: '🌱 Unite Ants & Bees: Plant the Seed to heal the whole Meadow!',
-                action: () => triggerEnding('symbiotic')
-              },
-              {
-                label: '👑 Carry the Seed home to fortify the Ant Kingdom alone.',
-                action: () => triggerEnding('colony')
-              },
-              {
-                label: '🌸 Awaken the Ancient Garden into a sanctuary of wild blooms.',
-                action: () => triggerEnding('garden')
-              }
-            ];
-          }
-          return [{ label: 'Admire the restored crystal.', next: null }];
-        }
-      }
-    };
+    // Fluttering Butterflies
+    const butterflyMat = new THREE.MeshStandardMaterial({ color: 0xf472b6, emissive: 0xbe185d, emissiveIntensity: 0.25, side: THREE.DoubleSide });
+    for (let i = 0; i < 6; i++) {
+      const bf = new THREE.Group();
+      const w1 = new THREE.Mesh(new THREE.CircleGeometry(0.65, 8), butterflyMat);
+      w1.position.x = -0.45;
+      const w2 = new THREE.Mesh(new THREE.CircleGeometry(0.65, 8), butterflyMat);
+      w2.position.x = 0.45;
+      bf.add(w1, w2);
+      bf.position.set((Math.random() - 0.5) * 60, 5 + Math.random() * 4, (Math.random() - 0.5) * 60);
+      worldGroup.add(bf);
+      aiAgents.push({
+        type: 'butterfly',
+        mesh: bf,
+        wings: [w1, w2],
+        center: bf.position.clone(),
+        phase: Math.random() * 10
+      });
+    }
 
-    function openDialogue(key) {
-      const dlg = dialogues[key];
-      if (!dlg) return;
-      sound.playDialogue();
-      state.paused = true;
-      ds4.menuFocusIndex = 0;
+    // =========================================================================
+    // 9. DIALOGUE & MULTI-ENDING NARRATIVE ENGINE
+    // =========================================================================
+    const dialogueModal = document.getElementById('dialogue-modal');
+    const dlgName = document.getElementById('dlg-name');
+    const dlgRole = document.getElementById('dlg-role');
+    const dlgText = document.getElementById('dlg-text');
+    const dlgChoices = document.getElementById('dlg-choices');
 
-      document.getElementById('dlg-speaker').textContent = dlg.speaker;
-      document.getElementById('dlg-text').textContent = dlg.getText ? dlg.getText() : dlg.text;
+    function openDialogue(speaker, role, species, text, choices) {
+      sfx.playInsectVoice(species);
+      dlgName.textContent = speaker;
+      dlgRole.textContent = role;
+      dlgText.textContent = text;
+      dlgChoices.innerHTML = '';
 
-      const choicesBox = document.getElementById('dlg-choices');
-      choicesBox.innerHTML = '';
-      const list = dlg.getChoices ? dlg.getChoices() : dlg.choices;
-
-      list.forEach((c, idx) => {
+      choices.forEach(c => {
         const btn = document.createElement('button');
         btn.className = 'choice-btn';
-        btn.innerHTML = ds4.connected
-          ? `${idx === 0 ? ds4.getActionBadgeHTML('jump') + ' ' : ''}${c.label}`
-          : c.label;
+        btn.textContent = c.label;
         btn.onclick = () => {
+          dialogueModal.classList.remove('open');
           if (c.action) c.action();
-          if (c.next) {
-            openDialogue(c.next);
-          } else {
-            closeModal('dialogue-modal');
-          }
+          updateHUD();
         };
-        choicesBox.appendChild(btn);
+        dlgChoices.appendChild(btn);
       });
 
-      document.getElementById('dialogue-modal').style.display = 'flex';
+      dialogueModal.classList.add('open');
+    }
+
+    function handleNPCInteraction(npcId) {
+      const mq = state.quests.main;
+
+      if (npcId === 'antlyra') {
+        if (!state.flags.talkedAurelia) {
+          state.flags.talkedAurelia = true;
+          mq.step = 1;
+          addXP(25);
+          openDialogue(
+            'Scout Antlyra',
+            'Vanguard of the Ant Mound',
+            'ant',
+            'Nara! The giant flowers are wilting and the bees have retreated into the Great Hollow Tree ahead. Gather 3 Golden Pollen Orbs or Nectar Dewdrops in the meadow, then speak with Apia the Bee near the giant flowers!',
+            [
+              {
+                label: 'I will gather the Pollen & Nectar and speak with Apia!',
+                action: () => {
+                  state.quests.sideLarva.active = true;
+                  updateHUD();
+                }
+              }
+            ]
+          );
+        } else if (mq.step >= 4 && !state.flags.endingChosen) {
+          openDialogue(
+            'Scout Antlyra',
+            'Vanguard of the Ant Mound',
+            'ant',
+            'You gathered the relics from the meadow and hollow tree! How shall we shape the future of the Last Bloom?',
+            [
+              {
+                label: '🌸 [Harmony Bloom] Share pollen & nectar so Ants and Bees heal the meadow together.',
+                action: () => triggerEnding('symbiosis')
+              },
+              {
+                label: '🛡️ [Hive Sanctuary] Guard the deep mound & hollow tree within sheltered walls.',
+                action: () => triggerEnding('fortress')
+              }
+            ]
+          );
+        } else {
+          openDialogue(
+            'Scout Antlyra',
+            'Vanguard of the Ant Mound',
+            'ant',
+            'Collect glowing Pollen Orbs and Nectar Dewdrops around the meadow, then head north toward Apia the Bee (-6, -8) and Bramble the Beetle (16, -16).',
+            [{ label: 'Got it, Antlyra!' }]
+          );
+        }
+      } else if (npcId === 'apia') {
+        if (mq.step < 3) {
+          mq.step = 3;
+          addXP(40);
+          addItem('beeswax', 1);
+        }
+        openDialogue(
+          'Apia the Meadow Bee',
+          'Scout of the Great Hollow Tree',
+          'bee',
+          'Bzz-hello, Nara! Our hive climbed high into the Great Hollow Tree because a strange blight drifted from the north-west garden. Take this Royal Beeswax—pair it with Amber Resin or Ancient Amber and speak with Bramble the Beetle!',
+          [{ label: 'Thank you, Apia! I will seek Bramble and the relics.' }]
+        );
+      } else if (npcId === 'bramble') {
+        state.quests.sideLarva.active = true;
+        if (mq.step < 3) mq.step = 3;
+        addXP(40);
+        if (!state.flags.endingChosen && (state.inventory.resin >= 1 || state.inventory.amberShard >= 1) && state.inventory.beeswax >= 1) {
+          mq.step = 4;
+        }
+        openDialogue(
+          'Bramble the Beetle',
+          'Guardian of the Ancient Garden',
+          'ant',
+          'The roots hum with ancient energy! Once you hold Royal Beeswax plus Amber Resin or Ancient Amber, we can awaken the Deep Root.',
+          [
+            {
+              label: '🌱 [Deep Root Awakening] Channel ancient root energy to revive the underground & meadow!',
+              action: () => triggerEnding('root')
+            },
+            { label: 'I will keep exploring first.' }
+          ]
+        );
+      } else if (npcId === 'aurelia') {
+        if (!state.flags.talkedAurelia) {
+          state.flags.talkedAurelia = true;
+          mq.step = 1;
+          addXP(30);
+        }
+        openDialogue(
+          'Queen Aurelia',
+          'Matriarch of the Deep Mound',
+          'ant',
+          'Nara, my bravest scout. Gather Golden Pollen & Nectar in the meadow, speak with Apia the Bee and Bramble the Beetle, and restore the Last Bloom!',
+          [{ label: 'For the Colony! I will return once the quest is complete.' }]
+        );
+      } else if (npcId === 'melisande') {
+        if (!state.flags.talkedMelisande) {
+          state.flags.talkedMelisande = true;
+          if (mq.step < 3) mq.step = 3;
+          addItem('beeswax', 1);
+        }
+        openDialogue(
+          'Queen Melisande',
+          'Sovereign of the Golden Hive',
+          'bee',
+          'Welcome to the Honeycomb Citadel, little Nara. With Royal Beeswax and Amber Resin or Ancient Amber, the meadow can bloom once more!',
+          [{ label: 'I will honor your wisdom, Queen Melisande.' }]
+        );
+      }
+    }
+
+    function handleBlightInteraction() {
+      const mq = state.quests.main;
+      if (state.flags.blightSealed) {
+        openDialogue(
+          'Sealed Canister',
+          'Ancient Garden Relic',
+          'ant',
+          'The leaking seam is tightly plugged with golden Amber Tree Resin and Royal Beeswax. Fresh green shoots are already sprouting!',
+          [{ label: 'Admire the recovering garden.' }]
+        );
+        return;
+      }
+
+      if (mq.step < 3) mq.step = 3;
+
+      if ((state.inventory.resin >= 1 || state.inventory.amberShard >= 1) && state.inventory.beeswax >= 1) {
+        openDialogue(
+          'Leaking Silver Blight Canister',
+          'Source of the Withering',
+          'ant',
+          'A corroded canister is leaking toxic mist into the soil. You have Royal Beeswax and resin/amber to seal it!',
+          [
+            {
+              label: '🍯 Seal the leak and unlock the finale!',
+              action: () => {
+                if (state.inventory.resin >= 1) state.inventory.resin -= 1;
+                else state.inventory.amberShard -= 1;
+                state.inventory.beeswax -= 1;
+                state.flags.blightSealed = true;
+                mq.step = 4;
+                sfx.playQuestComplete();
+                addXP(120);
+                if (blightMistParticles) blightMistParticles.visible = false;
+                showDiscovery('The Silver Blight Sealed!', 'Choose your ending with Antlyra, Apia, or Bramble');
+              }
+            },
+            { label: 'Leave it for now.' }
+          ]
+        );
+      } else {
+        openDialogue(
+          'Leaking Silver Blight Canister',
+          'Source of the Withering',
+          'ant',
+          'A corroded canister is oozing blight mist. Gather Royal Beeswax (from Apia/Melisande) and Amber Resin or Ancient Amber to seal it.',
+          [{ label: 'I will gather the materials.' }]
+        );
+      }
     }
 
     function triggerEnding(type) {
       state.flags.endingChosen = type;
-      checkQuestProgress();
-      closeModal('dialogue-modal');
-      sound.playDiscovery();
-      ds4.menuFocusIndex = 0;
+      state.quests.main.completed = true;
+      sfx.playQuestComplete();
+      addXP(200);
 
-      scene.fog.color.setHex(0xbbf7d0);
-      blightCrystal.scale.setScalar(1.4);
+      const modal = document.getElementById('ending-modal');
+      const title = document.getElementById('ending-title');
+      const desc = document.getElementById('ending-desc');
 
-      const endings = {
-        symbiotic: {
-          badge: 'Ending I of III • True Harmony',
-          title: 'The Symbiotic Bloom',
-          desc: 'Nara planted The Last Pure Seed at the heart of the meadow. Bees returned to pollinate the giant blossoms while Ants tended the soil beneath—forging an eternal alliance between earth and sky.'
-        },
-        colony: {
-          badge: 'Ending II of III • The Iron Chitin',
-          title: 'Empire Beneath the Roots',
-          desc: 'Nara carried The Last Pure Seed into Queen Formica’s royal chamber. The Ant Kingdom flourished in golden subterranean abundance, becoming the undisputed guardians of the deep earth.'
-        },
-        garden: {
-          badge: 'Ending III of III • Wild Rebirth',
-          title: 'Sanctuary of the Ancients',
-          desc: 'By shattering the Blight directly in the Ancient Garden, Nara unleashed an explosion of giant wildflowers that turned the forgotten ruins into a paradise for butterflies, beetles, ants, and bees alike.'
-        }
-      };
-
-      const data = endings[type];
-      document.getElementById('ending-badge').textContent = data.badge;
-      document.getElementById('ending-title').textContent = data.title;
-      document.getElementById('ending-desc').textContent = data.desc;
-      document.getElementById('ending-stats').textContent = `Final Level: ${state.level} • Landmarks Discovered: ${state.discoveredZones.size}/4`;
-      document.getElementById('ending-modal').style.display = 'flex';
+      if (type === 'symbiosis') {
+        title.textContent = 'Ending I: Harmony Bloom';
+        desc.textContent =
+          'Beneath the golden sun, Worker Ants tend the roots while Honeybees dance from blossom to blossom. Thanks to Nara’s courage, the Ant Mound and the Honeycomb Citadel unite in harmony—turning the Last Bloom into an endless spring.';
+      } else if (type === 'fortress') {
+        title.textContent = 'Ending II: Hive Sanctuary';
+        desc.textContent =
+          'With the blight contained and the deep chambers stocked with golden nectar, Ants and Bees fortify their sheltered sanctuaries—keeping both kingdoms safe through every season.';
+      } else {
+        title.textContent = 'Ending III: Deep Root Awakening';
+        desc.textContent =
+          'Channeling ancient root energy through the soil awakens dormant seeds across the meadow and caverns, sparking a radiant rebirth beneath the towering grass.';
+      }
+      modal.classList.add('open');
     }
 
-    /* =========================================================================
-       13. PLAYER MOVEMENT, TOUCH JOYSTICK, DUALSHOCK 4 & COLLISIONS
-       ========================================================================= */
+    // =========================================================================
+    // 10. PLAYER LOCOMOTION, MOBILE TOUCH CONTROLS & VR GAZE INTERACTION
+    // =========================================================================
     const input = {
       moveX: 0,
       moveZ: 0,
@@ -2672,35 +2014,60 @@
       keys: {}
     };
 
+    // Desktop Keyboard & Mouse Drag/Pointer Look
     window.addEventListener('keydown', e => {
       input.keys[e.code] = true;
-      if (!ds4.connected && !state.inVR) setInputMode('kbm');
-      if (e.code === 'Space') tryJump();
-      if (e.code === 'KeyE') triggerCurrentInteraction();
-      if (e.code === 'ShiftLeft') { state.sprinting = true; updateHUD(); }
+      if (e.code === 'Space') jumpPlayer();
+      if (e.code === 'KeyE') triggerInteraction();
     });
     window.addEventListener('keyup', e => {
       input.keys[e.code] = false;
-      if (e.code === 'ShiftLeft') { state.sprinting = false; updateHUD(); }
     });
 
-    function tryJump() {
-      if (!state.started || state.paused) return;
-      if (input.grounded) {
-        input.velY = 8.4;
-        input.grounded = false;
-        sound.playJump();
-      }
-    }
+    let isMouseDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
 
+    canvas.addEventListener('mousedown', e => {
+      if (!state.started || renderer.xr.isPresenting) return;
+      isMouseDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => {
+      isMouseDragging = false;
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (renderer.xr.isPresenting) return;
+      if (document.pointerLockElement === canvas) {
+        input.yaw -= e.movementX * 0.0024;
+        input.pitch = Math.max(-1.25, Math.min(1.25, input.pitch - e.movementY * 0.0024));
+      } else if (isMouseDragging) {
+        const dx = e.clientX - lastMouseX;
+        const dy = e.clientY - lastMouseY;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        input.yaw -= dx * 0.0045;
+        input.pitch = Math.max(-1.25, Math.min(1.25, input.pitch - dy * 0.004));
+      }
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (document.pointerLockElement === canvas) {
+        input.yaw -= e.movementX * 0.0024;
+        input.pitch = Math.max(-1.25, Math.min(1.25, input.pitch - e.movementY * 0.0024));
+      }
+    });
+
+    // Virtual Thumbstick (Left)
     const joyZone = document.getElementById('joystick-zone');
-    const joyKnob = document.getElementById('joystick-knob');
+    const joyNub = document.getElementById('joystick-nub');
     let joyTouchId = null;
 
     joyZone.addEventListener('touchstart', e => {
       e.preventDefault();
-      sound.unlock();
-      if (!ds4.connected) setInputMode('touch');
       const t = e.changedTouches[0];
       joyTouchId = t.identifier;
       updateJoystick(t.clientX, t.clientY);
@@ -2708,18 +2075,18 @@
 
     joyZone.addEventListener('touchmove', e => {
       e.preventDefault();
-      for (let t of e.changedTouches) {
+      for (const t of e.changedTouches) {
         if (t.identifier === joyTouchId) updateJoystick(t.clientX, t.clientY);
       }
     }, { passive: false });
 
     const resetJoystick = e => {
-      for (let t of e.changedTouches) {
+      for (const t of e.changedTouches) {
         if (t.identifier === joyTouchId) {
           joyTouchId = null;
           input.moveX = 0;
           input.moveZ = 0;
-          joyKnob.style.transform = 'translate(0px, 0px)';
+          joyNub.style.transform = 'translate(0px, 0px)';
         }
       }
     };
@@ -2738,508 +2105,459 @@
         dx = (dx / dist) * maxR;
         dy = (dy / dist) * maxR;
       }
-      joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+      joyNub.style.transform = `translate(${dx}px, ${dy}px)`;
       input.moveX = dx / maxR;
       input.moveZ = dy / maxR;
     }
 
+    // Touch Look Zone (Right Side)
+    const lookZone = document.getElementById('look-zone');
     let lookTouchId = null;
     let lastLookX = 0;
     let lastLookY = 0;
-    let mouseDragging = false;
 
-    canvas.addEventListener('touchstart', e => {
-      sound.unlock();
-      for (let t of e.changedTouches) {
-        if (t.identifier !== joyTouchId && lookTouchId === null) {
-          lookTouchId = t.identifier;
-          lastLookX = t.clientX;
-          lastLookY = t.clientY;
-        }
-      }
+    lookZone.addEventListener('touchstart', e => {
+      const t = e.changedTouches[0];
+      lookTouchId = t.identifier;
+      lastLookX = t.clientX;
+      lastLookY = t.clientY;
     }, { passive: true });
 
-    canvas.addEventListener('touchmove', e => {
-      for (let t of e.changedTouches) {
+    lookZone.addEventListener('touchmove', e => {
+      for (const t of e.changedTouches) {
         if (t.identifier === lookTouchId) {
           const dx = t.clientX - lastLookX;
           const dy = t.clientY - lastLookY;
           lastLookX = t.clientX;
           lastLookY = t.clientY;
-          input.yaw -= dx * 0.0052;
-          input.pitch = THREE.MathUtils.clamp(input.pitch - dy * 0.0042, -1.25, 1.25);
+          input.yaw -= dx * 0.0055;
+          input.pitch = Math.max(-1.25, Math.min(1.25, input.pitch - dy * 0.0045));
         }
       }
     }, { passive: true });
 
-    canvas.addEventListener('touchend', e => {
-      for (let t of e.changedTouches) {
+    lookZone.addEventListener('touchend', e => {
+      for (const t of e.changedTouches) {
         if (t.identifier === lookTouchId) lookTouchId = null;
       }
     });
 
-    canvas.addEventListener('mousedown', e => {
-      sound.unlock();
-      mouseDragging = true;
-      lastLookX = e.clientX;
-      lastLookY = e.clientY;
-    });
-    window.addEventListener('mouseup', () => { mouseDragging = false; });
-    window.addEventListener('mousemove', e => {
-      if (!mouseDragging || state.paused) return;
-      const dx = e.clientX - lastLookX;
-      const dy = e.clientY - lastLookY;
-      lastLookX = e.clientX;
-      lastLookY = e.clientY;
-      input.yaw -= dx * 0.004;
-      input.pitch = THREE.MathUtils.clamp(input.pitch - dy * 0.0035, -1.25, 1.25);
-    });
-
-    /* =========================================================================
-       14. RAYCAST / PROXIMITY INTERACTION & ADAPTIVE PS4 / VR PROMPTS
-       ========================================================================= */
-    let currentTarget = null;
-    let gazeTimer = 0;
-    const GAZE_DURATION = 1.35;
-    const raycaster = new THREE.Raycaster();
-
-    function updateInteractions(dt) {
-      if (state.paused) return;
-
-      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-      const meshes = interactables.map(i => i.mesh);
-      const hits = raycaster.intersectObjects(meshes, true);
-
-      let found = null;
-      const maxRange = state.aiming ? 12.0 : 7.5;
-      if (hits.length > 0 && hits[0].distance < maxRange) {
-        let obj = hits[0].object;
-        while (obj && !found) {
-          found = interactables.find(it => it.mesh === obj);
-          obj = obj.parent;
-        }
+    function jumpPlayer() {
+      if (input.grounded) {
+        input.velY = 7.4;
+        input.grounded = false;
+        sfx.playJump();
       }
+    }
 
-      if (!found) {
-        const pPos = playerRig.position;
-        let bestDist = state.aiming ? 7.0 : 4.2;
-        for (const it of interactables) {
-          const d = pPos.distanceTo(it.mesh.position);
-          if (d < bestDist) {
-            bestDist = d;
-            found = it;
+    document.getElementById('btn-jump').addEventListener('click', jumpPlayer);
+    document.getElementById('btn-interact').addEventListener('click', triggerInteraction);
+    document.getElementById('interact-prompt').addEventListener('click', triggerInteraction);
+
+    // Nearest Interactable & VR Gaze Detection
+    let activeTarget = null;
+    let vrGazeTimer = 0;
+    const forwardVec = new THREE.Vector3();
+    const toTargetVec = new THREE.Vector3();
+
+    function updateInteractionTarget(dt) {
+      let best = null;
+      let bestScore = Infinity;
+
+      const worldCamPos = new THREE.Vector3();
+      camera.getWorldPosition(worldCamPos);
+      camera.getWorldDirection(forwardVec);
+
+      for (const item of interactables) {
+        if (item.collected) continue;
+        const pos = new THREE.Vector3();
+        item.mesh.getWorldPosition(pos);
+        const dist = worldCamPos.distanceTo(pos);
+        if (dist <= item.radius) {
+          toTargetVec.subVectors(pos, worldCamPos).normalize();
+          const angle = forwardVec.angleTo(toTargetVec);
+          if (angle < 0.65 && dist < bestScore) {
+            best = item;
+            bestScore = dist;
           }
         }
       }
 
-      currentTarget = found;
+      activeTarget = best;
       const promptEl = document.getElementById('interact-prompt');
-      const labelEl = document.getElementById('interact-label');
-      const crossEl = document.getElementById('crosshair');
+      const reticleEl = document.getElementById('reticle');
 
-      if (found) {
-        if (ds4.connected) {
-          const actBadge = ds4.getActionBadgeHTML('interact');
-          const exBadge = ds4.getActionBadgeHTML('examine');
-          labelEl.innerHTML = found.type === 'item'
-            ? `${actBadge} ${found.prompt}`
-            : `${actBadge} ${found.prompt} &nbsp; ${exBadge} Examine`;
-        } else {
-          labelEl.textContent = found.prompt;
-        }
-        promptEl.style.display = 'flex';
-        crossEl.classList.add('active');
+      if (best) {
+        document.getElementById('prompt-text').textContent = best.prompt;
+        promptEl.classList.add('visible');
+        reticleEl.classList.add('interactive');
 
-        if (state.inVR) {
-          gazeTimer += dt;
-          const s = THREE.MathUtils.clamp(gazeTimer / GAZE_DURATION, 0.05, 1);
-          gazeFill.scale.set(s, s, 1);
-          if (gazeTimer >= GAZE_DURATION) {
-            gazeTimer = 0;
-            triggerCurrentInteraction();
+        // VR Gaze-Lock fallback (1.4 seconds looking directly at target in VR)
+        if (renderer.xr.isPresenting) {
+          vrGazeTimer += dt;
+          vrReticle.scale.setScalar(1 + vrGazeTimer * 0.6);
+          if (vrGazeTimer >= 1.4) {
+            vrGazeTimer = 0;
+            triggerInteraction();
           }
         }
       } else {
-        promptEl.style.display = 'none';
-        crossEl.classList.remove('active');
-        gazeTimer = 0;
-        gazeFill.scale.set(0.01, 0.01, 1);
+        promptEl.classList.remove('visible');
+        reticleEl.classList.remove('interactive');
+        vrGazeTimer = 0;
+        vrReticle.scale.setScalar(1);
       }
     }
 
-    function triggerCurrentInteraction() {
-      if (state.paused || !currentTarget) return;
-      currentTarget.onInteract();
+    function triggerInteraction() {
+      if (!activeTarget) return;
+      if (activeTarget.type === 'item') {
+        activeTarget.collected = true;
+        activeTarget.mesh.visible = false;
+        addItem(activeTarget.itemKey, 1);
+        showDiscovery('Collected', activeTarget.name);
+      } else if (activeTarget.type === 'npc') {
+        handleNPCInteraction(activeTarget.npcId);
+      } else if (activeTarget.type === 'blight') {
+        handleBlightInteraction();
+      }
     }
 
-    /* =========================================================================
-       15. UI MODAL, DIAGNOSTIC GRID & BUTTON REMAPPING WIRING
-       ========================================================================= */
-    function closeModal(id) {
-      document.getElementById(id).style.display = 'none';
-      ds4.listeningForRemap = null;
-      ds4.menuFocusIndex = 0;
-      state.paused = !!getActiveModal();
+    // =========================================================================
+    // 11. UI & HUD UPDATES
+    // =========================================================================
+    let bannerTimeout = null;
+    function showDiscovery(sub, title) {
+      const banner = document.getElementById('discovery-banner');
+      document.getElementById('discovery-sub').textContent = sub;
+      document.getElementById('discovery-title').textContent = title;
+      banner.classList.add('show');
+      clearTimeout(bannerTimeout);
+      bannerTimeout = setTimeout(() => banner.classList.remove('show'), 3200);
     }
 
-    document.querySelectorAll('[data-close]').forEach(btn => {
-      btn.addEventListener('click', () => closeModal(btn.dataset.close));
-    });
+    function checkBiomeDiscovery(x, z) {
+      let biome = 'Sunlit Meadow';
+      if (z < 0 && z > -25 && Math.abs(x) < 12) biome = 'Underground Ant Kingdom';
+      else if (Math.hypot(x, z - (-38)) < 18) biome = 'Great Hollow Tree & Bee Citadel';
+      else if (Math.hypot(x - (-48), z - (-25)) < 18) biome = 'Bioluminescent Mushroom Grove';
+      else if (Math.hypot(x - (-36), z - (-72)) < 18) biome = 'Abandoned Ancient Garden';
+      else if (Math.abs(z - (-24)) < 5) biome = 'Whispering Brook';
 
-    // Build 18-button diagnostic grid
-    const btnGrid = document.getElementById('diag-btn-grid');
-    DS4_BUTTON_LABELS.forEach(b => {
-      const div = document.createElement('div');
-      div.className = 'btn-pill';
-      div.textContent = b.name;
-      btnGrid.appendChild(div);
-    });
+      if (!state.discoveredBiomes.has(biome)) {
+        state.discoveredBiomes.add(biome);
+        showDiscovery('Region Discovered', biome);
+      }
+    }
 
-    function renderRemapList() {
-      const list = document.getElementById('remap-list');
-      list.innerHTML = '';
-      Object.entries(ACTION_NAMES).forEach(([actionKey, label]) => {
-        const row = document.createElement('div');
-        row.className = 'remap-row';
-        const btnIdx = ds4.remap[actionKey];
-        const btnInfo = DS4_BUTTON_LABELS[btnIdx] || { name: `Btn ${btnIdx}` };
-        const isListening = ds4.listeningForRemap === actionKey;
+    function updateHUD() {
+      const mq = state.quests.main;
+      document.getElementById('hud-quest-title').textContent = mq.title;
+      document.getElementById('hud-quest-obj').textContent = mq.completed
+        ? 'All main objectives completed! Enjoy free exploration.'
+        : mq.objectives[mq.step];
 
-        row.innerHTML = `
-          <span>${label}</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <strong style="color:#60a5fa;">${btnInfo.name}</strong>
-            <button class="q-btn ${isListening ? 'active' : ''}">${isListening ? 'Press Button...' : 'Change'}</button>
-          </div>
+      document.getElementById('hud-rank').textContent = `🐜 Scout Lv.${state.level}`;
+      document.getElementById('hud-xp').textContent = `${state.xp} XP`;
+    }
+
+    function renderInventoryModal() {
+      const grid = document.getElementById('inv-grid');
+      grid.innerHTML = '';
+      Object.entries(ITEMS_META).forEach(([key, meta]) => {
+        const count = state.inventory[key] || 0;
+        const card = document.createElement('div');
+        card.className = 'inv-item';
+        card.style.opacity = count > 0 ? '1' : '0.45';
+        card.innerHTML = `
+          <div class="inv-icon">${meta.icon}</div>
+          <div class="inv-name">${meta.name}</div>
+          <div class="inv-count">x${count}</div>
         `;
-        row.querySelector('button').onclick = () => {
-          ds4.listeningForRemap = actionKey;
-          document.getElementById('remap-status-hint').textContent = `Listening... Press any DualShock 4 button for "${label}"`;
-          renderRemapList();
-        };
-        list.appendChild(row);
+        grid.appendChild(card);
       });
     }
-    renderRemapList();
 
-    document.getElementById('btn-reset-remap').addEventListener('click', () => {
-      ds4.remap = { ...DEFAULT_REMAP };
-      ds4.listeningForRemap = null;
-      document.getElementById('remap-status-hint').textContent = 'Default PlayStation 4 DualShock 4 layout restored.';
-      renderRemapList();
-      sound.playTone(500, 'sine', 0.1, 0.1);
-    });
-
-    function openDiagnostics() {
-      state.paused = true;
-      ds4.menuFocusIndex = 0;
-      ds4.updateDiagnosticHeader();
-      renderRemapList();
-      document.getElementById('diagnostic-modal').style.display = 'flex';
+    function renderQuestModal() {
+      const list = document.getElementById('quest-list');
+      const mq = state.quests.main;
+      const sq = state.quests.sideLarva;
+      list.innerHTML = `
+        <div class="inv-item" style="text-align:left;">
+          <div class="qt-label">Main Storyline</div>
+          <div class="qt-title">${mq.title}</div>
+          <p style="font-size:0.85rem; color:#e7dcc6; margin-top:4px;">${mq.objectives[mq.step]}</p>
+        </div>
+        <div class="inv-item" style="text-align:left;">
+          <div class="qt-label">Side Expedition ${sq.completed ? '(Completed)' : ''}</div>
+          <div class="qt-title">${sq.title}</div>
+          <p style="font-size:0.85rem; color:#e7dcc6; margin-top:4px;">${sq.objective}</p>
+        </div>
+      `;
     }
 
-    document.getElementById('btn-title-diag').addEventListener('click', openDiagnostics);
-    document.getElementById('btn-open-diag').addEventListener('click', openDiagnostics);
-
-    ['auto', 'standard', 'android'].forEach(prof => {
-      document.getElementById(`btn-profile-${prof}`).addEventListener('click', () => {
-        ds4.profile = prof;
-        ['auto', 'standard', 'android'].forEach(p => {
-          document.getElementById(`btn-profile-${p}`).classList.toggle('active', p === prof);
-        });
-        showToast(`DS4 Mapping Profile: ${prof.toUpperCase()}`);
-      });
-    });
-
+    // UI Button Bindings
     document.getElementById('btn-start').addEventListener('click', () => {
-      sound.unlock();
+      sfx.init();
       state.started = true;
-      const ts = document.getElementById('title-screen');
-      ts.style.opacity = '0';
-      setTimeout(() => { ts.style.display = 'none'; }, 550);
-      document.getElementById('hud').style.display = 'block';
+      document.getElementById('title-screen').classList.add('hidden');
+      document.getElementById('hud').classList.add('active');
       updateHUD();
     });
 
-    document.getElementById('interact-prompt').addEventListener('click', triggerCurrentInteraction);
-    document.getElementById('btn-touch-interact').addEventListener('click', triggerCurrentInteraction);
-    document.getElementById('btn-touch-jump').addEventListener('click', tryJump);
-    document.getElementById('btn-toggle-cam').addEventListener('click', toggleCameraMode);
+    document.getElementById('btn-controls-info').addEventListener('click', () => {
+      document.getElementById('guide-modal').classList.add('open');
+    });
+    document.getElementById('btn-close-guide').addEventListener('click', () => {
+      document.getElementById('guide-modal').classList.remove('open');
+    });
 
-    document.getElementById('btn-open-inv').addEventListener('click', () => {
+    document.getElementById('btn-inv').addEventListener('click', () => {
+      renderInventoryModal();
+      document.getElementById('inv-modal').classList.add('open');
+    });
+    document.getElementById('btn-close-inv').addEventListener('click', () => {
+      document.getElementById('inv-modal').classList.remove('open');
+    });
+
+    document.getElementById('btn-quests').addEventListener('click', () => {
+      renderQuestModal();
+      document.getElementById('quest-modal').classList.add('open');
+    });
+    document.getElementById('hud-quest-box').addEventListener('click', () => {
+      renderQuestModal();
+      document.getElementById('quest-modal').classList.add('open');
+    });
+    document.getElementById('btn-close-quest').addEventListener('click', () => {
+      document.getElementById('quest-modal').classList.remove('open');
+    });
+
+    document.getElementById('btn-audio').addEventListener('click', e => {
+      sfx.init();
+      sfx.enabled = !sfx.enabled;
+      e.currentTarget.textContent = sfx.enabled ? '🔊' : '🔇';
+    });
+
+    document.getElementById('btn-pause').addEventListener('click', () => {
       state.paused = true;
-      ds4.menuFocusIndex = 0;
-      const grid = document.getElementById('inventory-grid');
-      grid.innerHTML = '';
-      Object.entries(state.inventory).forEach(([key, item]) => {
-        const card = document.createElement('button');
-        card.className = 'inv-item';
-        card.style.cursor = 'pointer';
-        card.innerHTML = `
-          <div class="inv-icon">${item.icon}</div>
-          <div class="inv-name">${item.name}</div>
-          <div class="inv-qty">Owned: ${item.count}</div>
-          <div style="font-size:0.72rem;color:#a89984;margin-top:4px;">${item.desc}</div>
-        `;
-        card.onclick = () => {
-          state.selectedItemIndex = inventoryKeys.indexOf(key);
-          useSelectedInventoryItem();
-          closeModal('inventory-modal');
-        };
-        grid.appendChild(card);
-      });
-      document.getElementById('inventory-modal').style.display = 'flex';
+      document.getElementById('pause-modal').classList.add('open');
     });
-
-    document.getElementById('btn-open-quests').addEventListener('click', () => {
-      state.paused = true;
-      ds4.menuFocusIndex = 0;
-      const list = document.getElementById('quest-list');
-      list.innerHTML = '';
-      state.quests.forEach(q => {
-        const div = document.createElement('div');
-        div.className = `quest-entry ${q.completed ? 'completed' : ''}`;
-        div.innerHTML = `
-          <div style="font-weight:800;color:${q.completed ? '#fcd34d' : '#6ee7b7'};margin-bottom:4px;">
-            ${q.completed ? '✔' : '◆'} ${q.title}
-          </div>
-          <div style="font-size:0.86rem;color:#fef3c7;">${q.desc}</div>
-        `;
-        list.appendChild(div);
-      });
-      document.getElementById('quest-modal').style.display = 'flex';
+    document.getElementById('btn-close-pause').addEventListener('click', () => {
+      state.paused = false;
+      document.getElementById('pause-modal').classList.remove('open');
     });
-
-    document.getElementById('btn-open-pause').addEventListener('click', () => {
-      state.paused = true;
-      ds4.menuFocusIndex = 0;
-      document.getElementById('pause-modal').style.display = 'flex';
+    document.getElementById('btn-resume').addEventListener('click', () => {
+      state.paused = false;
+      document.getElementById('pause-modal').classList.remove('open');
     });
-
-    document.getElementById('btn-continue-explore').addEventListener('click', () => {
-      closeModal('ending-modal');
-    });
-
     document.getElementById('btn-unstuck').addEventListener('click', () => {
-      playerRig.position.set(0, 1, 18);
+      playerRig.position.set(0, getTerrainHeight(0, 26), 26);
       input.velY = 0;
-      closeModal('pause-modal');
-      showToast('Returned safely to Meadow Clearing');
+      state.paused = false;
+      document.getElementById('pause-modal').classList.remove('open');
     });
 
-    document.getElementById('btn-toggle-audio').addEventListener('click', e => {
-      sound.enabled = !sound.enabled;
-      e.target.textContent = sound.enabled ? 'On' : 'Off';
-      e.target.classList.toggle('active', sound.enabled);
+    document.getElementById('btn-continue-freeplay').addEventListener('click', () => {
+      document.getElementById('ending-modal').classList.remove('open');
     });
 
-    function setQuality(q) {
-      state.quality = q;
-      document.querySelectorAll('.q-btn[data-quality]').forEach(b => {
-        b.classList.toggle('active', b.dataset.quality === q);
+    // Quality Settings (Low / Medium / High)
+    document.querySelectorAll('.q-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const q = pill.dataset.quality;
+        state.quality = q;
+        document.querySelectorAll('.q-pill').forEach(p => p.classList.toggle('active', p.dataset.quality === q));
+        if (q === 'low') {
+          renderer.setPixelRatio(1);
+          grassInstanced.count = 300;
+        } else if (q === 'medium') {
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.4));
+          grassInstanced.count = 600;
+        } else {
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          grassInstanced.count = gIdx;
+        }
       });
-      document.getElementById('btn-title-settings').textContent = `Graphics: ${q.charAt(0).toUpperCase() + q.slice(1)}`;
-      renderer.setPixelRatio(q === 'low' ? 1 : q === 'medium' ? Math.min(window.devicePixelRatio, 1.4) : Math.min(window.devicePixelRatio, 2));
-      renderer.shadowMap.enabled = (q === 'high');
-      buildFoliage(q);
-    }
-
-    document.querySelectorAll('.q-btn[data-quality]').forEach(btn => {
-      btn.addEventListener('click', () => setQuality(btn.dataset.quality));
     });
 
-    const qCycle = ['low', 'medium', 'high'];
-    document.getElementById('btn-title-settings').addEventListener('click', () => {
-      const next = qCycle[(qCycle.indexOf(state.quality) + 1) % qCycle.length];
-      setQuality(next);
-    });
-
-    buildFoliage('medium');
-
-    /* =========================================================================
-       16. MAIN ANIMATION & SIMULATION LOOP (Gamepad + VR + Physics)
-       ========================================================================= */
+    // =========================================================================
+    // 12. MAIN SIMULATION & RENDER LOOP (WebXR Compatible via setAnimationLoop)
+    // =========================================================================
     const clock = new THREE.Clock();
-    const forwardVec = new THREE.Vector3();
-    const rightVec = new THREE.Vector3();
+    const skyDayColor = new THREE.Color(0x88c9e8);
+    const skyNightColor = new THREE.Color(0x0f172a);
+    const currentSky = new THREE.Color();
 
     function updatePlayer(dt) {
       if (!state.started || state.paused) return;
 
-      // Apply Right Analog Stick Look (Smooth Yaw & Pitch; VR keeps pitch neutral to avoid motion sickness)
-      if (Math.abs(ds4.rightStick.x) > 0 || Math.abs(ds4.rightStick.y) > 0) {
-        const turnSpeed = state.inVR ? 1.85 : 2.35;
-        input.yaw -= ds4.rightStick.x * turnSpeed * dt;
-        if (!state.inVR) {
-          input.pitch = THREE.MathUtils.clamp(input.pitch - ds4.rightStick.y * 1.85 * dt, -1.25, 1.25);
-        }
-      }
+      const isVR = renderer.xr.isPresenting;
 
-      if (!state.inVR) {
+      // CRITICAL WEBXR RULE: Never overwrite `camera.position` or `camera.rotation`
+      // while presenting in WebXR; WebXR controls the headset pose directly.
+      if (!isVR) {
         playerRig.rotation.y = input.yaw;
+        camera.position.set(0, EYE_HEIGHT, 0);
+        camera.rotation.order = 'YXZ';
         camera.rotation.x = input.pitch;
-      } else {
-        // In WebXR, rotate playerRig horizontally for comfortable controller turning
-        playerRig.rotation.y = input.yaw;
+        camera.rotation.y = 0;
+        camera.rotation.z = 0;
       }
 
-      // Combine Touch Joystick + DualShock 4 Left Stick + WASD + WebXR Gamepad
-      let mx = input.moveX + ds4.leftStick.x;
-      let mz = input.moveZ + ds4.leftStick.y;
+      let moveForward = -input.moveZ;
+      let moveRight = input.moveX;
 
-      if (input.keys['KeyW'] || input.keys['ArrowUp']) mz -= 1;
-      if (input.keys['KeyS'] || input.keys['ArrowDown']) mz += 1;
-      if (input.keys['KeyA'] || input.keys['ArrowLeft']) mx -= 1;
-      if (input.keys['KeyD'] || input.keys['ArrowRight']) mx += 1;
+      if (input.keys['KeyW'] || input.keys['ArrowUp']) moveForward += 1;
+      if (input.keys['KeyS'] || input.keys['ArrowDown']) moveForward -= 1;
+      if (input.keys['KeyD'] || input.keys['ArrowRight']) moveRight += 1;
+      if (input.keys['KeyA'] || input.keys['ArrowLeft']) moveRight -= 1;
 
-      if (state.inVR) {
-        const session = renderer.xr.getSession();
-        if (session) {
-          for (const source of session.inputSources) {
-            if (source.gamepad && source.gamepad.axes.length >= 4) {
-              mx += source.gamepad.axes[2];
-              mz += source.gamepad.axes[3];
+      const session = renderer.xr.getSession();
+      if (session) {
+        for (const src of session.inputSources) {
+          if (src.gamepad && src.gamepad.axes.length >= 4) {
+            moveRight += src.gamepad.axes[2];
+            moveForward -= src.gamepad.axes[3];
+            // Optional right-stick snap/smooth turn on VR controller
+            if (Math.abs(src.gamepad.axes[0]) > 0.25) {
+              playerRig.rotation.y -= src.gamepad.axes[0] * 1.8 * dt;
             }
           }
         }
       }
 
-      const len = Math.hypot(mx, mz);
-      if (len > 1) { mx /= len; mz /= len; }
+      const sprintMult = (input.keys['ShiftLeft'] || input.keys['ShiftRight']) ? 1.45 : 1.0;
+      const speed = 8.2 * sprintMult;
+      const moveVec = new THREE.Vector3();
 
-      if (state.inVR) {
-        camera.getWorldDirection(forwardVec);
-        forwardVec.y = 0;
-        forwardVec.normalize();
-      } else {
-        forwardVec.set(-Math.sin(input.yaw), 0, -Math.cos(input.yaw));
+      if (Math.abs(moveForward) > 0.05 || Math.abs(moveRight) > 0.05) {
+        const dir = new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        dir.y = 0;
+        if (dir.lengthSq() < 0.0001) dir.set(0, 0, -1);
+        dir.normalize();
+        const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+
+        moveVec.addScaledVector(dir, moveForward);
+        moveVec.addScaledVector(right, moveRight);
+        if (moveVec.length() > 1) moveVec.normalize();
+        moveVec.multiplyScalar(speed * dt);
+
+        sfx.stepTimer += dt;
+        if (sfx.stepTimer > 0.34 && input.grounded) {
+          sfx.stepTimer = 0;
+          sfx.playStep();
+        }
       }
-      rightVec.set(-forwardVec.z, 0, forwardVec.x);
 
-      const moveSpeed = state.sprinting ? 12.2 : 7.8;
-      const nextX = playerRig.position.x + (rightVec.x * mx + forwardVec.x * (-mz)) * moveSpeed * dt;
-      const nextZ = playerRig.position.z + (rightVec.z * mx + forwardVec.z * (-mz)) * moveSpeed * dt;
-
-      let blocked = false;
-      const clampedX = THREE.MathUtils.clamp(nextX, -76, 76);
-      const clampedZ = THREE.MathUtils.clamp(nextZ, -76, 76);
+      let nextX = THREE.MathUtils.clamp(playerRig.position.x + moveVec.x, -92, 92);
+      let nextZ = THREE.MathUtils.clamp(playerRig.position.z + moveVec.z, -92, 92);
 
       for (const c of colliders) {
-        const dist = Math.hypot(clampedX - c.x, clampedZ - c.z);
-        if (dist < c.r && playerRig.position.y < c.topY - 0.5) {
-          blocked = true;
-          break;
+        const dx = nextX - c.x;
+        const dz = nextZ - c.z;
+        const dist = Math.hypot(dx, dz);
+        const minDist = c.r + 0.55;
+        if (dist < minDist && dist > 0.001) {
+          nextX = c.x + (dx / dist) * minDist;
+          nextZ = c.z + (dz / dist) * minDist;
         }
       }
 
-      if (!blocked) {
-        playerRig.position.x = clampedX;
-        playerRig.position.z = clampedZ;
-      }
+      playerRig.position.x = nextX;
+      playerRig.position.z = nextZ;
 
-      if (len > 0.15 && input.grounded) {
-        sound.stepTimer += dt * (state.sprinting ? 1.45 : 1.0);
-        if (sound.stepTimer > 0.34) {
-          sound.stepTimer = 0;
-          sound.playStep();
-        }
-      }
-
-      input.velY -= 21 * dt;
+      const groundY = getTerrainHeight(playerRig.position.x, playerRig.position.z);
+      input.velY -= 19.5 * dt;
       playerRig.position.y += input.velY * dt;
 
-      const terrainY = getTerrainHeight(playerRig.position.x, playerRig.position.z);
-      if (playerRig.position.y <= terrainY) {
-        playerRig.position.y = terrainY;
+      if (playerRig.position.y <= groundY) {
+        playerRig.position.y = groundY;
         input.velY = 0;
         input.grounded = true;
       }
 
-      const px = playerRig.position.x;
-      const pz = playerRig.position.z;
-      let newZone = 'Sunlit Meadow';
-      if (Math.hypot(px + 28, pz + 24) < 13) {
-        newZone = 'Subterranean Ant Kingdom';
-        triggerDiscovery('Subterranean Ant Kingdom');
-      } else if (Math.hypot(px - 34, pz + 12) < 15) {
-        newZone = 'Great Oak Bee Hive';
-        triggerDiscovery('Great Oak Bee Hive');
-      } else if (pz < -35) {
-        newZone = 'Abandoned Ancient Garden';
-        triggerDiscovery('Abandoned Ancient Garden');
-      } else if (Math.abs(px - 14) < 6) {
-        newZone = 'Crystal Dew Stream';
-      }
-
-      if (newZone !== state.currentZone) {
-        state.currentZone = newZone;
-        updateHUD();
-      }
+      checkBiomeDiscovery(playerRig.position.x, playerRig.position.z);
     }
 
-    function updateLivingWorld(dt, elapsed) {
-      for (const it of interactables) {
-        if (it.type === 'item') {
-          it.mesh.rotation.y += dt * 1.8;
-          it.mesh.position.y += Math.sin(elapsed * 3 + it.mesh.position.x) * 0.003;
-        }
-      }
-      blightCrystal.rotation.y += dt * 0.7;
-      blightCrystal.position.y = 2.6 + Math.sin(elapsed * 2.2) * 0.25;
-
-      [scoutApis, queenMellifera].forEach((b, idx) => {
-        b.position.y += Math.sin(elapsed * 4 + idx) * 0.004;
-        if (b.userData.wingL) {
-          b.userData.wingL.rotation.z = 0.25 + Math.sin(elapsed * 28) * 0.45;
-          b.userData.wingR.rotation.z = -0.25 - Math.sin(elapsed * 28) * 0.45;
-        }
-      });
-
-      const pPos = playerRig.position;
-      for (const ai of autonomousInsects) {
-        const distToPlayer = ai.mesh.position.distanceTo(pPos);
-        if (distToPlayer > 75) continue;
-
-        const toTarget = new THREE.Vector3().subVectors(ai.target, ai.mesh.position);
-        if (ai.kind === 'ant') toTarget.y = 0;
-
-        if (toTarget.length() < 1.5) {
-          ai.target.set(
-            (Math.random() - 0.5) * 65,
-            ai.kind === 'ant' ? 0 : 4 + Math.random() * 5,
-            (Math.random() - 0.5) * 65
-          );
-        } else {
-          toTarget.normalize();
-          ai.mesh.position.addScaledVector(toTarget, ai.speed * dt);
-          ai.mesh.lookAt(ai.mesh.position.clone().add(toTarget));
-        }
-
-        if (ai.kind === 'ant') {
-          ai.mesh.position.y = getTerrainHeight(ai.mesh.position.x, ai.mesh.position.z);
-        } else {
-          ai.mesh.position.y += Math.sin(elapsed * 5 + ai.phase) * 0.015;
-          if (ai.mesh.userData.wingL) {
-            const flapRate = ai.kind === 'bee' ? 30 : 11;
-            ai.mesh.userData.wingL.rotation.z = 0.2 + Math.sin(elapsed * flapRate) * 0.55;
-            ai.mesh.userData.wingR.rotation.z = -0.2 - Math.sin(elapsed * flapRate) * 0.55;
-          }
-        }
-      }
-
-      state.timeOfDay = (state.timeOfDay + dt * 0.004) % 1;
+    function updateWorld(dt, elapsed) {
+      // Gentle Day/Night Cycle (kept bright enough to remain clearly visible)
+      state.timeOfDay = (state.timeOfDay + dt * 0.003) % 1;
       const sunAngle = state.timeOfDay * Math.PI * 2;
-      const sunElev = Math.sin(sunAngle);
-      sunLight.position.set(Math.cos(sunAngle) * 60, Math.max(12, sunElev * 80), 30);
+      const dayFactor = Math.max(0.32, Math.sin(sunAngle) * 0.5 + 0.5);
 
-      if (!state.flags.endingChosen) {
-        const dayFactor = THREE.MathUtils.clamp(sunElev * 0.5 + 0.5, 0.25, 1);
-        scene.background.setRGB(0.25 * dayFactor + 0.1, 0.55 * dayFactor + 0.15, 0.72 * dayFactor + 0.2);
-        scene.fog.color.copy(scene.background);
-        hemiLight.intensity = 0.55 + dayFactor * 0.55;
+      currentSky.lerpColors(skyNightColor, skyDayColor, dayFactor);
+      scene.background.copy(currentSky);
+      renderer.setClearColor(currentSky, 1);
+      scene.fog.color.copy(currentSky);
+      sunLight.intensity = 0.5 + dayFactor * 1.1;
+      hemiLight.intensity = 0.65 + dayFactor * 0.65;
+          item.mesh.position.y = item.baseY + Math.sin(elapsed * 3 + item.mesh.position.x) * 0.14;
+        }
       }
-      const timeLabel = sunElev > 0.35 ? 'Golden Day' : sunElev > -0.1 ? 'Amber Dusk' : 'Starlit Dew';
-      document.getElementById('hud-time').textContent = timeLabel;
+
+      // Animate Water Ripple
+      waterMesh.position.y = -0.55 + Math.sin(elapsed * 2.2) * 0.05;
+
+      // Update Autonomous Living World Insects
+      for (const agent of aiAgents) {
+        agent.phase += dt * 8;
+        if (agent.type === 'ant') {
+          const toT = new THREE.Vector3().subVectors(agent.target, agent.mesh.position);
+          toT.y = 0;
+          if (toT.length() < 1.5) {
+            agent.target.set((Math.random() - 0.5) * 45, 0, -5 + Math.random() * 35);
+          } else {
+            toT.normalize();
+            agent.mesh.position.addScaledVector(toT, agent.speed * dt);
+            agent.mesh.position.y = getTerrainHeight(agent.mesh.position.x, agent.mesh.position.z);
+            agent.mesh.lookAt(agent.mesh.position.x + toT.x, agent.mesh.position.y, agent.mesh.position.z + toT.z);
+          }
+          if (agent.mesh.userData.legs) {
+            agent.mesh.userData.legs.forEach((leg, idx) => {
+              leg.rotation.x = Math.sin(agent.phase + idx) * 0.35;
+            });
+          }
+        } else if (agent.type === 'bee') {
+          const toT = new THREE.Vector3().subVectors(agent.target, agent.mesh.position);
+          if (toT.length() < 2.2) {
+            // Alternate between hive and random giant flower
+            if (agent.state === 'COLLECT') {
+              agent.state = 'RETURN_HOME';
+              agent.target.copy(agent.home);
+            } else {
+              agent.state = 'COLLECT';
+              const nextF = flowerHeads[Math.floor(Math.random() * flowerHeads.length)];
+              agent.target.copy(nextF);
+            }
+          } else {
+            toT.normalize();
+            agent.mesh.position.addScaledVector(toT, agent.speed * dt);
+            agent.mesh.position.y += Math.sin(agent.phase * 0.6) * 0.025;
+            agent.mesh.lookAt(agent.mesh.position.x + toT.x, agent.mesh.position.y, agent.mesh.position.z + toT.z);
+          }
+          if (agent.mesh.userData.wings) {
+            agent.mesh.userData.wings[0].rotation.z = Math.sin(agent.phase * 4) * 0.45;
+            agent.mesh.userData.wings[1].rotation.z = -Math.sin(agent.phase * 4) * 0.45;
+          }
+        } else if (agent.type === 'butterfly') {
+          agent.mesh.position.x = agent.center.x + Math.cos(agent.phase * 0.15) * 6;
+          agent.mesh.position.z = agent.center.z + Math.sin(agent.phase * 0.15) * 6;
+          agent.mesh.position.y = agent.center.y + Math.sin(agent.phase * 0.5) * 1.1;
+          agent.wings[0].rotation.z = Math.sin(agent.phase * 1.4) * 0.65;
+          agent.wings[1].rotation.z = -Math.sin(agent.phase * 1.4) * 0.65;
+        }
+      }
+
+      // Animate Blight Mist Particles if active
+      if (blightMistParticles && blightMistParticles.visible) {
+        const arr = blightMistParticles.geometry.attributes.position.array;
+        for (let i = 1; i < arr.length; i += 3) {
+          arr[i] += dt * 1.1;
+          if (arr[i] > 6) arr[i] = 0.2;
+        }
+        blightMistParticles.geometry.attributes.position.needsUpdate = true;
+      }
     }
 
     window.addEventListener('resize', () => {
@@ -3249,18 +2567,21 @@
     });
 
     renderer.setAnimationLoop(() => {
-      const dt = Math.min(clock.getDelta(), 0.05);
-      const elapsed = clock.elapsedTime;
-
-      // Always poll DualShock 4 Gamepad API (even during active WebXR VR sessions)
-      ds4.poll(dt);
-
-      updatePlayer(dt);
-      updateLivingWorld(dt, elapsed);
-      updateInteractions(dt);
-
-      renderer.render(scene, camera);
+      try {
+        const dt = Math.min(clock.getDelta(), 0.05);
+        const elapsed = clock.elapsedTime;
+        updatePlayer(dt);
+        updateWorld(dt, elapsed);
+        updateInteractionTarget(dt);
+        renderer.render(scene, camera);
+      } catch (err) {
+        showRuntimeError(err);
+      }
     });
+
+    } catch (initErr) {
+      showRuntimeError(initErr);
+    }
   </script>
 </body>
 </html>
